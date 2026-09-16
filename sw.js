@@ -1,0 +1,40 @@
+/* Ayudante de instalación de la app.
+   Guarda la app en el teléfono para que abra rápido y funcione sin
+   internet. El audio y la IA sí necesitan internet. */
+var CACHE = 'hcm-ingles-iv-v1';
+var BASE  = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+
+self.addEventListener('install', function (e) {
+  self.skipWaiting();
+  e.waitUntil(caches.open(CACHE).then(function (c) {
+    return Promise.all(BASE.map(function (u) {
+      return c.add(u).catch(function () {});
+    }));
+  }));
+});
+
+self.addEventListener('activate', function (e) {
+  e.waitUntil(caches.keys().then(function (ks) {
+    return Promise.all(ks.map(function (k) {
+      return k === CACHE ? null : caches.delete(k);
+    }));
+  }).then(function () { return self.clients.claim(); }));
+});
+
+self.addEventListener('fetch', function (e) {
+  var r = e.request;
+  if (r.method !== 'GET') return;                       // nada de POST al caché
+  if (r.url.indexOf('script.google.com') !== -1) return; // IA, voz y datos: siempre en vivo
+
+  e.respondWith(
+    fetch(r).then(function (resp) {
+      if (resp && resp.status === 200 && resp.type === 'basic') {
+        var copia = resp.clone();
+        caches.open(CACHE).then(function (c) { c.put(r, copia); });
+      }
+      return resp;
+    }).catch(function () {
+      return caches.match(r).then(function (hit) { return hit || caches.match('./index.html'); });
+    })
+  );
+});

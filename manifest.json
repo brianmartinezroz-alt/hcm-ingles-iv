@@ -1,0 +1,32 @@
+{
+  "name": "Inglés IV · Heroico Colegio Militar",
+  "short_name": "Inglés HCM",
+  "description": "Práctica de inglés hablado para cadetes de 3er año LAM.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F0EADB",
+  "theme_color": "#F0EADB",
+  "lang": "es-MX",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
