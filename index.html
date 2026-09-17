@@ -7582,7 +7582,8 @@ function marcarHecho(id,tokens){
   // se le avisa al servidor que ya la hizo, para que Brian lo vea en su panel
   if(DATOS_ENDPOINT&&P&&P.nombre){
     try{fetch(DATOS_ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({accion:'tarea_hecha',nombre:P.nombre,id:id})});}catch(e){}
+      body:JSON.stringify({accion:'tarea_hecha',nombre:P.nombre,id:id})})
+      .catch(function(){});}catch(e){}
   }
   return true;
 }
@@ -11150,7 +11151,7 @@ var KEY_HCM='hcm_iv_v1';
 // El cerebro IA y la voz ya estan desplegados (arriba, IA_ENDPOINT y
 // VOZ_ENDPOINT). Lo unico que falta desplegar es el servidor de datos
 // del HCM, que escribe en la hoja de calificaciones por grupo.
-var HCM_DATOS_ENDPOINT='';   // ← PEGAR AQUI la URL de HCM-Datos
+var HCM_DATOS_ENDPOINT='https://script.google.com/macros/s/AKfycbypVtZ3xzUURmChQzMsYM3rE-kiRt5e9NXLJ3QfBg8R7VpJx_0vtitQM1eb7i-wzTr1xA/exec';
 var CLAVE_JEFE_HCM='hcm2026'; // clave para el panel del maestro
 var PARADAS_HCM=19;
 var EXAMENES_HCM=[9,18,19];
@@ -11623,7 +11624,7 @@ function hcmGuardarAvance(leccion, intentos, segundos) {
         intentos: intentos || [],
         segundos: segundos || 0
       })
-    });
+    }).catch(function(){});
   } catch(e) {}
 }
 
