@@ -1473,6 +1473,39 @@ body{color:var(--tinta)}
   border-radius:9px;cursor:pointer;transition:.12s}
 .hcm-grupo:active{transform:scale(.94)}
 .hcm-grupo.sel{background:var(--verde);border-color:var(--verde);color:#F5E9C9;font-weight:700}
+
+/* ═══ hojas de abajo: ritmo, carril, largo de sesion y el Cerebro ═══ */
+.hcm-velo{position:fixed;inset:0;background:rgba(23,18,11,.45);z-index:90;
+  opacity:0;transition:opacity .2s}
+.hcm-velo.on{opacity:1}
+.hcm-hoja{position:fixed;left:0;right:0;bottom:0;z-index:91;background:var(--papel);
+  border-top-left-radius:22px;border-top-right-radius:22px;padding:20px 18px;
+  padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));
+  box-shadow:0 -16px 44px rgba(23,18,11,.26);transform:translateY(102%);
+  transition:transform .26s cubic-bezier(.19,.9,.26,1);max-height:82vh;overflow:auto}
+.hcm-hoja.on{transform:none}
+.hcm-hoja h3{margin:0 0 4px;font-size:19px;color:var(--tinta)}
+.hcm-hoja p.sub{margin:0 0 16px;font-size:14px;color:var(--tinta-2,#463C2D)}
+.hcm-op{display:block;width:100%;text-align:left;background:var(--papel-2,#FBF7EC);
+  border:1.5px solid var(--linea,#D9CFB6);border-radius:14px;padding:13px 15px;
+  margin-bottom:10px;font:inherit;color:var(--tinta);cursor:pointer}
+.hcm-op:active{transform:scale(.99)}
+.hcm-op.sel{border-color:var(--dorado,#8F7320);background:#F7F0DA}
+.hcm-op b{display:block;font-size:16px;margin-bottom:2px}
+.hcm-op span{font-size:13px;color:var(--tinta-2,#463C2D)}
+.hcm-hoja textarea{width:100%;box-sizing:border-box;min-height:88px;border-radius:14px;
+  border:1.5px solid var(--linea,#D9CFB6);padding:12px;font:inherit;background:#FBF7EC;
+  color:var(--tinta);resize:vertical}
+.hcm-hoja .cerrar{position:absolute;right:14px;top:12px;background:none;border:0;
+  font-size:22px;color:var(--tinta-2,#463C2D);cursor:pointer;line-height:1}
+.hcm-resp{margin-top:14px;background:#FBF7EC;border:1.5px solid var(--linea,#D9CFB6);
+  border-radius:14px;padding:13px 15px;font-size:15px;line-height:1.5}
+.hcm-resp .de{font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--dorado,#8F7320);margin-bottom:6px}
+.hcm-chip-bt{background:none;border:0;font:inherit;padding:0;cursor:pointer}
+.hcm-plan{margin:10px 0 0;font-size:14px;color:var(--tinta-2,#463C2D)}
+.hcm-parada.sugerida{border-color:var(--dorado,#8F7320);box-shadow:0 0 0 2px #F7F0DA inset}
+.ayudafab.escondido{display:flex !important}
 </style>
 
 
@@ -11166,19 +11199,19 @@ var PARADAS_HCM=19;
 var EXAMENES_HCM=[9,18,19];
 var LECCIONES_HCM=[null,
   {titulo:"I'd like to open an account",    sub:"Present progressive · banca",              fecha:"17 Sep"},
-  {titulo:"The cake is delicious",           sub:"Present perfect · because clauses",        fecha:"25 Sep"},
+  {titulo:"The cake is delicious",           sub:"Because clauses · verbos copulativos",        fecha:"25 Sep"},
   {titulo:"He was talking when he hit the car",sub:"Past progressive · accidentes",         fecha:"2 Oct"},
-  {titulo:"You must obey traffic laws",     sub:"Reported speech · tráfico",                fecha:"8 Oct"},
-  {titulo:"Ted can repair the car",         sub:"Can/could · mecánico",                     fecha:"19 Oct"},
-  {titulo:"Should I ask Lt Clark for help?",sub:"Should/could · consejos",                  fecha:"22 Oct"},
+  {titulo:"You must obey traffic laws",     sub:"Ask/tell · comparar y contrastar",                fecha:"8 Oct"},
+  {titulo:"Ted can repair the car",         sub:"Repaso de vocabulario 1–4",                     fecha:"19 Oct"},
+  {titulo:"Should I ask Lt Clark for help?",sub:"Should/could · adverbios en -ly",                  fecha:"22 Oct"},
   {titulo:"He realized the tank was empty", sub:"Verb + that + noun clause",                fecha:"29 Oct"},
   {titulo:"I apologize for breaking your window",sub:"Apologize + for + gerund",            fecha:"6 Nov"},
   {titulo:"1ª Evaluación Parcial",          sub:"ALC Book 11 · versión A, B o C",          fecha:"13 Nov",examen:true},
   {titulo:"Tell me how to",                 sub:"How + to-infinitive · aparatos",           fecha:"3 Dic"},
   {titulo:"Sue exercises before she goes to work",sub:"Before/after · be supposed to",     fecha:"11 Dic"},
-  {titulo:"Like shopping in the mall",      sub:"Gerund · preposiciones de lugar",          fecha:"18 Dic"},
-  {titulo:"Let me introduce",               sub:"Presentaciones · simple present as future",fecha:"11 Ene"},
-  {titulo:"Can you change a flat tire?",    sub:"Simple present as future · llanta",        fecha:"18 Ene"},
+  {titulo:"Like shopping in the mall",      sub:"Preposiciones de lugar · gerundio",          fecha:"18 Dic"},
+  {titulo:"Let me introduce",               sub:"Adjetivo + to-infinitive",fecha:"11 Ene"},
+  {titulo:"Can you change a flat tire?",    sub:"Presente simple como futuro",        fecha:"18 Ene"},
   {titulo:"Would you introduce your family?",sub:"Modal auxiliaries · solicitudes",         fecha:"22 Ene"},
   {titulo:"What kind of work can I do?",    sub:"Be able to · ocupaciones",                 fecha:"1 Feb"},
   {titulo:"How far is it from El Paso to Houston?",sub:"How long/far · impersonal it",     fecha:"9 Feb"},
@@ -11205,13 +11238,18 @@ var MATERIAL_HCM = {
     {k:"transf",origen:"She opens an account.",pide:"Pásala al presente progresivo.",meta:"She's opening an account.",pista:"She's opening..."}
   ],
   2:[
-    {k:"regla",titulo:"Present Perfect: have/has + participio",regla:"Usa el present perfect para experiencias o acciones con resultado en el presente.",bien:"I have tried this cake before.",mal:"I tried this cake already.",porque:"El present perfect conecta el pasado con el presente.",en:"I have tried this cake before."},
-    {k:"idea",audio:"This cake is wonderful. I've tasted many cakes, but I've never tasted anything so delicious. I think it's good because it has real butter and fresh eggs.",en:"I've never tasted anything so delicious.",es:"Nunca he probado algo tan delicioso.",ops:["Está hablando de un pastel delicioso.","Está explicando cómo cocinar.","Está quejándose de la comida."],correcta:0},
-    {k:"hueco",antes:"The cake is delicious ",despues:" it has fresh ingredients.",es:"El pastel está delicioso porque tiene ingredientes frescos.",ops:["because","although","but"],correcta:0},
-    {k:"model",en:"I've tried this recipe before.",es:"He probado esta receta antes."},
-    {k:"model",en:"It's delicious because it has fresh ingredients.",es:"Está delicioso porque tiene ingredientes frescos."},
-    {k:"ask",q:"Have you ever tried American food?",es:"¿Alguna vez has probado comida americana?",meta:"Yes, I have. I've tried hamburgers and pizza.",pista:"Yes, I have. I've tried..."},
-    {k:"transf",origen:"She ate at that restaurant.",pide:"Pásala al present perfect.",meta:"She has eaten at that restaurant.",pista:"She has eaten..."}
+    {k:"regla",titulo:"Because + cláusula · verbos copulativos",regla:"'Because' va seguido de sujeto + verbo. Los verbos copulativos (taste, look, smell, sound, feel) van con adjetivo, no con adverbio.",bien:"The cake tastes good because it has fresh butter.",mal:"The cake tastes well because of it has butter.",porque:"'Tastes' pide adjetivo (good), y 'because' pide sujeto + verbo.",en:"The cake tastes good because it has fresh butter."},
+    {k:"idea",audio:"This cake is delicious. It tastes sweet but not too sweet, and it smells like oranges. I think it's so good because the cook used real butter and fresh eggs.",en:"It's so good because the cook used real butter.",es:"Está tan bueno porque el cocinero usó mantequilla de verdad.",ops:["Explica por qué el pastel está bueno.","Pide la receta del pastel.","Se queja del sabor del pastel."],correcta:0},
+    {k:"dosc",audio:"The soup tastes salty.",en:"The soup tastes salty.",a:"The soup tastes salty.",b:"The soup tastes salt.",correcta:0},
+    {k:"hueco",antes:"I like this bread ",despues:" it smells fresh.",es:"Me gusta este pan porque huele fresco.",ops:["because","because of","so"],correcta:0},
+    {k:"hueco",antes:"The coffee ",despues:" bitter this morning.",es:"El café sabe amargo esta mañana.",ops:["tastes","tastes like","is tasting"],correcta:0},
+    {k:"model",en:"The cake tastes delicious.",es:"El pastel sabe delicioso."},
+    {k:"model",en:"It smells good because it's fresh.",es:"Huele bien porque está fresco."},
+    {k:"model",en:"This meat looks tough.",es:"Esta carne se ve dura."},
+    {k:"ask",q:"How does the food in the mess hall taste?",es:"¿Cómo sabe la comida del comedor?",meta:"It tastes good because it's fresh.",pista:"Say: It tastes... because..."},
+    {k:"transf",origen:"The cake is delicious. It has fresh butter.",pide:"Únelas con 'because'.",meta:"The cake is delicious because it has fresh butter.",pista:"...delicious because it..."},
+    {k:"transf",origen:"He didn't eat it. It smelled bad.",pide:"Reporta la razón con 'because'.",meta:"He didn't eat it because it smelled bad.",pista:"...because it smelled..."},
+    {k:"transf",solo:"alto",origen:"The dinner was so good. Everyone was very happy.",pide:"Usa un adjetivo en -ing y otro en -ed: satisfying / satisfied.",meta:"The dinner was satisfying, so everyone was satisfied.",pista:"-ing causa el sentimiento, -ed lo describe."}
   ],
   3:[
     {k:"regla",titulo:"Past Progressive + when + Past Simple",regla:"'Was/were + verb-ing' para la acción en progreso; 'when + pasado simple' para la interrupción.",bien:"He was talking on the phone when he hit the car.",mal:"He talked on the phone when he hitted the car.",porque:"La acción larga va en pasado progresivo; la interrupción en pasado simple.",en:"He was talking when he hit the car."},
@@ -11223,31 +11261,46 @@ var MATERIAL_HCM = {
     {k:"transf",origen:"She talks on the phone while driving.",pide:"Pásala al pasado progresivo con 'when'.",meta:"She was talking on the phone when she crashed.",pista:"She was talking when..."}
   ],
   4:[
-    {k:"regla",titulo:"Reported commands: tell/ask + to-infinitive",regla:"Para reportar órdenes: told/asked + objeto + to + infinitivo.",bien:"The officer told me to stop the car.",mal:"The officer told me stop the car.",porque:"Después de told/asked siempre va 'to + infinitivo'.",en:"The officer told me to pull over."},
-    {k:"detalle",audio:"The traffic officer stopped the driver and said: you must obey traffic laws. He asked him to show his license. He also told him to slow down.",en:"The officer asked him to show his license.",es:"El oficial le pidió que mostrara su licencia.",pide:"¿Qué le pidió el oficial al conductor?",ops:["Que se fuera.","Que mostrara su licencia.","Que llamara a alguien."],correcta:1},
-    {k:"hueco",antes:"The officer told him ",despues:" down.",es:"El oficial le dijo que disminuyera la velocidad.",ops:["to slow","slowing","slow"],correcta:0},
-    {k:"model",en:"The officer told me to pull over.",es:"El oficial me dijo que me orillara."},
-    {k:"model",en:"She asked him to show his license.",es:"Ella le pidió que mostrara su licencia."},
-    {k:"ask",q:"What did the officer tell you to do?",es:"¿Qué te dijo que hicieras el oficial?",meta:"He told me to slow down and show my license.",pista:"He told me to..."},
-    {k:"transf",origen:"Stop the car.",pide:"Repórtala usando 'He told me...'",meta:"He told me to stop the car.",pista:"He told me to stop..."}
+    {k:"regla",titulo:"Ask / tell + to-infinitive · comparar",regla:"Para reportar una orden: tell someone to do something. Para reportar una petición: ask someone to do something. Para comparar: the same as, similar to, different from, like, alike.",bien:"The officer told us to obey the speed limit.",mal:"The officer told us obey the speed limit.",porque:"Después de tell/ask + persona va el verbo con 'to'.",en:"The officer told us to obey the speed limit."},
+    {k:"idea",audio:"The officer told the driver to show his license. Then he asked him to step out of the car. He explained that this street is different from the highway: here the speed limit is thirty.",en:"He asked him to step out of the car.",es:"Le pidió que saliera del carro.",ops:["Un oficial revisa a un conductor.","Un mecánico arregla un carro.","Un cadete pide direcciones."],correcta:0},
+    {k:"dosc",audio:"He told me to stop at the corner.",en:"He told me to stop at the corner.",a:"He told me to stop at the corner.",b:"He told me stop at the corner.",correcta:0},
+    {k:"hueco",antes:"The sergeant ",despues:" us to fasten our seat belts.",es:"El sargento nos dijo que nos pusiéramos el cinturón.",ops:["told","said","told to"],correcta:0},
+    {k:"hueco",antes:"This sign is ",despues:" the one we saw at the gate.",es:"Este letrero es igual al que vimos en la entrada.",ops:["the same as","the same than","same as"],correcta:0},
+    {k:"hueco",antes:"A truck is ",despues:" a car: it needs more space to stop.",es:"Un camión es distinto de un carro: necesita más espacio para frenar.",ops:["different from","different to","different that"],correcta:0},
+    {k:"model",en:"He told me to obey the traffic laws.",es:"Me dijo que obedeciera las leyes de tránsito."},
+    {k:"model",en:"She asked me to slow down.",es:"Me pidió que bajara la velocidad."},
+    {k:"model",en:"My helmet is similar to yours.",es:"Mi casco es parecido al tuyo."},
+    {k:"ask",q:"What did the officer tell you to do?",es:"¿Qué te dijo que hicieras el oficial?",meta:"He told me to show my license.",pista:"Say: He told me to..."},
+    {k:"transf",origen:"'Stop at the crosswalk!' said the officer.",pide:"Repórtalo con 'told'.",meta:"The officer told me to stop at the crosswalk.",pista:"The officer told me to..."},
+    {k:"transf",origen:"'Please open the trunk,' he said.",pide:"Repórtalo con 'asked'.",meta:"He asked me to open the trunk.",pista:"He asked me to..."},
+    {k:"transf",solo:"alto",origen:"'Do you have your license?' the officer asked.",pide:"Pásalo a pregunta indirecta.",meta:"The officer asked me if I had my license.",pista:"...asked me if I had..."}
   ],
   5:[
-    {k:"regla",titulo:"Can / Could para habilidad",regla:"'Can' para habilidad presente. 'Could' para habilidad pasada. Nunca llevan -s en tercera persona.",bien:"Ted can repair any engine.",mal:"Ted cans repair any engine.",porque:"Los modales nunca llevan -s en tercera persona.",en:"Ted can fix the engine."},
-    {k:"idea",audio:"Ted works at a garage. He can repair almost any car. His roommate asked him: Can you fix my car? The engine doesn't work. Ted said: Sure, I can check it today. It could be a small problem.",en:"Can you fix my car? The engine doesn't work.",es:"¿Puedes arreglar mi auto? El motor no funciona.",ops:["Ted es mecánico y puede arreglar autos.","Ted no sabe nada de autos.","Ted está buscando un garage."],correcta:0},
-    {k:"hueco",antes:"Ted ",despues:" repair any car in the garage.",es:"Ted puede reparar cualquier auto en el garage.",ops:["can","could","must"],correcta:0},
-    {k:"model",en:"Can you fix the engine?",es:"¿Puedes arreglar el motor?"},
-    {k:"model",en:"I can check the brakes today.",es:"Puedo revisar los frenos hoy."},
-    {k:"ask",q:"Can you repair a car?",es:"¿Puedes reparar un auto?",meta:"Yes, I can. I can change the oil and the tires.",pista:"Yes, I can. I can..."},
-    {k:"transf",origen:"He repairs engines.",pide:"Pásala usando 'can'.",meta:"He can repair engines.",pista:"He can repair..."}
+    {k:"regla",titulo:"Repaso: el taller, el compañero de cuarto y la mentira piadosa",regla:"Esta lección no trae gramática nueva: repasa todo el vocabulario de las lecciones 1 a 4 en tres escenas — el taller mecánico, la vida con el roommate y una conversación con una mentira piadosa.",bien:"Ted can repair the car, so I'm taking it to the garage tomorrow.",mal:"Ted can to repair the car, so I take it to the garage tomorrow.",porque:"Después de 'can' va el verbo solo, y el plan confirmado va en presente progresivo.",en:"Ted can repair the car, so I'm taking it to the garage tomorrow."},
+    {k:"idea",audio:"My roommate Ted works at a garage. Yesterday my car wouldn't start, so he looked at the engine and told me to change the battery. I asked him how much it cost. He said it was free, but that was a little white lie.",en:"He told me to change the battery.",es:"Me dijo que cambiara la batería.",ops:["Su compañero de cuarto le arregló el carro.","Compró un carro nuevo.","Fue al banco a pedir un préstamo."],correcta:0},
+    {k:"dosc",audio:"I'm taking the car to the garage tomorrow.",en:"I'm taking the car to the garage tomorrow.",a:"I'm taking the car to the garage tomorrow.",b:"I take the car to the garage tomorrow.",correcta:0},
+    {k:"hueco",antes:"The engine sounds ",despues:", so I asked Ted to check it.",es:"El motor suena raro, así que le pedí a Ted que lo revisara.",ops:["strange","strangely","stranger"],correcta:0},
+    {k:"hueco",antes:"A little white lie is a lie you tell ",despues:" you don't want to hurt someone.",es:"Una mentira piadosa es la que dices porque no quieres lastimar a alguien.",ops:["because","because of","so"],correcta:0},
+    {k:"model",en:"My roommate can repair almost anything.",es:"Mi compañero de cuarto puede arreglar casi todo."},
+    {k:"model",en:"I'm meeting him at the garage at six.",es:"Voy a verlo en el taller a las seis."},
+    {k:"model",en:"It was only a little white lie.",es:"Fue solo una mentira piadosa."},
+    {k:"ask",q:"Tell me about your roommate. What can he do well?",es:"Háblame de tu compañero de cuarto. ¿Qué sabe hacer bien?",meta:"My roommate can repair cars.",pista:"Say: My roommate can..."},
+    {k:"transf",origen:"'Change the battery,' Ted said.",pide:"Repórtalo con 'told'.",meta:"Ted told me to change the battery.",pista:"Ted told me to..."},
+    {k:"transf",solo:"alto",origen:"Ted didn't repair the car himself. The shop did it.",pide:"Usa el causativo: have something done.",meta:"He had the car repaired.",pista:"He had the car..."}
   ],
   6:[
-    {k:"regla",titulo:"Should / Could para consejos y sugerencias",regla:"'Should' para dar consejo directo. 'Could' para sugerir opciones. Nunca llevan 'to' después.",bien:"You should ask your supervisor.",mal:"You should to ask your supervisor.",porque:"Después de modales va el infinitivo directo, sin 'to'.",en:"You should ask Lt Clark for help."},
-    {k:"idea",audio:"A cadet had a problem with his assignment. His friend said: You should ask Lt Clark for help. He always gives good advice. You could also check the manual first.",en:"Should I ask Lt Clark for help with this problem?",es:"¿Debería pedirle ayuda al Teniente Clark?",ops:["El cadete tiene un problema y busca consejo.","El cadete quiere cambiarse de grupo.","El cadete tiene un conflicto con un oficial."],correcta:0},
-    {k:"hueco",antes:"You ",despues:" check the manual before asking.",es:"Deberías revisar el manual antes de preguntar.",ops:["should","could","must"],correcta:0},
-    {k:"model",en:"You should ask your supervisor for help.",es:"Deberías pedirle ayuda a tu supervisor."},
-    {k:"model",en:"You could check the manual first.",es:"Podrías revisar el manual primero."},
-    {k:"ask",q:"What should a cadet do when he has a problem?",es:"¿Qué debería hacer un cadete cuando tiene un problema?",meta:"He should ask his supervisor for help.",pista:"He should ask..."},
-    {k:"transf",origen:"Ask your supervisor.",pide:"Da el consejo usando 'You should...'",meta:"You should ask your supervisor.",pista:"You should ask..."}
+    {k:"regla",titulo:"Should / could · adverbios de modo en -ly",regla:"'Should' da consejo y 'could' ofrece una posibilidad; los dos van con el verbo solo. Los adverbios de modo terminan en -ly y dicen cómo se hace algo: 'How does he drive?' — 'He drives carefully.'",bien:"You should drive more carefully. You could ask Lt Clark for help.",mal:"You should to drive more careful. You could asking Lt Clark.",porque:"Después de should/could va el verbo sin 'to', y el modo se dice con adverbio en -ly.",en:"You should drive more carefully."},
+    {k:"idea",audio:"Does Mike drive safely? Not really. He drives too fast and he changes lanes suddenly. You should talk to him, or you could ask Lt Clark to give him some advice.",en:"You should talk to him, or you could ask Lt Clark.",es:"Deberías hablar con él, o podrías pedirle consejo al Tte. Clark.",ops:["Dan consejos sobre cómo conduce Mike.","Compran un carro para Mike.","Reportan un accidente de Mike."],correcta:0},
+    {k:"dosc",audio:"He drives carefully.",en:"He drives carefully.",a:"He drives carefully.",b:"He drives careful.",correcta:0},
+    {k:"hueco",antes:"You ",despues:" ask the sergeant before you leave.",es:"Deberías preguntarle al sargento antes de irte.",ops:["should","should to","shoulds"],correcta:0},
+    {k:"hueco",antes:"How does she speak English? She speaks it ",despues:".",es:"¿Cómo habla inglés? Lo habla con fluidez.",ops:["fluently","fluent","more fluent"],correcta:0},
+    {k:"model",en:"You should ask for advice.",es:"Deberías pedir consejo."},
+    {k:"model",en:"You could talk to Lt Clark.",es:"Podrías hablar con el Tte. Clark."},
+    {k:"model",en:"He works quickly and quietly.",es:"Trabaja rápido y en silencio."},
+    {k:"ask",q:"Your classmate never studies. What should he do?",es:"Tu compañero nunca estudia. ¿Qué debería hacer?",meta:"He should study every day.",pista:"Say: He should..."},
+    {k:"ask",q:"How do you speak English — slowly or quickly?",es:"¿Cómo hablas inglés: despacio o rápido?",meta:"I speak English slowly.",pista:"Usa un adverbio en -ly."},
+    {k:"transf",origen:"He is a careful driver.",pide:"Dilo con un adverbio de modo.",meta:"He drives carefully.",pista:"He drives..."},
+    {k:"transf",solo:"alto",origen:"Nobody answers the phone at the garage.",pide:"Haz una deducción con 'must be' o 'can't be'.",meta:"It must be closed.",pista:"It must be..."}
   ],
   7:[
     {k:"regla",titulo:"Verb + that + noun clause",regla:"Muchos verbos van seguidos de 'that + oración'. En pasado, la cláusula también usa pasado.",bien:"He realized that the tank was empty.",mal:"He realized the tank is empty.",porque:"Después de verbos en pasado la cláusula con 'that' también usa pasado.",en:"He realized that the tank was empty."},
@@ -11277,40 +11330,61 @@ var MATERIAL_HCM = {
     {k:"transf",origen:"Use the machine like this.",pide:"Conviértela con 'Let me show you how to...'",meta:"Let me show you how to use the machine.",pista:"Let me show you how to..."}
   ],
   11:[
-    {k:"regla",titulo:"Before/After + cláusula · Be supposed to",regla:"'Before/after' van seguidos de oración completa. 'Be supposed to' indica obligación o expectativa.",bien:"Sue exercises before she goes to work. / You're supposed to be here at six.",mal:"Sue exercises before go to work. / You supposed to be here.",porque:"Before/after necesitan sujeto + verbo después. 'Supposed to' siempre necesita el verbo 'be'.",en:"She stretches after she finishes her run."},
-    {k:"idea",audio:"Sue has a healthy routine. She exercises for thirty minutes before she goes to work. After she exercises, she takes a shower. She is supposed to be at work by eight.",en:"Sue always exercises before she goes to work.",es:"Sue siempre hace ejercicio antes de ir al trabajo.",ops:["Sue tiene una rutina saludable antes del trabajo.","Sue trabaja en un gimnasio.","Sue llegó tarde al trabajo."],correcta:0},
-    {k:"hueco",antes:"You're supposed ",despues:" at formation by six.",es:"Se supone que debes estar en la formación a las seis.",ops:["to be","being","be"],correcta:0},
-    {k:"model",en:"Sue exercises before she goes to work.",es:"Sue hace ejercicio antes de ir al trabajo."},
-    {k:"model",en:"You're supposed to be here at six.",es:"Se supone que debes estar aquí a las seis."},
-    {k:"ask",q:"What are cadets supposed to do every morning?",es:"¿Qué se supone que deben hacer los cadetes cada mañana?",meta:"They're supposed to exercise and attend formation.",pista:"They're supposed to..."},
-    {k:"transf",origen:"I go to work. I exercise.",pide:"Une las dos con 'I exercise before...'",meta:"I exercise before I go to work.",pista:"I exercise before I go..."}
+    {k:"regla",titulo:"Cláusulas de tiempo · be supposed to",regla:"Con after, before, until, when y while se une lo que pasa antes con lo que pasa después, y el verbo va en presente: 'Sue exercises before she goes to work.' Y 'be supposed to' es lo que se espera de ti: 'You're supposed to be there at 06:00.'",bien:"Sue exercises before she goes to work.",mal:"Sue exercises before she will go to work.",porque:"Después de before, after, when, until y while el verbo va en presente, aunque hable del futuro.",en:"Sue exercises before she goes to work."},
+    {k:"idea",audio:"Sue gets up at five. She exercises before she goes to work, and she doesn't have breakfast until she finishes running. While she runs, she listens to the radio. She's supposed to be at the office at eight.",en:"She doesn't have breakfast until she finishes running.",es:"No desayuna hasta que termina de correr.",ops:["Describe la rutina de Sue por la mañana.","Explica cómo llegar a la oficina.","Pide permiso para faltar al trabajo."],correcta:0},
+    {k:"dosc",audio:"Wash your hands before you eat.",en:"Wash your hands before you eat.",a:"Wash your hands before you eat.",b:"Wash your hands before you will eat.",correcta:0},
+    {k:"hueco",antes:"I always check the oil ",despues:" I start the truck.",es:"Siempre reviso el aceite antes de arrancar el camión.",ops:["before","until","while"],correcta:0},
+    {k:"hueco",antes:"Don't leave your post ",despues:" the relief arrives.",es:"No dejes tu puesto hasta que llegue el relevo.",ops:["until","while","after"],correcta:0},
+    {k:"hueco",antes:"We are ",despues:" be in formation at 06:00.",es:"Se espera que estemos en formación a las 06:00.",ops:["supposed to","supposed","supposing to"],correcta:0},
+    {k:"model",en:"I study after I finish my duties.",es:"Estudio después de terminar mis obligaciones."},
+    {k:"model",en:"While he was on guard, it started to rain.",es:"Mientras estaba de guardia, empezó a llover."},
+    {k:"model",en:"You're supposed to sign the logbook.",es:"Se espera que firmes la bitácora."},
+    {k:"ask",q:"What do you do before you go to sleep?",es:"¿Qué haces antes de dormirte?",meta:"I clean my boots before I go to sleep.",pista:"Say: I ... before I ..."},
+    {k:"transf",origen:"He has breakfast. Then he goes to formation.",pide:"Únelas con 'before'.",meta:"He has breakfast before he goes to formation.",pista:"...before he goes..."},
+    {k:"transf",origen:"The rule says we must be quiet after 22:00.",pide:"Dilo con 'be supposed to'.",meta:"We're supposed to be quiet after 22:00.",pista:"We're supposed to..."},
+    {k:"transf",solo:"alto",origen:"She has run every morning for ten years.",pide:"Usa 'used to' o 'would' para el hábito pasado.",meta:"She used to run every morning.",pista:"She used to..."}
   ],
   12:[
-    {k:"regla",titulo:"Gerundio como objeto de verbo",regla:"Después de like, enjoy, avoid, prefer, hate, love va siempre el gerundio (-ing), nunca el infinitivo.",bien:"I enjoy shopping in the mall.",mal:"I enjoy to shop in the mall.",porque:"Estos verbos siempre van seguidos de gerundio.",en:"She likes trying on new clothes."},
-    {k:"idea",audio:"Maria loves shopping in the mall. She enjoys trying on clothes and comparing prices. Her husband hates shopping. He prefers waiting in the food court. The mall is next to the highway, across from the hospital.",en:"I really enjoy shopping at the mall on weekends.",es:"Realmente disfruto ir de compras al centro comercial.",ops:["A María le gusta ir de compras al mall.","María trabaja en una tienda del mall.","María va al mall a ver una película."],correcta:0},
-    {k:"hueco",antes:"He hates ",despues:" for clothes because he gets bored.",es:"Odia buscar ropa porque se aburre.",ops:["shopping","to shop","shop"],correcta:0},
-    {k:"model",en:"I enjoy shopping at the mall.",es:"Disfruto ir de compras al mall."},
-    {k:"model",en:"He avoids going to crowded places.",es:"Evita ir a lugares concurridos."},
-    {k:"ask",q:"Do you enjoy shopping? Why or why not?",es:"¿Disfrutas ir de compras? ¿Por qué?",meta:"Yes, I enjoy shopping because I like finding good deals.",pista:"Yes, I enjoy shopping because..."},
-    {k:"transf",origen:"I shop at the mall.",pide:"Conviértela usando 'I enjoy...'",meta:"I enjoy shopping at the mall.",pista:"I enjoy shopping at..."}
+    {k:"regla",titulo:"Preposiciones de lugar · gerundio como objeto",regla:"Para ubicar algo: above, across from, at, behind, below, by, in, in front of, in back of, near, next to, on, under. Y después de begin, enjoy, finish, like, mind y start, el verbo va en -ing.",bien:"I enjoy shopping at the mall. The bank is across from the food court.",mal:"I enjoy to shop at the mall. The bank is across the food court.",porque:"'Enjoy' pide gerundio, y 'frente a' es 'across from', no 'across'.",en:"I enjoy shopping at the mall."},
+    {k:"idea",audio:"I like shopping at the Royal Shopping Center. The shoe store is next to the bank, and the food court is below it, on the first floor. I finished buying everything in one hour.",en:"The shoe store is next to the bank.",es:"La zapatería está junto al banco.",ops:["Describe dónde están las tiendas del centro comercial.","Compra un carro en una agencia.","Pide direcciones para llegar al cuartel."],correcta:0},
+    {k:"dosc",audio:"The pharmacy is across from the elevator.",en:"The pharmacy is across from the elevator.",a:"The pharmacy is across from the elevator.",b:"The pharmacy is across the elevator.",correcta:0},
+    {k:"hueco",antes:"I enjoy ",despues:" with my friends on Saturdays.",es:"Disfruto ir de compras con mis amigos los sábados.",ops:["shopping","to shop","shop"],correcta:0},
+    {k:"hueco",antes:"The parking lot is ",despues:" the mall, on the roof.",es:"El estacionamiento está encima del centro comercial, en la azotea.",ops:["above","under","across"],correcta:0},
+    {k:"hueco",antes:"Do you mind ",despues:" here for ten minutes?",es:"¿Te importa esperar aquí diez minutos?",ops:["waiting","to wait","wait"],correcta:0},
+    {k:"model",en:"I like shopping at the Logar Mall.",es:"Me gusta ir de compras al Logar Mall."},
+    {k:"model",en:"The bookstore is next to the exit.",es:"La librería está junto a la salida."},
+    {k:"model",en:"We finished eating at two o'clock.",es:"Terminamos de comer a las dos."},
+    {k:"ask",q:"Where is the nearest store to your barracks?",es:"¿Dónde está la tienda más cercana a tu dormitorio?",meta:"It's next to the main gate.",pista:"Usa next to, near, across from, behind..."},
+    {k:"transf",origen:"I want to start. I will study English.",pide:"Únelas con el gerundio.",meta:"I started studying English.",pista:"I started..."},
+    {k:"transf",solo:"alto",origen:"She goes to that mall a lot now, but not before.",pide:"Contrasta con 'used to'.",meta:"She didn't use to go to that mall.",pista:"She didn't use to..."}
   ],
   13:[
-    {k:"regla",titulo:"Simple present como futuro para eventos programados",regla:"Usa el presente simple para eventos con hora o fecha fija.",bien:"The meeting starts at nine tomorrow.",mal:"The meeting will start at nine tomorrow.",porque:"Con eventos programados el presente simple suena más natural y preciso.",en:"The ceremony begins at eight."},
-    {k:"idea",audio:"Good morning. Let me introduce myself. My name is Captain Rodriguez. I'm your new English instructor. Class starts at seven every day. Our classroom is on the second floor, next to the library.",en:"Let me introduce you to my neighbor.",es:"Permíteme presentarte a mi vecino.",ops:["Un instructor se presenta a su clase.","Un cadete presenta a su familia.","Un oficial da una orden."],correcta:0},
-    {k:"hueco",antes:"Let me ",despues:" you to my colleague.",es:"Permíteme presentarte a mi colega.",ops:["introduce","introducing","introduction"],correcta:0},
-    {k:"model",en:"Let me introduce myself. My name is...",es:"Permíteme presentarme. Mi nombre es..."},
-    {k:"model",en:"The ceremony begins at eight o'clock sharp.",es:"La ceremonia comienza a las ocho en punto."},
-    {k:"ask",q:"How do you introduce yourself in English?",es:"¿Cómo te presentas en inglés?",meta:"Let me introduce myself. My name is... I'm a cadet at the Military College.",pista:"Let me introduce myself. My name is..."},
-    {k:"transf",origen:"My class will start at eight.",pide:"Cámbiala usando presente simple para evento programado.",meta:"My class starts at eight.",pista:"My class starts at..."}
+    {k:"regla",titulo:"Adjetivo + to-infinitive",regla:"Después de afraid, glad, happy, pleased, ready, sorry y upset, el verbo va con 'to': 'I'm glad to meet you.' Es la fórmula de las presentaciones.",bien:"I'm pleased to meet you. Let me introduce my neighbor.",mal:"I'm pleased meeting you. Let me to introduce my neighbor.",porque:"Esos adjetivos piden 'to + verbo'; y después de 'let me' va el verbo solo.",en:"I'm pleased to meet you."},
+    {k:"idea",audio:"Let me introduce my new neighbor, Sergeant Parra. He just moved in next door. He's happy to be here, and he's ready to help if we need anything.",en:"He's happy to be here and ready to help.",es:"Está contento de estar aquí y listo para ayudar.",ops:["Presenta a un vecino nuevo.","Se despide de un vecino.","Se queja del ruido del vecino."],correcta:0},
+    {k:"dosc",audio:"I'm glad to meet you.",en:"I'm glad to meet you.",a:"I'm glad to meet you.",b:"I'm glad meeting you.",correcta:0},
+    {k:"hueco",antes:"Let me ",despues:" my roommate, Cadet Luna.",es:"Permíteme presentarte a mi compañero, el cadete Luna.",ops:["introduce","to introduce","introducing"],correcta:0},
+    {k:"hueco",antes:"I'm sorry ",despues:" that your car was damaged.",es:"Lamento oír que tu carro se dañó.",ops:["to hear","hearing","hear"],correcta:0},
+    {k:"hueco",antes:"Are you ",despues:" now? The formation starts at 06:00.",es:"¿Ya estás listo? La formación empieza a las 06:00.",ops:["ready to go","ready going","ready for go"],correcta:0},
+    {k:"model",en:"I'm pleased to meet you.",es:"Mucho gusto en conocerte."},
+    {k:"model",en:"Let me introduce my neighbor.",es:"Permíteme presentarte a mi vecino."},
+    {k:"model",en:"I'm afraid to be late.",es:"Tengo miedo de llegar tarde."},
+    {k:"ask",q:"A new cadet arrives at your barracks. Introduce yourself.",es:"Llega un cadete nuevo a tu dormitorio. Preséntate.",meta:"I'm glad to meet you. My name is...",pista:"Say: I'm glad to meet you..."},
+    {k:"transf",origen:"I met you. I am happy.",pide:"Únelas con adjetivo + to-infinitive.",meta:"I'm happy to meet you.",pista:"I'm happy to..."},
+    {k:"transf",solo:"alto",origen:"'I am your new neighbor,' he said.",pide:"Pásalo a discurso indirecto.",meta:"He told me that he was my new neighbor.",pista:"He told me that he was..."}
   ],
   14:[
-    {k:"regla",titulo:"Instrucciones paso a paso con presente simple",regla:"Usa First, Then, Next + presente simple para dar instrucciones en orden.",bien:"First you loosen the lug nuts, then you jack up the car.",mal:"First you are loosening the lug nuts.",porque:"Para instrucciones el presente simple es más claro que el progresivo.",en:"First you put on the spare, then you tighten the lug nuts."},
-    {k:"idea",audio:"Juan had a flat tire on the highway. His friend said: Do you have a spare tire and a jack? First you loosen the lug nuts. Then you jack up the car. Next you remove the flat tire and put on the spare.",en:"Do you know how to change a flat tire?",es:"¿Sabes cómo cambiar una llanta ponchada?",ops:["Juan tuvo una llanta ponchada y pidió ayuda.","Juan quiere comprar una llanta nueva.","Juan no sabe manejar."],correcta:0},
-    {k:"hueco",antes:"First you loosen the lug nuts. Then you ",despues:" up the car.",es:"Primero afloja las tuercas. Luego levanta el auto.",ops:["jack","pick","pull"],correcta:0},
-    {k:"model",en:"Can you change a flat tire?",es:"¿Puedes cambiar una llanta ponchada?"},
-    {k:"model",en:"First you loosen the lug nuts.",es:"Primero afloja las tuercas."},
-    {k:"ask",q:"What do you need to change a flat tire?",es:"¿Qué necesitas para cambiar una llanta ponchada?",meta:"You need a spare tire, a jack, and a lug wrench.",pista:"You need a spare tire..."},
-    {k:"transf",origen:"Remove the flat tire.",pide:"Ponla en contexto de instrucciones con 'Next you...'",meta:"Next you remove the flat tire.",pista:"Next you remove..."}
+    {k:"regla",titulo:"Presente simple como futuro",regla:"Para horarios fijos —camiones, aviones, clases, formaciones— se usa el presente simple, no el futuro: 'The bus from Dallas arrives early tomorrow morning.'",bien:"The bus arrives at 07:30 tomorrow.",mal:"The bus will arrive at 07:30 tomorrow, I think.",porque:"Un horario publicado es un hecho programado: va en presente simple.",en:"The bus from Dallas arrives early tomorrow morning."},
+    {k:"idea",audio:"Can you change a flat tire? First you take out the jack and the spare tire. Then you loosen the nuts, you lift the car, and you replace the tire. The mechanic's class starts at eight tomorrow if you want to practice.",en:"The mechanic's class starts at eight tomorrow.",es:"La clase del mecánico empieza a las ocho mañana.",ops:["Explica cómo cambiar una llanta.","Vende llantas nuevas.","Reporta un choque en la carretera."],correcta:0},
+    {k:"dosc",audio:"The train leaves at six tomorrow.",en:"The train leaves at six tomorrow.",a:"The train leaves at six tomorrow.",b:"The train is leaving at six tomorrow, maybe.",correcta:0},
+    {k:"hueco",antes:"The bus from Dallas ",despues:" early tomorrow morning.",es:"El camión de Dallas llega mañana temprano.",ops:["arrives","is arriving","will arrive"],correcta:0},
+    {k:"hueco",antes:"First you ",despues:" the nuts, then you lift the car.",es:"Primero aflojas las tuercas, luego levantas el carro.",ops:["loosen","loosening","are loosening"],correcta:0},
+    {k:"model",en:"The formation starts at 06:00 tomorrow.",es:"La formación empieza a las 06:00 mañana."},
+    {k:"model",en:"First you take out the spare tire.",es:"Primero sacas la llanta de repuesto."},
+    {k:"model",en:"The flight leaves on Friday at noon.",es:"El vuelo sale el viernes al mediodía."},
+    {k:"ask",q:"What time does your first class start tomorrow?",es:"¿A qué hora empieza tu primera clase mañana?",meta:"It starts at seven.",pista:"Usa el presente simple: It starts at..."},
+    {k:"ask",q:"Explain in three steps how to change a flat tire.",es:"Explica en tres pasos cómo cambiar una llanta.",meta:"First you loosen the nuts, then you lift the car, then you replace the tire.",pista:"First you... then you... then you..."},
+    {k:"transf",origen:"The bus will arrive at seven. (es el horario oficial)",pide:"Dilo como horario, en presente simple.",meta:"The bus arrives at seven.",pista:"The bus arrives..."},
+    {k:"transf",solo:"alto",origen:"He is not going to fix the tire himself.",pide:"Usa el causativo: have something done.",meta:"He's going to have the tire changed.",pista:"...have the tire..."}
   ],
   15:[
     {k:"regla",titulo:"Would/Could para solicitudes · Reported commands",regla:"'Would/Could you' para solicitudes formales. 'Told/asked + to + infinitivo' para reportar órdenes.",bien:"Would you introduce your family? / He asked me to fill out the form.",mal:"He asked me that I fill out the form.",porque:"Después de asked/told + objeto va 'to + infinitivo', nunca 'that'.",en:"Could you please show me your identification?"},
@@ -11482,8 +11556,16 @@ function armarSesionHCM(n){
   var D2=hcmLoad();var P2=D2.perfil||{};
   var carril=CARRILES_HCM[P2.carril||'medio']||CARRILES_HCM.medio;
   var raw=MATERIAL_HCM[n]||MATERIAL_HCM[1]||[];
-  var items=raw.filter(function(x){return carril.tipos.indexOf(x.k)>=0;});
+  var items=raw.filter(function(x){
+    // los ejercicios marcados solo:"alto" son el material del ALC 11-12:
+    // solo los ve el cadete que va sobrado.
+    if(x.solo&&x.solo!==(P2.carril||'medio'))return false;
+    return carril.tipos.indexOf(x.k)>=0;
+  });
   if(!items.length)items=raw.slice();
+  // sesion corta: la regla y tres ejercicios, para el que agarra el
+  // telefono entre clases.
+  if(HCM_SESION==='corta'&&items.length>4)items=items.slice(0,4);
   items=items.map(function(x){
     var y=JSON.parse(JSON.stringify(x));
     if(!carril.espanol)delete y.es;
@@ -11523,7 +11605,10 @@ function irAParadaHCM(n){
   }
   MAT=[S]; sIdx=0; it=0; attempts=[]; intentosDe={}; vistos={}; t0=Date.now();
   var D2=hcmLoad();var P2=D2.perfil||{};
-  P2.parada=n; P2.parada_actual=n; D2.perfil=P2; hcmSave(D2);
+  // Antes esto ponia parada=n, asi que entrar a la leccion 15 hacia
+  // creer que las catorce anteriores ya estaban hechas. El avance
+  // ahora vive en P2.hechas y solo lo mueve cerrar una leccion.
+  P2.parada_actual=n; P2.viendo=n; D2.perfil=P2; hcmSave(D2);
   if(P)P.parada_actual=n;
   hcmGuardarAvance(n,[],0);
   try{portadaSesion();}catch(e){console.error(e);try{mostrarMapa();}catch(x){}}
@@ -11538,7 +11623,10 @@ function hcmCerrarLeccion(rec){
   var sig=n+1;
   while(sig<=PARADAS_HCM&&LECCIONES_HCM[sig]&&LECCIONES_HCM[sig].examen)sig++;
   if(sig>PARADAS_HCM)sig=PARADAS_HCM;
+  if(!Ph.hechas)Ph.hechas={};
+  Ph.hechas[n]=true;
   if(sig>(Ph.parada||1))Ph.parada=sig;
+  Ph.ultima=new Date().toISOString().slice(0,10);
   Dh.perfil=Ph;hcmSave(Dh);
 }
 
@@ -11546,7 +11634,7 @@ function hcmCerrarLeccion(rec){
 function hcmAvance(){
   hcmSincronizarPerfil();
   var Dh=hcmLoad();var Ph=Dh.perfil||{};
-  var hechas=(Ph.parada||1)-1;
+  var hechas=hcmCuantasHechas();
   var pct=Math.round(hechas/PARADAS_HCM*100);
   var chips={bajo:'\ud83d\udfe1 B\u00e1sico',medio:'\ud83d\udfe0 Intermedio',alto:'\ud83d\udd34 Avanzado'};
   var ses=0,dom=0;
@@ -11794,6 +11882,302 @@ document.addEventListener('DOMContentLoaded',function(){
   }
   else{hcmSincronizarPerfil();mostrarMapa();}
 });
+
+
+/* ══════════════════════════════════════════════════════════════════
+   HCM · ritmo, niveles y Cerebro siempre a mano
+   Esta capa va al final a proposito: las funciones que declara
+   sustituyen a las de arriba (mostrarMapa, mostrarAyudaSiToca) sin
+   tocar el codigo original.
+   ══════════════════════════════════════════════════════════════════ */
+
+var HCM_SESION = 'completa';   // corta | completa | larga
+var HCM_RITMOS = {
+  diario:  {nom:'Todos los dias',     det:'Una leccion por semana, en ratos de 20 minutos.', porSem:1},
+  algunos: {nom:'Unos dias a la semana', det:'Dos o tres ratos por semana, como te toque.', porSem:1},
+  finde:   {nom:'Solo los fines de semana', det:'Una sesion larga el sabado o el domingo.', porSem:1}
+};
+
+/* El avance: cuenta lecciones cerradas, no en que numero vas.
+   Si el cadete venia del esquema viejo (solo "parada"), se le dan por
+   hechas las anteriores para no borrarle el trabajo. */
+function hcmHechas(){
+  var D=hcmLoad(); var P=D.perfil||{};
+  if(!P.hechas){
+    P.hechas={};
+    var p=P.parada||1;
+    for(var i=1;i<p;i++) if(LECCIONES_HCM[i]&&!LECCIONES_HCM[i].examen) P.hechas[i]=true;
+    D.perfil=P; hcmSave(D);
+  }
+  return P.hechas;
+}
+function hcmCuantasHechas(){
+  var h=hcmHechas(), n=0;
+  for(var k in h) if(h[k]) n++;
+  return n;
+}
+/* La sugerida es la primera sin cerrar que no sea examen. */
+function hcmSugerida(){
+  var h=hcmHechas();
+  for(var i=1;i<=PARADAS_HCM;i++){
+    var L=LECCIONES_HCM[i];
+    if(L&&!L.examen&&!h[i]) return i;
+  }
+  return 1;
+}
+function hcmRitmo(){
+  var D=hcmLoad(); var P=D.perfil||{};
+  return HCM_RITMOS[P.ritmo] ? P.ritmo : 'algunos';
+}
+function hcmGuardarPerfil(campo, valor){
+  var D=hcmLoad(); var P=D.perfil||{};
+  P[campo]=valor; D.perfil=P; hcmSave(D);
+}
+
+/* ── hoja de abajo, generica ── */
+function hcmCerrarHoja(){
+  var v=document.getElementById('hcm-velo'), h=document.getElementById('hcm-hoja');
+  if(v){v.classList.remove('on'); setTimeout(function(){if(v.parentNode)v.parentNode.removeChild(v);},220);}
+  if(h){h.classList.remove('on'); setTimeout(function(){if(h.parentNode)h.parentNode.removeChild(h);},280);}
+}
+function hcmHoja(html){
+  hcmCerrarHoja();
+  var v=document.createElement('div'); v.className='hcm-velo'; v.id='hcm-velo';
+  v.onclick=hcmCerrarHoja;
+  var h=document.createElement('div'); h.className='hcm-hoja'; h.id='hcm-hoja';
+  h.style.position='fixed';
+  h.innerHTML='<button class="cerrar" aria-label="Cerrar">&times;</button>'+html;
+  document.body.appendChild(v); document.body.appendChild(h);
+  h.querySelector('.cerrar').onclick=hcmCerrarHoja;
+  requestAnimationFrame(function(){v.classList.add('on'); h.classList.add('on');});
+  return h;
+}
+
+/* ── elegir ritmo ── */
+function hcmElegirRitmo(){
+  var act=hcmRitmo(), html='<h3>¿Cada cuando vas a practicar?</h3>'+
+    '<p class="sub">Sirve para saber qué proponerte. Puedes cambiarlo cuando quieras, y si faltas una semana no pasa nada.</p>';
+  ['diario','algunos','finde'].forEach(function(k){
+    var r=HCM_RITMOS[k];
+    html+='<button class="hcm-op'+(k===act?' sel':'')+'" data-r="'+k+'">'+
+      '<b>'+r.nom+'</b><span>'+r.det+'</span></button>';
+  });
+  var h=hcmHoja(html);
+  h.querySelectorAll('[data-r]').forEach(function(b){
+    b.onclick=function(){
+      hcmGuardarPerfil('ritmo', b.dataset.r);
+      hcmCerrarHoja(); setTimeout(mostrarMapa, 240);
+    };
+  });
+}
+
+/* ── cambiar de carril en marcha ── */
+function hcmElegirCarril(){
+  var D=hcmLoad(); var P=D.perfil||{};
+  var act=P.carril||'medio';
+  var det={
+    bajo:'Con traducción al español, el texto a la vista y pistas automáticas.',
+    medio:'Con traducción, pero sin el texto delante. Es el punto medio.',
+    alto:'Todo en inglés, sin traducción, y con las estructuras del ALC 11-12.'
+  };
+  var html='<h3>¿Cómo vas de inglés?</h3>'+
+    '<p class="sub">Cámbialo cuando quieras. Si una lección se te hace fácil, súbete; si te está costando, bájate. No afecta tu calificación.</p>';
+  ['bajo','medio','alto'].forEach(function(k){
+    html+='<button class="hcm-op'+(k===act?' sel':'')+'" data-c="'+k+'">'+
+      '<b>'+(CARRILES_HCM[k].nombre)+'</b><span>'+det[k]+'</span></button>';
+  });
+  var h=hcmHoja(html);
+  h.querySelectorAll('[data-c]').forEach(function(b){
+    b.onclick=function(){
+      hcmGuardarPerfil('carril', b.dataset.c);
+      try{hcmSincronizarPerfil();}catch(e){}
+      hcmCerrarHoja(); setTimeout(mostrarMapa, 240);
+    };
+  });
+}
+
+/* ── cuanto tiempo traen hoy ── */
+function hcmElegirSesion(n){
+  var lec=LECCIONES_HCM[n]||{};
+  var html='<h3>'+esc(lec.titulo||('Lección '+n))+'</h3>'+
+    '<p class="sub">¿Cuánto tiempo traes ahora?</p>'+
+    '<button class="hcm-op" data-s="corta"><b>Un rato · 5 minutos</b>'+
+      '<span>La regla y tres ejercicios. Para entre clases.</span></button>'+
+    '<button class="hcm-op" data-s="completa"><b>La lección completa · 20 minutos</b>'+
+      '<span>Todo: la regla, escuchar, hablar y transformar.</span></button>'+
+    '<button class="hcm-op" data-s="larga"><b>Sesión de fin de semana</b>'+
+      '<span>Esta lección y sigues con la que viene, sin volver al mapa.</span></button>';
+  var h=hcmHoja(html);
+  h.querySelectorAll('[data-s]').forEach(function(b){
+    b.onclick=function(){
+      HCM_SESION=b.dataset.s;
+      hcmGuardarPerfil('largo_pref', HCM_SESION);
+      hcmCerrarHoja();
+      setTimeout(function(){ hcmEntrar(n); }, 240);
+    };
+  });
+}
+/* Entrar de verdad. En la sesion larga se encadenan las lecciones
+   siguientes que no sean examen, para que no vuelva al mapa. */
+function hcmEntrar(n){
+  if(HCM_SESION!=='larga'){ irAParadaHCM(n); return; }
+  hcmSincronizarPerfil();
+  var lista=[], i=n;
+  while(lista.length<3 && i<=PARADAS_HCM){
+    var L=LECCIONES_HCM[i];
+    if(L&&!L.examen){ var S=armarSesionHCM(i); if(S&&S.items.length) lista.push(S); }
+    i++;
+  }
+  if(!lista.length){ irAParadaHCM(n); return; }
+  MAT=lista; sIdx=0; it=0; attempts=[]; intentosDe={}; vistos={}; t0=Date.now();
+  var D2=hcmLoad(); var P2=D2.perfil||{};
+  P2.parada_actual=n; P2.viendo=n; D2.perfil=P2; hcmSave(D2);
+  if(P)P.parada_actual=n;
+  try{hcmGuardarAvance(n,[],0);}catch(e){}
+  try{portadaSesion();}catch(e){}
+}
+
+/* ── el mapa: todas abiertas ── */
+function mostrarMapa(){
+  document.getElementById('topbar').style.display='';
+  document.getElementById('barrabaja').style.display='';
+  document.querySelectorAll('.tabb').forEach(function(b){b.classList.toggle('on',b.dataset.t==='mapa');});
+  var D=hcmLoad(); var P=D.perfil||{};
+  var nom=(P.nombre||'Cadete').split(' ')[0];
+  var carril=P.carril||'medio';
+  var h=hcmHechas();
+  var hechas=hcmCuantasHechas();
+  var sug=hcmSugerida();
+  var pct=Math.round((hechas/PARADAS_HCM)*100);
+  var chips={bajo:'🟡 Básico',medio:'🟠 Intermedio',alto:'🔴 Avanzado'};
+  var ritmo=HCM_RITMOS[hcmRitmo()];
+  var rows='';
+  for(var i=1;i<=PARADAS_HCM;i++){
+    var lec=LECCIONES_HCM[i]; if(!lec)continue;
+    var esEx=!!lec.examen;
+    var cls='hcm-parada', icTxt=String(i), etiTxt='Lección '+i+' · '+lec.fecha;
+    if(esEx){ etiTxt=lec.fecha; icTxt='⚑'; cls+=' examen'; }
+    else if(h[i]){ cls+=' hecha'; icTxt='✓'; }
+    else if(i===sug){ cls+=' actual sugerida'; }
+    rows+='<div class="'+cls+'" data-n="'+i+'">'+
+      '<div class="hcm-par-ic">'+icTxt+'</div>'+
+      '<div class="hcm-par-tx">'+
+      '<div class="hcm-par-eti">'+etiTxt+(i===sug&&!esEx?' · te toca':'')+'</div>'+
+      '<div class="hcm-par-nom">'+lec.titulo+'</div>'+
+      '<div class="hcm-par-sub">'+lec.sub+'</div>'+
+      '</div></div>';
+  }
+  document.getElementById('app').innerHTML=
+    '<div class="hcm-mapa"><div class="hcm-mapa-cab">'+
+    '<div class="hcm-saludo">Bienvenido, cadete.</div>'+
+    '<div class="hcm-nombre">'+nom+'</div>'+
+    '<button class="hcm-chip-bt" id="hcm-bt-carril">'+
+      '<span class="hcm-carril-chip '+carril+'">'+(chips[carril]||carril)+' ›</span></button>'+
+    '<div class="hcm-prog-fila">'+
+    '<div class="hcm-prog-bar"><div class="hcm-prog-fill" style="width:'+pct+'%"></div></div>'+
+    '<div class="hcm-prog-txt">'+hechas+' de '+PARADAS_HCM+'</div></div>'+
+    '<p class="hcm-plan">'+ritmo.nom.toLowerCase()+' · '+
+      '<button class="hcm-chip-bt" id="hcm-bt-ritmo" style="text-decoration:underline">cambiar ritmo</button></p>'+
+    '<p class="hcm-plan">Todas las lecciones están abiertas. Entra a la que quieras.</p>'+
+    '</div><div class="hcm-paradas">'+rows+'</div></div>';
+
+  document.querySelectorAll('.hcm-parada').forEach(function(el){
+    el.onclick=function(){
+      var n=+el.dataset.n;
+      var L=LECCIONES_HCM[n];
+      if(L&&L.examen){ irAParadaHCM(n); return; }
+      hcmElegirSesion(n);
+    };
+  });
+  var bc=document.getElementById('hcm-bt-carril'); if(bc)bc.onclick=hcmElegirCarril;
+  var br=document.getElementById('hcm-bt-ritmo');  if(br)br.onclick=hcmElegirRitmo;
+  setTimeout(function(){
+    var a=document.querySelector('.hcm-parada.sugerida');
+    if(a)a.scrollIntoView({behavior:'smooth',block:'center'});
+  },200);
+}
+
+/* ── el Cerebro, en todas las pantallas ──
+   Antes el boton se escondia dentro de las lecciones y preguntaba con
+   prompt(), que en el telefono tapa la pantalla. Ahora es una hoja
+   normal y no se esconde nunca. */
+function mostrarAyudaSiToca(){
+  var ay=document.getElementById('btnayuda');
+  if(ay)ay.classList.remove('escondido');
+}
+function hcmRespaldoEscrito(n){
+  var raw=MATERIAL_HCM[n]||[];
+  for(var i=0;i<raw.length;i++){
+    if(raw[i].k==='regla'){
+      var r=raw[i];
+      return '<b>'+esc(r.titulo||'')+'</b><br>'+esc(r.regla||'')+
+        (r.bien?'<br><br>Así sí: <i>'+esc(r.bien)+'</i>':'')+
+        (r.mal?'<br>Así no: '+esc(r.mal):'')+
+        (r.porque?'<br><br>'+esc(r.porque):'');
+    }
+  }
+  return 'Vuelve a la regla de la lección y léela despacio. En cuanto haya señal te explico con más detalle.';
+}
+function hcmCerebro(){
+  var D=hcmLoad(); var P=D.perfil||{};
+  var n=P.viendo||P.parada_actual||hcmSugerida();
+  var lec=LECCIONES_HCM[n]||{};
+  var h=hcmHoja(
+    '<h3>¿Qué no te cuadra?</h3>'+
+    '<p class="sub">Pregúntame en español o en inglés. Estoy en la lección '+n+
+      (lec.titulo?': '+esc(lec.titulo):'')+'.</p>'+
+    '<textarea id="hcm-duda" placeholder="Por ejemplo: ¿cuándo uso because y cuándo because of?"></textarea>'+
+    '<button class="hcm-op sel" id="hcm-duda-ok" style="text-align:center;margin-top:10px">'+
+      '<b>Preguntar</b></button>'+
+    '<div id="hcm-duda-resp"></div>');
+  var ta=h.querySelector('#hcm-duda');
+  setTimeout(function(){try{ta.focus();}catch(e){}},300);
+  h.querySelector('#hcm-duda-ok').onclick=function(){
+    var q=(ta.value||'').trim();
+    if(!q)return;
+    var caja=h.querySelector('#hcm-duda-resp');
+    caja.innerHTML='<div class="hcm-resp"><div class="de">Tu maestro</div>Pensando…</div>';
+    function pintar(txt, de){
+      caja.innerHTML='<div class="hcm-resp"><div class="de">'+de+'</div>'+txt+'</div>';
+    }
+    if(!IA_ENDPOINT){ pintar(hcmRespaldoEscrito(n), 'Sin conexión · la regla'); return; }
+    var corto=setTimeout(function(){
+      pintar(hcmRespaldoEscrito(n), 'Sin conexión · la regla');
+      corto=null;
+    }, 12000);
+    fetch(IA_ENDPOINT,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({accion:'ayuda',datos:{
+        pregunta:q, leccion:n, carril:P.carril||'medio'
+      }})
+    }).then(function(r){return r.ok?r.json():null;})
+      .then(function(d){
+        if(corto===null)return; clearTimeout(corto);
+        var res=d&&d.ok&&d.resultado;
+        var txt=res&&(res.respuesta||res.texto);
+        if(txt)pintar(esc(txt).replace(/\n/g,'<br>'), 'Tu maestro');
+        else pintar(hcmRespaldoEscrito(n), 'La regla de esta lección');
+      })
+      .catch(function(){
+        if(corto===null)return; clearTimeout(corto);
+        pintar(hcmRespaldoEscrito(n), 'Sin conexión · la regla');
+      });
+  };
+}
+document.addEventListener('DOMContentLoaded', function(){
+  var fab=document.getElementById('btnayuda');
+  if(fab){
+    var nuevo=fab.cloneNode(true);       // se van los listeners viejos
+    nuevo.classList.remove('escondido');
+    fab.parentNode.replaceChild(nuevo, fab);
+    nuevo.onclick=function(e){ e.preventDefault(); hcmCerebro(); };
+    nuevo.title='Pregúntale a tu maestro';
+  }
+  var D=hcmLoad(); var P=D.perfil||{};
+  if(P.largo_pref)HCM_SESION=P.largo_pref;
+});
+
 })();
 
 </script>
