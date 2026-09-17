@@ -8325,7 +8325,7 @@ var IA_ENDPOINT='https://script.google.com/macros/s/AKfycbxlAGlMVpdjqLZ_yh-Oh393
 var VOZ_ENDPOINT='https://script.google.com/macros/s/AKfycbxJgynQD_GCLvdzlDNUrc8AnnWbTeS-1G6_lqIkNjelpB7Mqbjeg-qH3_tpidzNMGiK/exec';
 // Servidor de datos: si lo pones, cada sesión se guarda sola en tu hoja.
 // Si está vacío, el alumno tiene que mandarla por correo.
-var DATOS_ENDPOINT='https://script.google.com/macros/s/AKfycbypVtZ3xzUURmChQzMsYM3rE-kiRt5e9NXLJ3QfBg8R7VpJx_0vtitQM1eb7i-wzTr1xA/exec';
+var DATOS_ENDPOINT='https://script.google.com/macros/s/AKfycbyW4nHbMi8a4pcOS_0PUOYR053PEYwQ0tFjm9hZM4Tx7kq2hK6VdrZy9PGqyrlsSrimng/exec';
 
 /* Buscador de videos. Si esta linea queda vacia, la app sigue funcionando
    igual que antes: en vez del recuadro ofrece abrir la busqueda en YouTube. */
@@ -11490,6 +11490,14 @@ function armarSesionHCM(n){
     if(carril.ver_texto)y._ver_texto=true;
     if(carril.pista_auto)y._pista_auto=true;
     y._pct=carril.pct;
+    // El material del HCM marca la respuesta con el numero de la opcion
+    // ("correcta"); el motor la busca por texto, en "bien". Sin esta
+    // traduccion el motor comparaba contra undefined y daba por mala
+    // hasta la respuesta buena: salia "Era undefined".
+    if(typeof y.correcta==='number'){
+      if(y.k==='dosc')      y.bien = (y.correcta===0?'a':'b');
+      else if(y.ops&&y.ops.length) y.bien = y.ops[y.correcta];
+    }
     return y;
   });
   return {
