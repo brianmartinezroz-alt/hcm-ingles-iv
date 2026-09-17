@@ -12078,7 +12078,8 @@ function mostrarMapa(){
     '<div class="hcm-prog-txt">'+hechas+' de '+PARADAS_HCM+'</div></div>'+
     '<p class="hcm-plan">'+ritmo.nom.toLowerCase()+' · '+
       '<button class="hcm-chip-bt" id="hcm-bt-ritmo" style="text-decoration:underline">cambiar ritmo</button></p>'+
-    '<p class="hcm-plan">Todas las lecciones están abiertas. Entra a la que quieras.</p>'+
+    '<p class="hcm-plan">Todas las lecciones están abiertas. Entra a la que quieras. \u00b7 '+
+      '<button class="hcm-chip-bt" id="hcm-bt-tutorial" style="text-decoration:underline">ver el tutorial</button></p>'+
     '</div><div class="hcm-paradas">'+rows+'</div></div>';
 
   document.querySelectorAll('.hcm-parada').forEach(function(el){
@@ -12091,6 +12092,10 @@ function mostrarMapa(){
   });
   var bc=document.getElementById('hcm-bt-carril'); if(bc)bc.onclick=hcmElegirCarril;
   var br=document.getElementById('hcm-bt-ritmo');  if(br)br.onclick=hcmElegirRitmo;
+  var bt=document.getElementById('hcm-bt-tutorial');
+  if(bt)bt.onclick=function(){hcmGuardarPerfil('tutorHCM',false);hcmTutorial();};
+  // La primera vez arranca solo, en cuanto el mapa ya esta pintado.
+  if(!P.tutorHCM)setTimeout(hcmTutorial,700);
   setTimeout(function(){
     var a=document.querySelector('.hcm-parada.sugerida');
     if(a)a.scrollIntoView({behavior:'smooth',block:'center'});
@@ -12177,6 +12182,54 @@ document.addEventListener('DOMContentLoaded', function(){
   var D=hcmLoad(); var P=D.perfil||{};
   if(P.largo_pref)HCM_SESION=P.largo_pref;
 });
+
+
+
+/* ══════════════════════════════════════════════════════════════════
+   HCM · el tutorial de la primera vez
+   Reaprovecha el motor de arriba (arrancarTutor / pintarTutor) pero
+   con los pasos de esta app: todas las lecciones abiertas, el ritmo,
+   el carril y el Cerebro. Se puede saltar y volver a ver.
+   ══════════════════════════════════════════════════════════════════ */
+
+function pasosTutor(){
+  return [
+    {donde:null, titulo:'Esto es todo tu curso',
+     txt:'Diecisiete lecciones y los dos parciales. No hay que acabarlo hoy ni esta semana: es para todo el ciclo.'},
+    {donde:'.hcm-parada.sugerida', titulo:'Ésta es la que te toca',
+     txt:'Va marcada para que no tengas que pensarlo. Pero todas están abiertas: si quieres entrar a la última, entras.'},
+    {donde:'.hcm-parada.sugerida', titulo:'Tú dices cuánto tiempo traes',
+     txt:'Al tocar una lección te pregunta: un rato de cinco minutos, la lección completa de veinte, o una sesión larga de fin de semana.'},
+    {donde:'#hcm-bt-ritmo', titulo:'Y cada cuándo entras',
+     txt:'Diario, unos días, o solo los fines de semana. Si faltas una semana no pasa nada: retomas donde ibas.'},
+    {donde:'#hcm-bt-carril', titulo:'Tu nivel, ajustable',
+     txt:'Si una lección se te hace fácil, súbete de nivel aquí. Si te está costando, bájate. No afecta tu calificación.'},
+    {donde:'#btnayuda', titulo:'Éste es tu maestro',
+     txt:'Pregúntale lo que sea, en español o en inglés, desde cualquier pantalla. Y si te queda sin señal, te da la regla de la lección completa.'},
+    {donde:'[data-t="avance"]', titulo:'Tu avance',
+     txt:'Aquí ves cuántas lecciones llevas cerradas y qué frases se te atoran.'},
+    {donde:'[data-t="maestro"]', titulo:'Y el profe',
+     txt:'Por aquí le escribes al profesor Brian si algo no se entiende. Contesta una persona, no la máquina.'}
+  ];
+}
+
+/* Al cerrar: guardar la marca del HCM y no llamar al saludo del motor
+   viejo, que hablaba de otro curso. */
+function cerrarTutor(){
+  TUTOR_VIVO=false;
+  var v=document.getElementById('tutor');
+  if(v&&v.remove)v.remove();
+  try{ var d=load(); d.tutorVisto=true; save(d); D=d; }catch(e){}
+  hcmGuardarPerfil('tutorHCM', true);
+}
+
+function hcmTutorial(){
+  hcmCerrarHoja();
+  var D=hcmLoad(); var P2=D.perfil||{};
+  if(!P2.nombre)return;                       // todavia no se registra
+  if(document.getElementById('hcm-hoja'))return;
+  try{ arrancarTutor(); }catch(e){}
+}
 
 })();
 
