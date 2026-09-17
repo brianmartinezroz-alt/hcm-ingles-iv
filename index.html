@@ -1465,6 +1465,14 @@ body{color:var(--tinta)}
 .dudab-i{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;
   border-radius:50%;background:var(--dorado);color:#FBF7EC;font-size:12px;font-weight:700;
   line-height:1;vertical-align:-3px;margin-right:4px}
+
+/* ── elegir grupo tocando, sin teclear ── */
+.hcm-grupos{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.hcm-grupo{font-family:var(--mono);font-size:13px;font-weight:500;padding:10px 0;
+  background:var(--papel);color:var(--tinta-2);border:1.5px solid var(--linea);
+  border-radius:9px;cursor:pointer;transition:.12s}
+.hcm-grupo:active{transform:scale(.94)}
+.hcm-grupo.sel{background:var(--verde);border-color:var(--verde);color:#F5E9C9;font-weight:700}
 </style>
 
 
@@ -11153,6 +11161,8 @@ var KEY_HCM='hcm_iv_v1';
 // del HCM, que escribe en la hoja de calificaciones por grupo.
 var HCM_DATOS_ENDPOINT='https://script.google.com/macros/s/AKfycbypVtZ3xzUURmChQzMsYM3rE-kiRt5e9NXLJ3QfBg8R7VpJx_0vtitQM1eb7i-wzTr1xA/exec';
 var CLAVE_JEFE_HCM='hcm2026'; // clave para el panel del maestro
+var GRUPOS_HCM=['101','102','103','104','105','106','107','108',
+               '109','110','111','112','113','114','115'];
 var PARADAS_HCM=19;
 var EXAMENES_HCM=[9,18,19];
 var LECCIONES_HCM=[null,
@@ -11358,29 +11368,42 @@ function pantallLogin(){
     '<div class="hcm-form">'+
     '<div class="hcm-campo"><label>Nombre completo</label>'+
     '<input type="text" id="hcm-nom" placeholder="García Mendoza Rodrigo" autocomplete="name"></div>'+
-    '<div class="hcm-campo"><label>Número de cadete</label>'+
-    '<input type="password" id="hcm-cla" placeholder="Tu número de cadete" inputmode="numeric"></div>'+
-    '<div class="hcm-campo"><label>Grupo</label>'+
-    '<input type="text" id="hcm-gru" placeholder="101" inputmode="numeric" maxlength="3"></div>'+
+    '<div class="hcm-campo"><label>Tu grupo</label>'+
+    '<div class="hcm-grupos" id="hcm-grupos">'+
+      GRUPOS_HCM.map(function(g){
+        return '<button type="button" class="hcm-grupo" data-g="'+g+'">'+g+'</button>';
+      }).join('')+
+    '</div></div>'+
     '<button class="hcm-btn-login" id="hcm-ok">Entrar</button></div></div>';
+  var GRUPO_ELEGIDO='';
   (function(){
     var yo=(hcmLoad().perfil)||{};
     if(yo.nombre)document.getElementById('hcm-nom').value=yo.nombre;
-    if(yo.grupo)document.getElementById('hcm-gru').value=yo.grupo;
+    if(yo.grupo)GRUPO_ELEGIDO=yo.grupo;
+    document.querySelectorAll('.hcm-grupo').forEach(function(b){
+      b.classList.toggle('sel', b.dataset.g===GRUPO_ELEGIDO);
+      b.onclick=function(){
+        GRUPO_ELEGIDO=b.dataset.g;
+        document.querySelectorAll('.hcm-grupo').forEach(function(x){
+          x.classList.toggle('sel', x===b);
+        });
+      };
+    });
   })();
   document.getElementById('hcm-ok').onclick=function(){
     var nom=(document.getElementById('hcm-nom').value||'').trim();
-    var cla=(document.getElementById('hcm-cla').value||'').trim();
-    var gru=(document.getElementById('hcm-gru').value||'').trim();
-    if(!nom||!cla){alert('Escribe tu nombre y número de cadete.');return;}
-    if(!/^1(0[1-9]|1[0-5])$/.test(gru)){alert('Escribe tu grupo: del 101 al 115.');return;}
+    var gru=GRUPO_ELEGIDO;
+    if(nom.split(/\s+/).filter(Boolean).length<2){
+      alert('Escribe tu nombre completo: apellidos y nombre.');return;
+    }
+    if(!gru){alert('Toca tu grupo.');return;}
     var Dh=hcmLoad();
-    if(!Dh.perfil)Dh.perfil={nombre:nom,num_cadete:cla,grupo:gru,carril:'pendiente',parada:1};
-    Dh.perfil.nombre=nom;Dh.perfil.num_cadete=cla;Dh.perfil.grupo=gru;hcmSave(Dh);
+    if(!Dh.perfil)Dh.perfil={nombre:nom,grupo:gru,carril:'pendiente',parada:1};
+    Dh.perfil.nombre=nom;Dh.perfil.grupo=gru;delete Dh.perfil.num_cadete;hcmSave(Dh);
     if(!Dh.perfil.carril||Dh.perfil.carril==='pendiente'){pantalaDiagnostico();}
     else{hcmSincronizarPerfil();mostrarMapa();}
   };
-  ['hcm-nom','hcm-cla','hcm-gru'].forEach(function(id){
+  ['hcm-nom'].forEach(function(id){
     var el=document.getElementById(id);
     if(el)el.addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('hcm-ok').click();});
   });
@@ -11526,7 +11549,7 @@ function hcmAvance(){
   try{curva=curvaDeAvance();}catch(e){}
   var h2=atras()+'<div class="qcard"><div class="qlbl">Tu avance</div>'+
     '<div class="qtxt">'+esc(Ph.nombre||'')+'</div>'+
-    '<div class="qsub">Cadete #'+esc(Ph.num_cadete||'')+' \u00b7 grupo '+esc(Ph.grupo||'')+
+    '<div class="qsub">Grupo '+esc(Ph.grupo||'')+
     ' \u00b7 '+(chips[Ph.carril]||'')+'</div>'+
     '<div class="hcm-prog-fila" style="margin:14px 0">'+
     '<div class="hcm-prog-bar"><div class="hcm-prog-fill" style="width:'+pct+'%"></div></div>'+
@@ -11566,6 +11589,16 @@ function menu(){
   };
 }
 
+/* La llave del cadete en la hoja. Antes era su número; ahora que solo
+   escriben su nombre, se arma con el nombre mismo: minúsculas, sin
+   acentos y sin espacios. Así su renglón sigue siendo el mismo cada
+   sesión aunque un día escriba "García" y otro "Garcia". */
+function claveCadete(nombre){
+  return String(nombre||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().replace(/[^a-z0-9]/g,'');
+}
+
 /* Puente con el motor: el motor guarda su alumno en P. El cadete se
    registra en la capa HCM, asi que aqui se traduce uno al otro. */
 function hcmSincronizarPerfil(){
@@ -11584,7 +11617,7 @@ function hcmSincronizarPerfil(){
      meta_es:'hablar ingl\u00e9s en el servicio', meta_en:'to speak English on duty',
      enfoque:'militar', enfoque_es:'ingl\u00e9s militar y de servicio',
      carril:P2.carril||'medio',
-     num_cadete:P2.num_cadete||'', grupo:P2.grupo||'',
+     grupo:P2.grupo||'', clave:claveCadete(P2.nombre),
      parada_actual:P2.parada||1};
   try{var d=load(); d.perfil=P; d.tutorVisto=true; save(d); D=d;}catch(e){}
   vioMarca=true; vioSaludo=true;
@@ -11617,7 +11650,7 @@ function hcmGuardarAvance(leccion, intentos, segundos) {
       body: JSON.stringify({
         accion: 'guardar',
         nombre: P2.nombre || '',
-        num_cadete: P2.num_cadete || '',
+        num_cadete: claveCadete(P2.nombre),
         grupo: P2.grupo || '101',
         carril: P2.carril || 'medio',
         leccion: leccion,
@@ -11713,7 +11746,7 @@ function hcmPanelMaestro() {
           var chip={bajo:'🟡',medio:'🟠',alto:'🔴'}[c.carril]||'⚪';
           html+='<div style="padding:10px 12px;background:var(--papel);border:1.5px solid var(--linea);border-radius:10px">'+
             '<div style="display:flex;justify-content:space-between;align-items:center">'+
-            '<div><b style="font-size:13px">'+c.nombre+'</b> <span style="font-size:11px;color:var(--tenue)">#'+c.num+'</span></div>'+
+            '<div><b style="font-size:13px">'+c.nombre+'</b></div>'+
             '<span>'+chip+'</span></div>'+
             '<div style="font-size:11px;color:var(--tenue);margin-top:4px">'+
             'Lección '+c.leccion+' · '+c.minutos+' min · '+c.sesiones+' sesiones · '+
