@@ -1467,8 +1467,8 @@ body{color:var(--tinta)}
   line-height:1;vertical-align:-3px;margin-right:4px}
 
 /* ── elegir grupo tocando, sin teclear ── */
-.hcm-grupos{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
-.hcm-grupo{font-family:var(--mono);font-size:13px;font-weight:500;padding:10px 0;
+.hcm-grupos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.hcm-grupo{font-family:var(--mono);font-size:16px;font-weight:500;padding:14px 0;
   background:var(--papel);color:var(--tinta-2);border:1.5px solid var(--linea);
   border-radius:9px;cursor:pointer;transition:.12s}
 .hcm-grupo:active{transform:scale(.94)}
@@ -11161,8 +11161,7 @@ var KEY_HCM='hcm_iv_v1';
 // del HCM, que escribe en la hoja de calificaciones por grupo.
 var HCM_DATOS_ENDPOINT='https://script.google.com/macros/s/AKfycbypVtZ3xzUURmChQzMsYM3rE-kiRt5e9NXLJ3QfBg8R7VpJx_0vtitQM1eb7i-wzTr1xA/exec';
 var CLAVE_JEFE_HCM='hcm2026'; // clave para el panel del maestro
-var GRUPOS_HCM=['101','102','103','104','105','106','107','108',
-               '109','110','111','112','113','114','115'];
+var GRUPOS_HCM=['301','302','303','304','305','306'];
 var PARADAS_HCM=19;
 var EXAMENES_HCM=[9,18,19];
 var LECCIONES_HCM=[null,
@@ -11651,7 +11650,7 @@ function hcmGuardarAvance(leccion, intentos, segundos) {
         accion: 'guardar',
         nombre: P2.nombre || '',
         num_cadete: claveCadete(P2.nombre),
-        grupo: P2.grupo || '101',
+        grupo: P2.grupo || '301',
         carril: P2.carril || 'medio',
         leccion: leccion,
         intentos: intentos || [],
