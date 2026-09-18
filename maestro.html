@@ -1,0 +1,825 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Inglés IV · Panel del docente</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --papel:#F0EADB; --tarjeta:#FBF7EC; --papel-2:#E5DDC8;
+    --tinta:#17120B; --tinta-2:#463C2D; --tenue:#8A7C66; --linea:#D9CFB6;
+    --oro:#8F7320; --oro-h:#6E5716; --oro-luz:#C9A84C; --oro-s:#F7F0DA;
+    --negro:#1A150E; --rojo:#9B2C2C; --verde:#2F6B33;
+    --display:'Libre Baskerville',Georgia,serif;
+    --cuerpo:'Inter',system-ui,-apple-system,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--papel);color:var(--tinta);font-family:var(--cuerpo);
+       -webkit-font-smoothing:antialiased;font-size:15px;line-height:1.5}
+  a{color:var(--oro-h)}
+
+  /* ── cabecera ── */
+  header{position:sticky;top:0;z-index:20;background:var(--negro);color:#F5E9C9;
+         border-bottom:2px solid var(--oro-luz)}
+  .cab{max-width:1080px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;gap:14px}
+  .cab .esc{width:30px;height:30px;flex:none}
+  .cab h1{font-family:var(--display);font-size:17px;margin:0;font-weight:700;letter-spacing:-.01em}
+  .cab .sub{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+            color:var(--oro-luz);display:block;margin-bottom:1px}
+  .cab .sp{flex:1}
+  .salir{background:none;border:1.5px solid rgba(201,168,76,.5);color:#F5E9C9;border-radius:18px;
+         padding:6px 14px;font:inherit;font-size:13px;cursor:pointer}
+  .salir:hover{background:rgba(201,168,76,.18)}
+
+  nav.tabs{background:var(--negro);border-bottom:1px solid rgba(201,168,76,.28)}
+  nav.tabs .in{max-width:1080px;margin:0 auto;padding:0 18px;display:flex;gap:2px}
+  nav.tabs button{background:none;border:0;border-bottom:3px solid transparent;color:#C8BBA4;
+    font:inherit;font-weight:600;padding:11px 16px;cursor:pointer;font-size:14px}
+  nav.tabs button.on{color:#F5E9C9;border-bottom-color:var(--oro-luz)}
+
+  main{max-width:1080px;margin:0 auto;padding:22px 18px 70px}
+
+  /* ── entrada ── */
+  .entrada{max-width:380px;margin:12vh auto;text-align:center}
+  .entrada .esc{width:58px;height:58px;margin-bottom:18px}
+  .entrada h2{font-family:var(--display);font-size:26px;margin:0 0 6px}
+  .entrada p{color:var(--tinta-2);margin:0 0 22px;font-size:14px}
+  .campo{display:flex;gap:8px}
+  input,select,textarea{font:inherit;color:var(--tinta);background:var(--tarjeta);
+    border:1.5px solid var(--linea);border-radius:10px;padding:11px 13px}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--oro)}
+  .bt{background:var(--negro);color:#F5E9C9;border:0;border-radius:10px;padding:11px 20px;
+      font:inherit;font-weight:600;cursor:pointer}
+  .bt:hover{background:#2a2216}
+  .bt.claro{background:var(--tarjeta);color:var(--tinta);border:1.5px solid var(--linea);font-weight:500}
+  .bt.claro:hover{background:var(--oro-s);border-color:var(--oro)}
+  .err{color:var(--rojo);font-size:14px;margin-top:12px}
+
+  /* ── lista de lecciones ── */
+  .filtro{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+  .filtro label{font-size:13px;color:var(--tinta-2)}
+  .rejilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+  .lec{background:var(--tarjeta);border:1.5px solid var(--linea);border-radius:13px;padding:14px 16px;
+       cursor:pointer;text-align:left;font:inherit;color:inherit;display:flex;gap:13px;align-items:flex-start}
+  .lec:hover{border-color:var(--oro);background:var(--oro-s)}
+  .lec .n{flex:none;width:30px;height:30px;border-radius:50%;background:var(--negro);color:var(--oro-luz);
+          font-family:var(--mono);font-size:13px;display:flex;align-items:center;justify-content:center}
+  .lec.ex .n{background:var(--oro);color:#fff}
+  .lec .t{font-weight:600;font-size:15px;margin-bottom:2px}
+  .lec .s{font-size:13px;color:var(--tinta-2)}
+  .lec .f{font-family:var(--mono);font-size:11px;color:var(--tenue);margin-top:5px}
+
+  /* ── detalle de leccion ── */
+  .volver{background:none;border:0;font:inherit;color:var(--oro-h);cursor:pointer;padding:0;
+          margin-bottom:14px;font-size:14px}
+  .tit{font-family:var(--display);font-size:25px;margin:0 0 4px;line-height:1.2}
+  .tit-s{color:var(--tinta-2);margin:0 0 6px}
+  .meta{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+        color:var(--oro);margin-bottom:18px}
+  .acciones{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:22px}
+
+  .item{background:var(--tarjeta);border:1.5px solid var(--linea);border-radius:13px;
+        padding:15px 17px;margin-bottom:11px;position:relative}
+  .item.regla{background:var(--negro);color:#F0EADB;border-color:var(--oro)}
+  .item.regla .tipo{background:var(--oro);color:#fff;border-color:var(--oro)}
+  .item.regla b{color:var(--oro-luz)}
+  .item .tipo{position:absolute;right:13px;top:13px;font-family:var(--mono);font-size:10px;
+    letter-spacing:.1em;text-transform:uppercase;background:var(--papel-2);color:var(--tinta-2);
+    border:1px solid var(--linea);border-radius:20px;padding:3px 9px}
+  .item h4{margin:0 0 9px;font-size:16px;padding-right:96px}
+  .item p{margin:0 0 8px}
+  .item .en{font-family:var(--display);font-size:16px}
+  .item .es{color:var(--tinta-2);font-size:14px}
+  .ops{list-style:none;margin:9px 0 0;padding:0}
+  .ops li{padding:7px 11px;border-radius:8px;margin-bottom:5px;background:var(--papel);
+          border:1.5px solid var(--linea);font-size:14px}
+  .ops li.bien{border-color:#4F7942;background:#EDF4EA;font-weight:600}
+  .ops li.bien::after{content:' ✓ correcta';font-family:var(--mono);font-size:10px;color:#3D6134;
+                      letter-spacing:.08em}
+  .carriles{display:flex;gap:5px;margin-top:11px}
+  .cchip{font-family:var(--mono);font-size:10px;letter-spacing:.06em;border-radius:20px;
+         padding:2px 8px;border:1px solid var(--linea);color:var(--tenue)}
+  .cchip.si{background:var(--oro-s);border-color:var(--oro);color:var(--oro-h)}
+  .solo-alto{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+             color:var(--rojo);margin-top:9px}
+  .bien-mal{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:11px 0}
+  .bien-mal div{border-radius:9px;padding:10px 12px;font-family:var(--display);font-size:14px}
+  .bien-mal .si{background:rgba(237,244,234,.14);border:1.5px solid #6D9160}
+  .bien-mal .no{background:rgba(155,44,44,.14);border:1.5px solid #B4564F;text-decoration:line-through;
+                opacity:.8}
+
+  /* ── grupos ── */
+  .resumen{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:11px;margin-bottom:22px}
+  .caja{background:var(--tarjeta);border:1.5px solid var(--linea);border-radius:12px;padding:13px 15px}
+  .caja .k{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+           color:var(--oro);margin-bottom:5px}
+  .caja .v{font-family:var(--display);font-size:25px;line-height:1}
+  h3.grupo{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+           color:var(--oro-h);margin:26px 0 9px;border-bottom:1px solid var(--linea);padding-bottom:6px}
+  table{width:100%;border-collapse:collapse;background:var(--tarjeta);border-radius:12px;overflow:hidden;
+        border:1.5px solid var(--linea);font-size:14px}
+  th{background:var(--papel-2);text-align:left;padding:9px 11px;font-size:11px;font-family:var(--mono);
+     letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-2);cursor:pointer;white-space:nowrap}
+  th:hover{color:var(--oro-h)}
+  td{padding:9px 11px;border-top:1px solid var(--linea)}
+  td.num{font-family:var(--mono);text-align:right}
+  tr:hover td{background:var(--oro-s)}
+  .car{font-family:var(--mono);font-size:11px;border-radius:20px;padding:2px 8px;border:1px solid}
+  .car.bajo{color:#8A6D00;border-color:#D9B84C;background:#FBF3D9}
+  .car.medio{color:#8F5A20;border-color:#D9A04C;background:#FBEBD9}
+  .car.alto{color:#8B2B2B;border-color:#C96A6A;background:#FBE0E0}
+  .vacio{color:var(--tenue);font-size:14px;padding:18px 0}
+  .nota{background:var(--oro-s);border:1.5px solid var(--oro);border-radius:12px;padding:13px 16px;
+        font-size:14px;margin-bottom:20px}
+  .nota b{color:var(--oro-h)}
+
+  @media print{
+    header,nav.tabs,.acciones,.volver,.filtro{display:none!important}
+    body{background:#fff}
+    .item{break-inside:avoid;border-color:#bbb}
+    .item.regla{background:#fff;color:#000;border:2px solid #000}
+    .item.regla b{color:#000}
+  }
+  @media (max-width:560px){
+    .bien-mal{grid-template-columns:1fr}
+    .cab h1{font-size:15px}
+    table{font-size:13px}
+    td,th{padding:7px 8px}
+  }
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+
+<!-- Copia de respaldo del material, del 17/09/2026. Solo se usa si no se
+     puede leer el index.html de la app; lo normal es leerlo en vivo. -->
+<script>
+window.__HCM_SNAP = {LEC:[null,
+  {titulo:"I'd like to open an account",    sub:"Present progressive · banca",              fecha:"17 Sep"},
+  {titulo:"The cake is delicious",           sub:"Because clauses · verbos copulativos",        fecha:"25 Sep"},
+  {titulo:"He was talking when he hit the car",sub:"Past progressive · accidentes",         fecha:"2 Oct"},
+  {titulo:"You must obey traffic laws",     sub:"Ask/tell · comparar y contrastar",                fecha:"8 Oct"},
+  {titulo:"Ted can repair the car",         sub:"Repaso de vocabulario 1–4",                     fecha:"19 Oct"},
+  {titulo:"Should I ask Lt Clark for help?",sub:"Should/could · adverbios en -ly",                  fecha:"22 Oct"},
+  {titulo:"He realized the tank was empty", sub:"Verb + that + noun clause",                fecha:"29 Oct"},
+  {titulo:"I apologize for breaking your window",sub:"Apologize + for + gerund",            fecha:"6 Nov"},
+  {titulo:"1ª Evaluación Parcial",          sub:"ALC Book 11 · versión A, B o C",          fecha:"13 Nov",examen:true},
+  {titulo:"Tell me how to",                 sub:"How + to-infinitive · aparatos",           fecha:"3 Dic"},
+  {titulo:"Sue exercises before she goes to work",sub:"Before/after · be supposed to",     fecha:"11 Dic"},
+  {titulo:"Like shopping in the mall",      sub:"Preposiciones de lugar · gerundio",          fecha:"18 Dic"},
+  {titulo:"Let me introduce",               sub:"Adjetivo + to-infinitive",fecha:"11 Ene"},
+  {titulo:"Can you change a flat tire?",    sub:"Presente simple como futuro",        fecha:"18 Ene"},
+  {titulo:"Would you introduce your family?",sub:"Modal auxiliaries · solicitudes",         fecha:"22 Ene"},
+  {titulo:"What kind of work can I do?",    sub:"Be able to · ocupaciones",                 fecha:"1 Feb"},
+  {titulo:"How far is it from El Paso to Houston?",sub:"How long/far · impersonal it",     fecha:"9 Feb"},
+  {titulo:"2ª Evaluación Parcial",          sub:"ALC Book 12 · versión A, B o C",          fecha:"15 Feb",examen:true},
+  {titulo:"Evaluación Final",               sub:"ALC Book 11 + 12 combinados",             fecha:"16 Feb",examen:true}
+], MAT:{
+  1:[
+    {k:"regla",titulo:"Present Progressive para planes futuros",regla:"Usa 'be + verb-ing' para hablar de planes ya confirmados.",bien:"I'm meeting the captain tomorrow.",mal:"I meet the captain tomorrow.",porque:"El presente progresivo con tiempo futuro indica un plan organizado.",en:"I'm meeting the captain tomorrow."},
+    {k:"idea",audio:"I'd like to open a savings account. I need to make a deposit of five hundred pesos.",en:"I'd like to open a savings account.",es:"Quisiera abrir una cuenta de ahorros.",ops:["Está en un banco pidiendo información.","Está comprando en una tienda.","Está pagando una multa."],correcta:0},
+    {k:"dosc",audio:"I'd like to open an account.",en:"I'd like to open an account.",a:"I'd like to open an account.",b:"I'd like to close an account.",correcta:0},
+    {k:"hueco",antes:"I'd like ",despues:" a savings account.",es:"Quisiera abrir una cuenta de ahorros.",ops:["to open","opening","open"],correcta:0},
+    {k:"model",en:"I'd like to open an account.",es:"Quisiera abrir una cuenta."},
+    {k:"model",en:"I need to make a deposit.",es:"Necesito hacer un depósito."},
+    {k:"ask",q:"What would you like to do at the bank today?",es:"¿Qué quisiera hacer hoy en el banco?",meta:"I'd like to make a deposit.",pista:"Say: I'd like to..."},
+    {k:"transf",origen:"She opens an account.",pide:"Pásala al presente progresivo.",meta:"She's opening an account.",pista:"She's opening..."}
+  ],
+  2:[
+    {k:"regla",titulo:"Because + cláusula · verbos copulativos",regla:"'Because' va seguido de sujeto + verbo. Los verbos copulativos (taste, look, smell, sound, feel) van con adjetivo, no con adverbio.",bien:"The cake tastes good because it has fresh butter.",mal:"The cake tastes well because of it has butter.",porque:"'Tastes' pide adjetivo (good), y 'because' pide sujeto + verbo.",en:"The cake tastes good because it has fresh butter."},
+    {k:"idea",audio:"This cake is delicious. It tastes sweet but not too sweet, and it smells like oranges. I think it's so good because the cook used real butter and fresh eggs.",en:"It's so good because the cook used real butter.",es:"Está tan bueno porque el cocinero usó mantequilla de verdad.",ops:["Explica por qué el pastel está bueno.","Pide la receta del pastel.","Se queja del sabor del pastel."],correcta:0},
+    {k:"dosc",audio:"The soup tastes salty.",en:"The soup tastes salty.",a:"The soup tastes salty.",b:"The soup tastes salt.",correcta:0},
+    {k:"hueco",antes:"I like this bread ",despues:" it smells fresh.",es:"Me gusta este pan porque huele fresco.",ops:["because","because of","so"],correcta:0},
+    {k:"hueco",antes:"The coffee ",despues:" bitter this morning.",es:"El café sabe amargo esta mañana.",ops:["tastes","tastes like","is tasting"],correcta:0},
+    {k:"model",en:"The cake tastes delicious.",es:"El pastel sabe delicioso."},
+    {k:"model",en:"It smells good because it's fresh.",es:"Huele bien porque está fresco."},
+    {k:"model",en:"This meat looks tough.",es:"Esta carne se ve dura."},
+    {k:"ask",q:"How does the food in the mess hall taste?",es:"¿Cómo sabe la comida del comedor?",meta:"It tastes good because it's fresh.",pista:"Say: It tastes... because..."},
+    {k:"transf",origen:"The cake is delicious. It has fresh butter.",pide:"Únelas con 'because'.",meta:"The cake is delicious because it has fresh butter.",pista:"...delicious because it..."},
+    {k:"transf",origen:"He didn't eat it. It smelled bad.",pide:"Reporta la razón con 'because'.",meta:"He didn't eat it because it smelled bad.",pista:"...because it smelled..."},
+    {k:"transf",solo:"alto",origen:"The dinner was so good. Everyone was very happy.",pide:"Usa un adjetivo en -ing y otro en -ed: satisfying / satisfied.",meta:"The dinner was satisfying, so everyone was satisfied.",pista:"-ing causa el sentimiento, -ed lo describe."}
+  ],
+  3:[
+    {k:"regla",titulo:"Past Progressive + when + Past Simple",regla:"'Was/were + verb-ing' para la acción en progreso; 'when + pasado simple' para la interrupción.",bien:"He was talking on the phone when he hit the car.",mal:"He talked on the phone when he hitted the car.",porque:"La acción larga va en pasado progresivo; la interrupción en pasado simple.",en:"He was talking when he hit the car."},
+    {k:"idea",audio:"There was a bad accident on Highway 15. A driver was talking on his phone when he hit another car. The police said he was also driving too fast. Nobody was seriously hurt.",en:"He was driving too fast when the police stopped him.",es:"Estaba manejando muy rápido cuando la policía lo detuvo.",ops:["Hubo un accidente de tráfico.","Un policía ayudó a un conductor.","Alguien se perdió en la carretera."],correcta:0},
+    {k:"dosc",audio:"He was talking when he hit the car.",en:"He was talking when he hit the car.",a:"He was talking when he hit the car.",b:"He was walking when he hit the car.",correcta:0},
+    {k:"model",en:"He was talking on the phone when he hit the car.",es:"Estaba hablando por teléfono cuando chocó el auto."},
+    {k:"model",en:"What were you doing when the accident happened?",es:"¿Qué estabas haciendo cuando ocurrió el accidente?"},
+    {k:"ask",q:"What was the driver doing when the accident happened?",es:"¿Qué hacía el conductor cuando ocurrió el accidente?",meta:"He was talking on his phone.",pista:"He was talking..."},
+    {k:"transf",origen:"She talks on the phone while driving.",pide:"Pásala al pasado progresivo con 'when'.",meta:"She was talking on the phone when she crashed.",pista:"She was talking when..."}
+  ],
+  4:[
+    {k:"regla",titulo:"Ask / tell + to-infinitive · comparar",regla:"Para reportar una orden: tell someone to do something. Para reportar una petición: ask someone to do something. Para comparar: the same as, similar to, different from, like, alike.",bien:"The officer told us to obey the speed limit.",mal:"The officer told us obey the speed limit.",porque:"Después de tell/ask + persona va el verbo con 'to'.",en:"The officer told us to obey the speed limit."},
+    {k:"idea",audio:"The officer told the driver to show his license. Then he asked him to step out of the car. He explained that this street is different from the highway: here the speed limit is thirty.",en:"He asked him to step out of the car.",es:"Le pidió que saliera del carro.",ops:["Un oficial revisa a un conductor.","Un mecánico arregla un carro.","Un cadete pide direcciones."],correcta:0},
+    {k:"dosc",audio:"He told me to stop at the corner.",en:"He told me to stop at the corner.",a:"He told me to stop at the corner.",b:"He told me stop at the corner.",correcta:0},
+    {k:"hueco",antes:"The sergeant ",despues:" us to fasten our seat belts.",es:"El sargento nos dijo que nos pusiéramos el cinturón.",ops:["told","said","told to"],correcta:0},
+    {k:"hueco",antes:"This sign is ",despues:" the one we saw at the gate.",es:"Este letrero es igual al que vimos en la entrada.",ops:["the same as","the same than","same as"],correcta:0},
+    {k:"hueco",antes:"A truck is ",despues:" a car: it needs more space to stop.",es:"Un camión es distinto de un carro: necesita más espacio para frenar.",ops:["different from","different to","different that"],correcta:0},
+    {k:"model",en:"He told me to obey the traffic laws.",es:"Me dijo que obedeciera las leyes de tránsito."},
+    {k:"model",en:"She asked me to slow down.",es:"Me pidió que bajara la velocidad."},
+    {k:"model",en:"My helmet is similar to yours.",es:"Mi casco es parecido al tuyo."},
+    {k:"ask",q:"What did the officer tell you to do?",es:"¿Qué te dijo que hicieras el oficial?",meta:"He told me to show my license.",pista:"Say: He told me to..."},
+    {k:"transf",origen:"'Stop at the crosswalk!' said the officer.",pide:"Repórtalo con 'told'.",meta:"The officer told me to stop at the crosswalk.",pista:"The officer told me to..."},
+    {k:"transf",origen:"'Please open the trunk,' he said.",pide:"Repórtalo con 'asked'.",meta:"He asked me to open the trunk.",pista:"He asked me to..."},
+    {k:"transf",solo:"alto",origen:"'Do you have your license?' the officer asked.",pide:"Pásalo a pregunta indirecta.",meta:"The officer asked me if I had my license.",pista:"...asked me if I had..."}
+  ],
+  5:[
+    {k:"regla",titulo:"Repaso: el taller, el compañero de cuarto y la mentira piadosa",regla:"Esta lección no trae gramática nueva: repasa todo el vocabulario de las lecciones 1 a 4 en tres escenas — el taller mecánico, la vida con el roommate y una conversación con una mentira piadosa.",bien:"Ted can repair the car, so I'm taking it to the garage tomorrow.",mal:"Ted can to repair the car, so I take it to the garage tomorrow.",porque:"Después de 'can' va el verbo solo, y el plan confirmado va en presente progresivo.",en:"Ted can repair the car, so I'm taking it to the garage tomorrow."},
+    {k:"idea",audio:"My roommate Ted works at a garage. Yesterday my car wouldn't start, so he looked at the engine and told me to change the battery. I asked him how much it cost. He said it was free, but that was a little white lie.",en:"He told me to change the battery.",es:"Me dijo que cambiara la batería.",ops:["Su compañero de cuarto le arregló el carro.","Compró un carro nuevo.","Fue al banco a pedir un préstamo."],correcta:0},
+    {k:"dosc",audio:"I'm taking the car to the garage tomorrow.",en:"I'm taking the car to the garage tomorrow.",a:"I'm taking the car to the garage tomorrow.",b:"I take the car to the garage tomorrow.",correcta:0},
+    {k:"hueco",antes:"The engine sounds ",despues:", so I asked Ted to check it.",es:"El motor suena raro, así que le pedí a Ted que lo revisara.",ops:["strange","strangely","stranger"],correcta:0},
+    {k:"hueco",antes:"A little white lie is a lie you tell ",despues:" you don't want to hurt someone.",es:"Una mentira piadosa es la que dices porque no quieres lastimar a alguien.",ops:["because","because of","so"],correcta:0},
+    {k:"model",en:"My roommate can repair almost anything.",es:"Mi compañero de cuarto puede arreglar casi todo."},
+    {k:"model",en:"I'm meeting him at the garage at six.",es:"Voy a verlo en el taller a las seis."},
+    {k:"model",en:"It was only a little white lie.",es:"Fue solo una mentira piadosa."},
+    {k:"ask",q:"Tell me about your roommate. What can he do well?",es:"Háblame de tu compañero de cuarto. ¿Qué sabe hacer bien?",meta:"My roommate can repair cars.",pista:"Say: My roommate can..."},
+    {k:"transf",origen:"'Change the battery,' Ted said.",pide:"Repórtalo con 'told'.",meta:"Ted told me to change the battery.",pista:"Ted told me to..."},
+    {k:"transf",solo:"alto",origen:"Ted didn't repair the car himself. The shop did it.",pide:"Usa el causativo: have something done.",meta:"He had the car repaired.",pista:"He had the car..."}
+  ],
+  6:[
+    {k:"regla",titulo:"Should / could · adverbios de modo en -ly",regla:"'Should' da consejo y 'could' ofrece una posibilidad; los dos van con el verbo solo. Los adverbios de modo terminan en -ly y dicen cómo se hace algo: 'How does he drive?' — 'He drives carefully.'",bien:"You should drive more carefully. You could ask Lt Clark for help.",mal:"You should to drive more careful. You could asking Lt Clark.",porque:"Después de should/could va el verbo sin 'to', y el modo se dice con adverbio en -ly.",en:"You should drive more carefully."},
+    {k:"idea",audio:"Does Mike drive safely? Not really. He drives too fast and he changes lanes suddenly. You should talk to him, or you could ask Lt Clark to give him some advice.",en:"You should talk to him, or you could ask Lt Clark.",es:"Deberías hablar con él, o podrías pedirle consejo al Tte. Clark.",ops:["Dan consejos sobre cómo conduce Mike.","Compran un carro para Mike.","Reportan un accidente de Mike."],correcta:0},
+    {k:"dosc",audio:"He drives carefully.",en:"He drives carefully.",a:"He drives carefully.",b:"He drives careful.",correcta:0},
+    {k:"hueco",antes:"You ",despues:" ask the sergeant before you leave.",es:"Deberías preguntarle al sargento antes de irte.",ops:["should","should to","shoulds"],correcta:0},
+    {k:"hueco",antes:"How does she speak English? She speaks it ",despues:".",es:"¿Cómo habla inglés? Lo habla con fluidez.",ops:["fluently","fluent","more fluent"],correcta:0},
+    {k:"model",en:"You should ask for advice.",es:"Deberías pedir consejo."},
+    {k:"model",en:"You could talk to Lt Clark.",es:"Podrías hablar con el Tte. Clark."},
+    {k:"model",en:"He works quickly and quietly.",es:"Trabaja rápido y en silencio."},
+    {k:"ask",q:"Your classmate never studies. What should he do?",es:"Tu compañero nunca estudia. ¿Qué debería hacer?",meta:"He should study every day.",pista:"Say: He should..."},
+    {k:"ask",q:"How do you speak English — slowly or quickly?",es:"¿Cómo hablas inglés: despacio o rápido?",meta:"I speak English slowly.",pista:"Usa un adverbio en -ly."},
+    {k:"transf",origen:"He is a careful driver.",pide:"Dilo con un adverbio de modo.",meta:"He drives carefully.",pista:"He drives..."},
+    {k:"transf",solo:"alto",origen:"Nobody answers the phone at the garage.",pide:"Haz una deducción con 'must be' o 'can't be'.",meta:"It must be closed.",pista:"It must be..."}
+  ],
+  7:[
+    {k:"regla",titulo:"Verb + that + noun clause",regla:"Muchos verbos van seguidos de 'that + oración'. En pasado, la cláusula también usa pasado.",bien:"He realized that the tank was empty.",mal:"He realized the tank is empty.",porque:"Después de verbos en pasado la cláusula con 'that' también usa pasado.",en:"He realized that the tank was empty."},
+    {k:"idea",audio:"They were driving late at night. Suddenly, he realized that the tank was almost empty. He noticed that the next gas station was twenty miles away. His wife said she knew that this would happen.",en:"He noticed that the gas station was closed.",es:"Notó que la gasolinera estaba cerrada.",ops:["El auto se quedó sin gasolina de noche.","Llegaron tarde al motel.","El auto tuvo una llanta ponchada."],correcta:0},
+    {k:"hueco",antes:"She knew ",despues:" this would happen.",es:"Ella sabía que esto iba a pasar.",ops:["that","what","which"],correcta:0},
+    {k:"model",en:"He realized that the tank was empty.",es:"Se dio cuenta de que el tanque estaba vacío."},
+    {k:"model",en:"She noticed that the motel was full.",es:"Notó que el motel estaba lleno."},
+    {k:"ask",q:"What did he realize about the car?",es:"¿Qué se dio cuenta sobre el auto?",meta:"He realized that the tank was empty.",pista:"He realized that the tank..."},
+    {k:"transf",origen:"The tank is empty.",pide:"Repórtalo usando 'He realized that...'",meta:"He realized that the tank was empty.",pista:"He realized that the tank was..."}
+  ],
+  8:[
+    {k:"regla",titulo:"Apologize + for + gerund / I'm sorry + that",regla:"Para disculparte: apologize + for + verbo-ing. Para expresar sentimiento: I'm sorry + that + oración.",bien:"I apologize for breaking your window.",mal:"I apologize to break your window.",porque:"Después de 'for' siempre va el gerundio; después de 'sorry' va 'that + oración'.",en:"I apologize for breaking your window."},
+    {k:"idea",audio:"A cadet accidentally broke a window during training. He said: Sergeant, I apologize for breaking the window. I'm sorry that this happened. The sergeant said: I'm glad that you told me. Please be more careful.",en:"I apologize for the inconvenience.",es:"Me disculpo por las molestias.",ops:["Un cadete se disculpa por romper una ventana.","Un cadete pide permiso para salir.","Un oficial regaña a un cadete."],correcta:0},
+    {k:"hueco",antes:"I'm sorry ",despues:" I was late to formation.",es:"Lamento haber llegado tarde a la formación.",ops:["that","for","because"],correcta:0},
+    {k:"model",en:"I apologize for breaking your window.",es:"Me disculpo por haber roto tu ventana."},
+    {k:"model",en:"I'm sorry that this happened.",es:"Lamento que esto haya pasado."},
+    {k:"ask",q:"How do you apologize when you make a mistake?",es:"¿Cómo te disculpas cuando cometes un error?",meta:"I apologize for making a mistake. I'm sorry that it happened.",pista:"I apologize for..."},
+    {k:"transf",origen:"I broke your window.",pide:"Conviértela en disculpa con 'I apologize for...'",meta:"I apologize for breaking your window.",pista:"I apologize for breaking..."}
+  ],
+  10:[
+    {k:"regla",titulo:"How + to-infinitive para instrucciones",regla:"Usa 'how + to + infinitivo' para pedir o dar instrucciones. El 'to' nunca se omite.",bien:"Can you tell me how to use this machine?",mal:"Can you tell me how use this machine?",porque:"Después de 'how' va siempre 'to + infinitivo'.",en:"Tell me how to use the vending machine."},
+    {k:"idea",audio:"Maria couldn't figure out how to use the new vending machine. She asked her colleague: Can you show me how to get a drink? Her colleague said: Sure. First, put your money in. Then press the button.",en:"Please show me how to operate this machine.",es:"Por favor muéstrame cómo operar esta máquina.",ops:["Alguien explica cómo usar una máquina expendedora.","Alguien repara una máquina rota.","Alguien compra una máquina nueva."],correcta:0},
+    {k:"hueco",antes:"Can you tell me how ",despues:" this machine?",es:"¿Puedes decirme cómo usar esta máquina?",ops:["to use","using","use"],correcta:0},
+    {k:"model",en:"Tell me how to use this machine.",es:"Dime cómo usar esta máquina."},
+    {k:"model",en:"I don't know how to work this printer.",es:"No sé cómo usar esta impresora."},
+    {k:"ask",q:"Do you know how to use a vending machine?",es:"¿Sabes cómo usar una máquina expendedora?",meta:"Yes. First you put your money in, then you press the button.",pista:"Yes. First you put your money in..."},
+    {k:"transf",origen:"Use the machine like this.",pide:"Conviértela con 'Let me show you how to...'",meta:"Let me show you how to use the machine.",pista:"Let me show you how to..."}
+  ],
+  11:[
+    {k:"regla",titulo:"Cláusulas de tiempo · be supposed to",regla:"Con after, before, until, when y while se une lo que pasa antes con lo que pasa después, y el verbo va en presente: 'Sue exercises before she goes to work.' Y 'be supposed to' es lo que se espera de ti: 'You're supposed to be there at 06:00.'",bien:"Sue exercises before she goes to work.",mal:"Sue exercises before she will go to work.",porque:"Después de before, after, when, until y while el verbo va en presente, aunque hable del futuro.",en:"Sue exercises before she goes to work."},
+    {k:"idea",audio:"Sue gets up at five. She exercises before she goes to work, and she doesn't have breakfast until she finishes running. While she runs, she listens to the radio. She's supposed to be at the office at eight.",en:"She doesn't have breakfast until she finishes running.",es:"No desayuna hasta que termina de correr.",ops:["Describe la rutina de Sue por la mañana.","Explica cómo llegar a la oficina.","Pide permiso para faltar al trabajo."],correcta:0},
+    {k:"dosc",audio:"Wash your hands before you eat.",en:"Wash your hands before you eat.",a:"Wash your hands before you eat.",b:"Wash your hands before you will eat.",correcta:0},
+    {k:"hueco",antes:"I always check the oil ",despues:" I start the truck.",es:"Siempre reviso el aceite antes de arrancar el camión.",ops:["before","until","while"],correcta:0},
+    {k:"hueco",antes:"Don't leave your post ",despues:" the relief arrives.",es:"No dejes tu puesto hasta que llegue el relevo.",ops:["until","while","after"],correcta:0},
+    {k:"hueco",antes:"We are ",despues:" be in formation at 06:00.",es:"Se espera que estemos en formación a las 06:00.",ops:["supposed to","supposed","supposing to"],correcta:0},
+    {k:"model",en:"I study after I finish my duties.",es:"Estudio después de terminar mis obligaciones."},
+    {k:"model",en:"While he was on guard, it started to rain.",es:"Mientras estaba de guardia, empezó a llover."},
+    {k:"model",en:"You're supposed to sign the logbook.",es:"Se espera que firmes la bitácora."},
+    {k:"ask",q:"What do you do before you go to sleep?",es:"¿Qué haces antes de dormirte?",meta:"I clean my boots before I go to sleep.",pista:"Say: I ... before I ..."},
+    {k:"transf",origen:"He has breakfast. Then he goes to formation.",pide:"Únelas con 'before'.",meta:"He has breakfast before he goes to formation.",pista:"...before he goes..."},
+    {k:"transf",origen:"The rule says we must be quiet after 22:00.",pide:"Dilo con 'be supposed to'.",meta:"We're supposed to be quiet after 22:00.",pista:"We're supposed to..."},
+    {k:"transf",solo:"alto",origen:"She has run every morning for ten years.",pide:"Usa 'used to' o 'would' para el hábito pasado.",meta:"She used to run every morning.",pista:"She used to..."}
+  ],
+  12:[
+    {k:"regla",titulo:"Preposiciones de lugar · gerundio como objeto",regla:"Para ubicar algo: above, across from, at, behind, below, by, in, in front of, in back of, near, next to, on, under. Y después de begin, enjoy, finish, like, mind y start, el verbo va en -ing.",bien:"I enjoy shopping at the mall. The bank is across from the food court.",mal:"I enjoy to shop at the mall. The bank is across the food court.",porque:"'Enjoy' pide gerundio, y 'frente a' es 'across from', no 'across'.",en:"I enjoy shopping at the mall."},
+    {k:"idea",audio:"I like shopping at the Royal Shopping Center. The shoe store is next to the bank, and the food court is below it, on the first floor. I finished buying everything in one hour.",en:"The shoe store is next to the bank.",es:"La zapatería está junto al banco.",ops:["Describe dónde están las tiendas del centro comercial.","Compra un carro en una agencia.","Pide direcciones para llegar al cuartel."],correcta:0},
+    {k:"dosc",audio:"The pharmacy is across from the elevator.",en:"The pharmacy is across from the elevator.",a:"The pharmacy is across from the elevator.",b:"The pharmacy is across the elevator.",correcta:0},
+    {k:"hueco",antes:"I enjoy ",despues:" with my friends on Saturdays.",es:"Disfruto ir de compras con mis amigos los sábados.",ops:["shopping","to shop","shop"],correcta:0},
+    {k:"hueco",antes:"The parking lot is ",despues:" the mall, on the roof.",es:"El estacionamiento está encima del centro comercial, en la azotea.",ops:["above","under","across"],correcta:0},
+    {k:"hueco",antes:"Do you mind ",despues:" here for ten minutes?",es:"¿Te importa esperar aquí diez minutos?",ops:["waiting","to wait","wait"],correcta:0},
+    {k:"model",en:"I like shopping at the Logar Mall.",es:"Me gusta ir de compras al Logar Mall."},
+    {k:"model",en:"The bookstore is next to the exit.",es:"La librería está junto a la salida."},
+    {k:"model",en:"We finished eating at two o'clock.",es:"Terminamos de comer a las dos."},
+    {k:"ask",q:"Where is the nearest store to your barracks?",es:"¿Dónde está la tienda más cercana a tu dormitorio?",meta:"It's next to the main gate.",pista:"Usa next to, near, across from, behind..."},
+    {k:"transf",origen:"I want to start. I will study English.",pide:"Únelas con el gerundio.",meta:"I started studying English.",pista:"I started..."},
+    {k:"transf",solo:"alto",origen:"She goes to that mall a lot now, but not before.",pide:"Contrasta con 'used to'.",meta:"She didn't use to go to that mall.",pista:"She didn't use to..."}
+  ],
+  13:[
+    {k:"regla",titulo:"Adjetivo + to-infinitive",regla:"Después de afraid, glad, happy, pleased, ready, sorry y upset, el verbo va con 'to': 'I'm glad to meet you.' Es la fórmula de las presentaciones.",bien:"I'm pleased to meet you. Let me introduce my neighbor.",mal:"I'm pleased meeting you. Let me to introduce my neighbor.",porque:"Esos adjetivos piden 'to + verbo'; y después de 'let me' va el verbo solo.",en:"I'm pleased to meet you."},
+    {k:"idea",audio:"Let me introduce my new neighbor, Sergeant Parra. He just moved in next door. He's happy to be here, and he's ready to help if we need anything.",en:"He's happy to be here and ready to help.",es:"Está contento de estar aquí y listo para ayudar.",ops:["Presenta a un vecino nuevo.","Se despide de un vecino.","Se queja del ruido del vecino."],correcta:0},
+    {k:"dosc",audio:"I'm glad to meet you.",en:"I'm glad to meet you.",a:"I'm glad to meet you.",b:"I'm glad meeting you.",correcta:0},
+    {k:"hueco",antes:"Let me ",despues:" my roommate, Cadet Luna.",es:"Permíteme presentarte a mi compañero, el cadete Luna.",ops:["introduce","to introduce","introducing"],correcta:0},
+    {k:"hueco",antes:"I'm sorry ",despues:" that your car was damaged.",es:"Lamento oír que tu carro se dañó.",ops:["to hear","hearing","hear"],correcta:0},
+    {k:"hueco",antes:"Are you ",despues:" now? The formation starts at 06:00.",es:"¿Ya estás listo? La formación empieza a las 06:00.",ops:["ready to go","ready going","ready for go"],correcta:0},
+    {k:"model",en:"I'm pleased to meet you.",es:"Mucho gusto en conocerte."},
+    {k:"model",en:"Let me introduce my neighbor.",es:"Permíteme presentarte a mi vecino."},
+    {k:"model",en:"I'm afraid to be late.",es:"Tengo miedo de llegar tarde."},
+    {k:"ask",q:"A new cadet arrives at your barracks. Introduce yourself.",es:"Llega un cadete nuevo a tu dormitorio. Preséntate.",meta:"I'm glad to meet you. My name is...",pista:"Say: I'm glad to meet you..."},
+    {k:"transf",origen:"I met you. I am happy.",pide:"Únelas con adjetivo + to-infinitive.",meta:"I'm happy to meet you.",pista:"I'm happy to..."},
+    {k:"transf",solo:"alto",origen:"'I am your new neighbor,' he said.",pide:"Pásalo a discurso indirecto.",meta:"He told me that he was my new neighbor.",pista:"He told me that he was..."}
+  ],
+  14:[
+    {k:"regla",titulo:"Presente simple como futuro",regla:"Para horarios fijos —camiones, aviones, clases, formaciones— se usa el presente simple, no el futuro: 'The bus from Dallas arrives early tomorrow morning.'",bien:"The bus arrives at 07:30 tomorrow.",mal:"The bus will arrive at 07:30 tomorrow, I think.",porque:"Un horario publicado es un hecho programado: va en presente simple.",en:"The bus from Dallas arrives early tomorrow morning."},
+    {k:"idea",audio:"Can you change a flat tire? First you take out the jack and the spare tire. Then you loosen the nuts, you lift the car, and you replace the tire. The mechanic's class starts at eight tomorrow if you want to practice.",en:"The mechanic's class starts at eight tomorrow.",es:"La clase del mecánico empieza a las ocho mañana.",ops:["Explica cómo cambiar una llanta.","Vende llantas nuevas.","Reporta un choque en la carretera."],correcta:0},
+    {k:"dosc",audio:"The train leaves at six tomorrow.",en:"The train leaves at six tomorrow.",a:"The train leaves at six tomorrow.",b:"The train is leaving at six tomorrow, maybe.",correcta:0},
+    {k:"hueco",antes:"The bus from Dallas ",despues:" early tomorrow morning.",es:"El camión de Dallas llega mañana temprano.",ops:["arrives","is arriving","will arrive"],correcta:0},
+    {k:"hueco",antes:"First you ",despues:" the nuts, then you lift the car.",es:"Primero aflojas las tuercas, luego levantas el carro.",ops:["loosen","loosening","are loosening"],correcta:0},
+    {k:"model",en:"The formation starts at 06:00 tomorrow.",es:"La formación empieza a las 06:00 mañana."},
+    {k:"model",en:"First you take out the spare tire.",es:"Primero sacas la llanta de repuesto."},
+    {k:"model",en:"The flight leaves on Friday at noon.",es:"El vuelo sale el viernes al mediodía."},
+    {k:"ask",q:"What time does your first class start tomorrow?",es:"¿A qué hora empieza tu primera clase mañana?",meta:"It starts at seven.",pista:"Usa el presente simple: It starts at..."},
+    {k:"ask",q:"Explain in three steps how to change a flat tire.",es:"Explica en tres pasos cómo cambiar una llanta.",meta:"First you loosen the nuts, then you lift the car, then you replace the tire.",pista:"First you... then you... then you..."},
+    {k:"transf",origen:"The bus will arrive at seven. (es el horario oficial)",pide:"Dilo como horario, en presente simple.",meta:"The bus arrives at seven.",pista:"The bus arrives..."},
+    {k:"transf",solo:"alto",origen:"He is not going to fix the tire himself.",pide:"Usa el causativo: have something done.",meta:"He's going to have the tire changed.",pista:"...have the tire..."}
+  ],
+  15:[
+    {k:"regla",titulo:"Would/Could para solicitudes · Reported commands",regla:"'Would/Could you' para solicitudes formales. 'Told/asked + to + infinitivo' para reportar órdenes.",bien:"Would you introduce your family? / He asked me to fill out the form.",mal:"He asked me that I fill out the form.",porque:"Después de asked/told + objeto va 'to + infinitivo', nunca 'that'.",en:"Could you please show me your identification?"},
+    {k:"idea",audio:"At the military ceremony, the general asked the officer to introduce his family. He said: Would you please introduce your family to us? The officer replied: Of course, sir. He told his wife and children to stand up.",en:"Would you please introduce your family to the group?",es:"¿Podría presentar a su familia al grupo, por favor?",ops:["Un oficial presenta a su familia en una ceremonia.","Un oficial recibe una medalla.","Un cadete conoce a sus compañeros."],correcta:0},
+    {k:"hueco",antes:"He asked me ",despues:" out the form.",es:"Me pidió que llenara el formulario.",ops:["to fill","filling","fill"],correcta:0},
+    {k:"model",en:"Would you please introduce your family?",es:"¿Podría presentar a su familia, por favor?"},
+    {k:"model",en:"She told me to fill out the form.",es:"Ella me dijo que llenara el formulario."},
+    {k:"ask",q:"What did the general ask the officer to do?",es:"¿Qué le pidió el general al oficial que hiciera?",meta:"He asked him to introduce his family.",pista:"He asked him to..."},
+    {k:"transf",origen:"Show me your ID.",pide:"Conviértela en solicitud cortés con 'Could you...'",meta:"Could you show me your ID?",pista:"Could you show me..."}
+  ],
+  16:[
+    {k:"regla",titulo:"Be able to — habilidad en todos los tiempos",regla:"'Be able to' = 'can' pero funciona en todos los tiempos verbales.",bien:"I was able to finish the report on time.",mal:"I could to finish the report.",porque:"'Could to' no existe. Usa 'was/were able to' para habilidad específica en el pasado.",en:"She was able to fix the problem."},
+    {k:"idea",audio:"At the job interview, the officer asked: What kind of work can you do? The cadet answered: I am able to speak English and Spanish. I was able to fix computers in my last job. I will be able to learn new skills quickly.",en:"What kind of work are you able to do?",es:"¿Qué tipo de trabajo eres capaz de hacer?",ops:["Un cadete describe sus habilidades en una entrevista.","Un cadete pide un aumento de salario.","Un oficial evalúa el entrenamiento físico."],correcta:0},
+    {k:"hueco",antes:"She ",despues:" finish the report on time.",es:"Ella pudo terminar el informe a tiempo.",ops:["was able to","is able to","will able to"],correcta:0},
+    {k:"model",en:"I am able to speak English and Spanish.",es:"Soy capaz de hablar inglés y español."},
+    {k:"model",en:"I was able to finish the mission on time.",es:"Pude terminar la misión a tiempo."},
+    {k:"ask",q:"What kind of work are you able to do?",es:"¿Qué tipo de trabajo eres capaz de hacer?",meta:"I am able to work in a team and follow orders.",pista:"I am able to..."},
+    {k:"transf",origen:"I can speak English.",pide:"Cámbiala usando 'be able to'.",meta:"I am able to speak English.",pista:"I am able to..."}
+  ],
+  17:[
+    {k:"regla",titulo:"How far / How long · Impersonal it",regla:"'How far' para distancia; 'How long' para duración. 'It' como sujeto impersonal para clima, distancia y tiempo.",bien:"It takes about six hours to drive there.",mal:"Takes about six hours to drive there.",porque:"En inglés las oraciones necesitan sujeto. 'It' es el sujeto impersonal.",en:"How long does it take to drive there?"},
+    {k:"idea",audio:"Two soldiers were talking about a road trip. One asked: How far is it from El Paso to Houston? The other said: It's about seven hundred miles. How long does it take? It takes about ten hours. That's a long drive!",en:"How far is it from El Paso to Houston?",es:"¿Qué tan lejos está El Paso de Houston?",ops:["Dos soldados hablan sobre un viaje por carretera.","Dos soldados hablan sobre el clima.","Un soldado pide indicaciones."],correcta:0},
+    {k:"hueco",antes:"",despues:" takes about three hours to get there.",es:"Toma aproximadamente tres horas llegar allá.",ops:["It","He","There"],correcta:0},
+    {k:"model",en:"How far is it from El Paso to Houston?",es:"¿Qué tan lejos está El Paso de Houston?"},
+    {k:"model",en:"It takes about ten hours to drive there.",es:"Toma aproximadamente diez horas manejar allá."},
+    {k:"ask",q:"How far is it from Mexico City to Guadalajara?",es:"¿Qué tan lejos está la Ciudad de México de Guadalajara?",meta:"It's about three hundred miles. It takes about five hours by car.",pista:"It's about three hundred miles..."},
+    {k:"transf",origen:"The distance is five hundred miles.",pide:"Conviértela en pregunta con 'How far...'",meta:"How far is it?",pista:"How far is it from..."}
+  ]
+}, CARR:{
+  bajo:{nombre:"Básico",pct:70,ver_texto:true,pista_auto:true,espanol:true,
+    tipos:["regla","model","ask","hueco","ordenar","idea","detalle","dosc"]},
+  medio:{nombre:"Intermedio",pct:80,ver_texto:false,pista_auto:false,espanol:true,
+    tipos:["regla","model","ask","drill","hueco","ordenar","transf","idea","detalle","dosc","segm"]},
+  alto:{nombre:"Avanzado",pct:90,ver_texto:false,pista_auto:false,espanol:false,
+    tipos:["regla","ask","drill","transf","roleplay","recuento","free","idea","detalle","dosc","segm","acento"]}
+}, PARADAS:19};
+</script>
+
+<script>
+(function(){
+"use strict";
+
+var CLAVE   = 'hcm2026';               // la misma del panel
+var KEY_LS  = 'hcm_maestro_v1';
+// De aquí se lee el material, para que nunca se desfase de la app.
+// Primero se intenta el index.html de al lado (cuando el panel vive junto a
+// la app); si no está —por ejemplo si se abre suelto— se cae a la copia
+// publicada en GitHub Pages, que manda Access-Control-Allow-Origin: *.
+var APP_URLS = ['index.html',
+                'https://brianmartinezroz-alt.github.io/hcm-ingles-iv/index.html'];
+var DATOS   = '';                      // se toma del index.html
+
+var RAIZ = document.getElementById('raiz');
+var LEC = null, MAT = null, CARR = null, PARADAS = 19, EXAM = [];
+var vista = 'lecciones', leccionAbierta = null, carrilVista = 'todos';
+var panel = null, panelError = '', ordenCol = null, ordenAsc = true;
+var esCopia = false;   // true si se usó la copia de respaldo en lugar de la app en vivo
+
+var ESCUDO = '<svg class="esc" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'+
+  '<circle cx="40" cy="40" r="38" fill="#1A150E" stroke="#C9A84C" stroke-width="3"/>'+
+  '<rect x="16" y="37" width="48" height="7" rx="3.5" fill="#C9A84C" transform="rotate(-30 40 40)"/>'+
+  '<rect x="16" y="37" width="48" height="7" rx="3.5" fill="#C9A84C" transform="rotate(30 40 40)"/>'+
+  '<rect x="37.5" y="18" width="5" height="22" rx="2.5" fill="#C9A84C"/>'+
+  '<ellipse cx="40" cy="16" rx="5" ry="7" fill="#E8B84B"/>'+
+  '<rect x="32" y="38" width="16" height="10" rx="3" fill="#C9A84C"/></svg>';
+
+var NOMBRE_TIPO = {
+  regla:'La regla', model:'Repetir', hueco:'Completar', transf:'Transformar',
+  ask:'Contestar hablando', idea:'Escuchar el tema', dosc:'Cuál oíste',
+  drill:'Repetición', ordenar:'Ordenar', detalle:'Detalle', segm:'Segmentar',
+  roleplay:'Diálogo', recuento:'Recontar', free:'Libre', acento:'Acentuación'
+};
+
+function esc(t){
+  return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── leer el material del index.html: una sola fuente de verdad ── */
+function recorte(txt, marca, abre, cierra){
+  var a = txt.indexOf(marca);
+  if(a < 0) return null;
+  var i = txt.indexOf(abre, a);
+  if(i < 0) return null;
+  var prof = 0, j = i;
+  while(j < txt.length){
+    var c = txt[j];
+    if(c === '"' || c === "'"){                 // saltar cadenas
+      var q = c; j++;
+      while(j < txt.length && (txt[j] !== q || txt[j-1] === '\\')) j++;
+    }
+    else if(c === abre) prof++;
+    else if(c === cierra){ prof--; if(prof === 0) return txt.slice(i, j+1); }
+    j++;
+  }
+  return null;
+}
+function evaluar(src){
+  try{ return (new Function('return (' + src + ');'))(); }
+  catch(e){ return null; }
+}
+function traerApp(i){
+  i = i || 0;
+  if(i >= APP_URLS.length) return Promise.reject(new Error('no pude leer el archivo de la app'));
+  return fetch(APP_URLS[i], {cache:'no-store'})
+    .then(function(r){ if(!r.ok) throw new Error('http ' + r.status); return r.text(); })
+    .catch(function(){ return traerApp(i + 1); });
+}
+function cargarMaterial(){
+  return traerApp(0).then(function(t){
+    LEC  = evaluar(recorte(t, 'var LECCIONES_HCM',  '[', ']'));
+    MAT  = evaluar(recorte(t, 'MATERIAL_HCM',       '{', '}'));
+    CARR = evaluar(recorte(t, 'var CARRILES_HCM',   '{', '}'));
+    var mp = t.match(/var\s+PARADAS_HCM\s*=\s*(\d+)/);
+    if(mp) PARADAS = +mp[1];
+    var me = t.match(/var\s+EXAMENES_HCM\s*=\s*(\[[^\]]*\])/);
+    if(me) EXAM = evaluar(me[1]) || [];
+    var md = t.match(/var\s+HCM_DATOS_ENDPOINT\s*=\s*'([^']+)'/);
+    if(md) DATOS = md[1];
+    if(!LEC || !MAT || !CARR) throw new Error('la app cambió de forma y no pude leer su material');
+    return true;
+  }).catch(function(e){
+    // Último respaldo: la copia guardada aquí. Se avisa, para que no se
+    // confunda con el material en vivo.
+    var S = window.__HCM_SNAP;
+    if(!S) throw e;
+    LEC = S.LEC; MAT = S.MAT; CARR = S.CARR; PARADAS = S.PARADAS || 19;
+    EXAM = [9,18,19];
+    esCopia = true;
+    return true;
+  });
+}
+
+/* ── entrada ── */
+function pintarEntrada(msg){
+  RAIZ.innerHTML =
+    '<div class="entrada">' + ESCUDO +
+    '<h2>Panel del docente</h2>' +
+    '<p>Idioma Extranjero IV · 3<sup>er</sup> año LAM<br>Heroico Colegio Militar</p>' +
+    '<div class="campo">' +
+      '<input type="password" id="cl" placeholder="Clave del maestro" style="flex:1" autocomplete="current-password">' +
+      '<button class="bt" id="ok">Entrar</button>' +
+    '</div>' +
+    (msg ? '<p class="err">' + esc(msg) + '</p>' : '') +
+    '</div>';
+  var inp = document.getElementById('cl');
+  function probar(){
+    if(inp.value === CLAVE){
+      try{ localStorage.setItem(KEY_LS, '1'); }catch(e){}
+      arrancar();
+    } else pintarEntrada('Clave incorrecta.');
+  }
+  document.getElementById('ok').onclick = probar;
+  inp.onkeydown = function(e){ if(e.key === 'Enter') probar(); };
+  inp.focus();
+}
+
+/* ── armazón ── */
+function pintar(){
+  var tabs = [['lecciones','Lecciones'],['grupos','Grupos'],['ayuda','Cómo se usa']];
+  RAIZ.innerHTML =
+    '<header><div class="cab">' + ESCUDO +
+      '<div><span class="sub">Heroico Colegio Militar</span><h1>Inglés IV · Panel del docente</h1></div>' +
+      '<div class="sp"></div><button class="salir" id="salir">Salir</button>' +
+    '</div></header>' +
+    '<nav class="tabs"><div class="in">' +
+      tabs.map(function(t){
+        return '<button data-v="' + t[0] + '"' + (vista === t[0] ? ' class="on"' : '') + '>' + t[1] + '</button>';
+      }).join('') +
+    '</div></nav><main id="cuerpo"></main>';
+
+  document.getElementById('salir').onclick = function(){
+    try{ localStorage.removeItem(KEY_LS); }catch(e){}
+    pintarEntrada();
+  };
+  RAIZ.querySelectorAll('nav.tabs button').forEach(function(b){
+    b.onclick = function(){ vista = b.dataset.v; leccionAbierta = null; pintar(); };
+  });
+
+  var c = document.getElementById('cuerpo');
+  if(vista === 'lecciones') leccionAbierta ? pintarLeccion(c) : pintarLecciones(c);
+  else if(vista === 'grupos') pintarGrupos(c);
+  else pintarAyuda(c);
+}
+
+/* ── lecciones ── */
+function pintarLecciones(c){
+  var filas = '';
+  for(var i = 1; i <= PARADAS; i++){
+    var L = LEC[i]; if(!L) continue;
+    var ex = !!L.examen;
+    var n = (MAT[i] || []).length;
+    filas += '<button class="lec' + (ex ? ' ex' : '') + '" data-n="' + i + '">' +
+      '<div class="n">' + (ex ? '⚑' : i) + '</div>' +
+      '<div><div class="t">' + esc(L.titulo) + '</div>' +
+      '<div class="s">' + esc(L.sub) + '</div>' +
+      '<div class="f">' + esc(L.fecha) + (ex ? '' : ' · ' + n + ' ejercicios') + '</div>' +
+      '</div></button>';
+  }
+  c.innerHTML = (esCopia ? '<p class="nota"><b>Estás viendo una copia del 17/09/2026.</b> ' +
+      'No pude leer la app en vivo, así que si cambiaste un ejercicio hoy, aquí todavía no aparece. ' +
+      'Sube este panel junto al <b>index.html</b> y siempre leerá el material al día.</p>' : '') +
+    '<p class="nota">Entra a la que quieras: aquí se ve el material completo de cada ' +
+    'lección, con las respuestas correctas marcadas y qué ejercicios le tocan a cada carril. ' +
+    '<b>Nada de lo que hagas aquí afecta el avance de los cadetes.</b></p>' +
+    '<div class="rejilla">' + filas + '</div>';
+  c.querySelectorAll('.lec').forEach(function(b){
+    b.onclick = function(){ leccionAbierta = +b.dataset.n; pintar(); };
+  });
+}
+
+function chipsCarril(k, solo){
+  return ['bajo','medio','alto'].map(function(cr){
+    var ve = CARR[cr] && CARR[cr].tipos.indexOf(k) >= 0 && (!solo || solo === cr);
+    return '<span class="cchip' + (ve ? ' si' : '') + '">' + CARR[cr].nombre + '</span>';
+  }).join('');
+}
+
+function pintarItem(x, idx){
+  var t = NOMBRE_TIPO[x.k] || x.k;
+  var h = '<div class="item ' + esc(x.k) + '"><span class="tipo">' + esc(t) + '</span>';
+
+  if(x.k === 'regla'){
+    h += '<h4>' + esc(x.titulo || 'La regla') + '</h4><p>' + esc(x.regla) + '</p>';
+    if(x.bien || x.mal){
+      h += '<div class="bien-mal">' +
+        (x.bien ? '<div class="si">' + esc(x.bien) + '</div>' : '') +
+        (x.mal  ? '<div class="no">' + esc(x.mal)  + '</div>' : '') + '</div>';
+    }
+    if(x.porque) h += '<p class="es" style="color:#C8BBA4">' + esc(x.porque) + '</p>';
+  }
+  else if(x.k === 'idea'){
+    h += '<h4>' + (idx) + '. Escucha y di de qué se trata</h4>';
+    if(x.audio) h += '<p class="en">“' + esc(x.audio) + '”</p>';
+    if(x.es) h += '<p class="es">' + esc(x.es) + '</p>';
+    h += '<ul class="ops">' + (x.ops || []).map(function(o, k){
+      return '<li' + (k === x.correcta ? ' class="bien"' : '') + '>' + esc(o) + '</li>';
+    }).join('') + '</ul>';
+  }
+  else if(x.k === 'dosc'){
+    h += '<h4>' + (idx) + '. ¿Cuál oíste?</h4>';
+    if(x.audio) h += '<p class="es">Audio: “' + esc(x.audio) + '”</p>';
+    h += '<ul class="ops">' +
+      '<li' + (x.correcta === 0 ? ' class="bien"' : '') + '>a) ' + esc(x.a) + '</li>' +
+      '<li' + (x.correcta === 1 ? ' class="bien"' : '') + '>b) ' + esc(x.b) + '</li></ul>';
+  }
+  else if(x.k === 'hueco'){
+    h += '<h4>' + (idx) + '. Completa</h4>' +
+      '<p class="en">' + esc(x.antes) + '<b>_____</b>' + esc(x.despues) + '</p>';
+    if(x.es) h += '<p class="es">' + esc(x.es) + '</p>';
+    h += '<ul class="ops">' + (x.ops || []).map(function(o, k){
+      return '<li' + (k === x.correcta ? ' class="bien"' : '') + '>' + esc(o) + '</li>';
+    }).join('') + '</ul>';
+  }
+  else if(x.k === 'model'){
+    h += '<h4>' + (idx) + '. Repite el modelo</h4><p class="en">' + esc(x.en) + '</p>';
+    if(x.es) h += '<p class="es">' + esc(x.es) + '</p>';
+  }
+  else if(x.k === 'ask'){
+    h += '<h4>' + (idx) + '. Contesta hablando</h4><p class="en">' + esc(x.q) + '</p>';
+    if(x.es) h += '<p class="es">' + esc(x.es) + '</p>';
+    if(x.meta) h += '<ul class="ops"><li class="bien">' + esc(x.meta) + '</li></ul>';
+    if(x.pista) h += '<p class="es">Pista: ' + esc(x.pista) + '</p>';
+  }
+  else if(x.k === 'transf'){
+    h += '<h4>' + (idx) + '. Transforma</h4><p class="en">' + esc(x.origen) + '</p>' +
+      '<p class="es">' + esc(x.pide) + '</p>';
+    if(x.meta) h += '<ul class="ops"><li class="bien">' + esc(x.meta) + '</li></ul>';
+    if(x.pista) h += '<p class="es">Pista: ' + esc(x.pista) + '</p>';
+  }
+  else {
+    h += '<h4>' + (idx) + '. ' + esc(t) + '</h4><p class="es">' +
+      esc(JSON.stringify(x).slice(0, 300)) + '</p>';
+  }
+
+  if(x.solo) h += '<div class="solo-alto">Solo carril ' + esc(x.solo) + ' · material del ALC 11-12</div>';
+  h += '<div class="carriles">' + chipsCarril(x.k, x.solo) + '</div>';
+  return h + '</div>';
+}
+
+function pintarLeccion(c){
+  var n = leccionAbierta, L = LEC[n] || {}, items = MAT[n] || [];
+  var vistos = items.filter(function(x){
+    if(carrilVista === 'todos') return true;
+    if(x.solo && x.solo !== carrilVista) return false;
+    return CARR[carrilVista].tipos.indexOf(x.k) >= 0;
+  });
+  var i = 0;
+  var cuerpo = vistos.length
+    ? vistos.map(function(x){ if(x.k !== 'regla') i++; return pintarItem(x, i); }).join('')
+    : '<p class="vacio">Esta parada no tiene material propio. Los exámenes se aplican en papel, ' +
+      'con el ALC Book 11 o 12 en su versión A, B o C.</p>';
+
+  c.innerHTML =
+    '<button class="volver" id="atras">‹ Todas las lecciones</button>' +
+    '<h2 class="tit">' + esc(L.titulo || ('Parada ' + n)) + '</h2>' +
+    '<p class="tit-s">' + esc(L.sub || '') + '</p>' +
+    '<div class="meta">Parada ' + n + ' de ' + PARADAS + ' · ' + esc(L.fecha || '') +
+      ' · ' + items.length + ' ejercicios</div>' +
+    '<div class="filtro"><label for="cv">Ver como:</label>' +
+      '<select id="cv">' +
+        ['todos','bajo','medio','alto'].map(function(k){
+          var et = k === 'todos' ? 'Todos los carriles' : CARR[k].nombre;
+          return '<option value="' + k + '"' + (carrilVista === k ? ' selected' : '') + '>' + et + '</option>';
+        }).join('') +
+      '</select>' +
+      '<span class="es">' + vistos.length + ' de ' + items.length + ' ejercicios</span>' +
+    '</div>' +
+    '<div class="acciones">' +
+      '<a class="bt claro" href="' + APP_URLS[APP_URLS.length-1] + '" target="_blank" rel="noopener">Abrir la app del cadete</a>' +
+      '<button class="bt claro" id="imprimir">Imprimir esta lección</button>' +
+    '</div>' + cuerpo;
+
+  document.getElementById('atras').onclick = function(){ leccionAbierta = null; pintar(); };
+  document.getElementById('cv').onchange = function(e){ carrilVista = e.target.value; pintar(); };
+  document.getElementById('imprimir').onclick = function(){ window.print(); };
+}
+
+/* ── grupos ── */
+function pintarGrupos(c){
+  if(!DATOS){
+    c.innerHTML = '<p class="nota">La app no tiene todavía la liga del servidor de datos, ' +
+      'así que no puedo traer el avance de los cadetes.</p>';
+    return;
+  }
+  if(panel === null && !panelError){
+    c.innerHTML = '<p class="vacio">Trayendo el avance de los seis grupos…</p>';
+    fetch(DATOS, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({accion:'panel_maestro', clave:CLAVE})
+    }).then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        if(d && d.ok) panel = d.grupos || [];
+        else panelError = (d && d.error) || 'El servidor no contestó bien.';
+        pintar();
+      })
+      .catch(function(){
+        panelError = 'Sin conexión con el servidor de datos.';
+        pintar();
+      });
+    return;
+  }
+  if(panelError){
+    c.innerHTML = '<p class="nota"><b>No pude traer los datos.</b> ' + esc(panelError) +
+      '<br><br>Lo más probable: el servidor de datos todavía tiene la lista de grupos de primer año ' +
+      '(101 a 115) en lugar de 301 a 306. Hay que editar esas dos líneas en el Apps Script, ' +
+      'correr <b>crearHojas</b> y publicar versión nueva.</p>' +
+      '<button class="bt claro" id="reintentar">Reintentar</button>';
+    document.getElementById('reintentar').onclick = function(){
+      panelError = ''; panel = null; pintar();
+    };
+    return;
+  }
+
+  var todos = [];
+  panel.forEach(function(g){ (g.cadetes || []).forEach(function(x){ x._g = g.grupo; todos.push(x); }); });
+  if(!todos.length){
+    c.innerHTML = '<p class="nota">Todavía no hay cadetes registrados. En cuanto alguno cierre su ' +
+      'primera lección aparece aquí, con su grupo, su carril y sus minutos.</p>';
+    return;
+  }
+  var minutos = 0, sesiones = 0, part = 0;
+  todos.forEach(function(x){
+    minutos += (+x.minutos || 0); sesiones += (+x.sesiones || 0); part += (+x.particip || 0);
+  });
+
+  var html = '<div class="resumen">' +
+    caja('Cadetes', todos.length) +
+    caja('Grupos', panel.length) +
+    caja('Minutos', minutos) +
+    caja('Sesiones', sesiones) +
+    caja('Participación', Math.round(part / todos.length) + '%') +
+    '</div>' +
+    '<div class="filtro"><input id="busca" placeholder="Buscar cadete por nombre" style="flex:1;max-width:320px">' +
+    '<button class="bt claro" id="imprimir2">Imprimir</button></div><div id="tablas"></div>';
+  c.innerHTML = html;
+  document.getElementById('imprimir2').onclick = function(){ window.print(); };
+  var bus = document.getElementById('busca');
+  bus.oninput = function(){ tablas(bus.value); };
+  tablas('');
+
+  function tablas(q){
+    q = (q || '').toLowerCase().trim();
+    var out = '';
+    panel.forEach(function(g){
+      var cs = (g.cadetes || []).filter(function(x){
+        return !q || String(x.nombre || '').toLowerCase().indexOf(q) >= 0;
+      });
+      if(!cs.length) return;
+      if(ordenCol){
+        cs = cs.slice().sort(function(a, b){
+          var va = a[ordenCol], vb = b[ordenCol];
+          if(typeof va === 'string' || typeof vb === 'string'){
+            va = String(va || '').toLowerCase(); vb = String(vb || '').toLowerCase();
+            return ordenAsc ? (va < vb ? -1 : va > vb ? 1 : 0) : (va > vb ? -1 : va < vb ? 1 : 0);
+          }
+          return ordenAsc ? (va || 0) - (vb || 0) : (vb || 0) - (va || 0);
+        });
+      }
+      out += '<h3 class="grupo">Grupo ' + esc(g.grupo) + ' · ' + cs.length + ' cadetes</h3>' +
+        '<table><thead><tr>' +
+        th('nombre','Cadete') + th('carril','Carril') + th('leccion','Lección') +
+        th('minutos','Min') + th('sesiones','Ses') + th('particip','Part.') +
+        th('ultima','Última') + '</tr></thead><tbody>' +
+        cs.map(function(x){
+          var cr = x.carril || 'medio';
+          var nom = (LEC[+x.leccion] || {}).titulo || '';
+          return '<tr><td>' + esc(x.nombre) + '</td>' +
+            '<td><span class="car ' + esc(cr) + '">' + esc((CARR[cr] || {}).nombre || cr) + '</span></td>' +
+            '<td>' + esc(x.leccion) + (nom ? ' · <span class="es">' + esc(nom) + '</span>' : '') + '</td>' +
+            '<td class="num">' + esc(x.minutos) + '</td>' +
+            '<td class="num">' + esc(x.sesiones) + '</td>' +
+            '<td class="num">' + esc(x.particip) + '%</td>' +
+            '<td class="es">' + esc(x.ultima) + '</td></tr>';
+        }).join('') + '</tbody></table>';
+    });
+    document.getElementById('tablas').innerHTML = out ||
+      '<p class="vacio">Ningún cadete con ese nombre.</p>';
+    document.querySelectorAll('#tablas th[data-c]').forEach(function(h){
+      h.onclick = function(){
+        var col = h.dataset.c;
+        if(ordenCol === col) ordenAsc = !ordenAsc; else { ordenCol = col; ordenAsc = true; }
+        tablas(bus.value);
+      };
+    });
+  }
+  function th(col, et){
+    var fl = ordenCol === col ? (ordenAsc ? ' ↑' : ' ↓') : '';
+    return '<th data-c="' + col + '">' + et + fl + '</th>';
+  }
+  function caja(k, v){
+    return '<div class="caja"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
+  }
+}
+
+/* ── cómo se usa ── */
+function pintarAyuda(c){
+  c.innerHTML =
+    '<h2 class="tit">Cómo se usa</h2>' +
+    '<p class="tit-s">Lo que hace cada pestaña, y lo que falta del lado del servidor.</p>' +
+    '<div class="item"><h4>Lecciones</h4>' +
+    '<p>Las 19 paradas del curso. Entra a la que quieras, en cualquier orden: aquí ves el material ' +
+    'completo con <b>las respuestas correctas marcadas</b>, el texto de los audios y la pista de cada ' +
+    'ejercicio hablado.</p>' +
+    '<p>El selector <i>Ver como</i> te muestra exactamente qué ejercicios le tocan a cada carril. ' +
+    'Los marcados en rojo son los del ALC 11-12 y solo los ve el carril avanzado.</p>' +
+    '<p><b>Imprimir esta lección</b> saca una versión limpia en papel, sin menús, para llevarla al salón.</p></div>' +
+    '<div class="item"><h4>Grupos</h4>' +
+    '<p>El avance de los seis grupos, del 301 al 306: en qué lección va cada cadete, su carril, ' +
+    'sus minutos, sus sesiones y su porcentaje de participación. Se puede ordenar por cualquier ' +
+    'columna y buscar por nombre.</p></div>' +
+    '<div class="item"><h4>El material sale de la app, no de aquí</h4>' +
+    '<p>Este panel lee las lecciones directamente del archivo de la app del cadete. Si mañana ' +
+    'cambias un ejercicio allá, aquí aparece cambiado sin que haya que tocar nada. No hay dos copias ' +
+    'que se puedan desfasar.</p></div>' +
+    '<div class="item"><h4>Para dejar correcciones a un cadete</h4>' +
+    '<p>Eso se escribe directo en la hoja de cálculo, en la pestaña <b>Correcciones</b>: el nombre del ' +
+    'cadete, el tipo (corrección, mensaje, tarea o bonus), la frase y tu mensaje. La app se lo entrega ' +
+    'la próxima vez que entre y marca la fila como entregada.</p></div>' +
+    '<div class="item"><h4>Lo que falta del lado del servidor</h4>' +
+    '<p>El servidor de datos todavía tiene la lista de grupos de primer año. Hay que abrir el Apps ' +
+    'Script <b>HCM-Datos</b>, dejar <span class="es">GRUPOS = [\'301\',\'302\',\'303\',\'304\',\'305\',\'306\']</span>, ' +
+    'cambiar los dos <span class="es">\'101\'</span> de respaldo por <span class="es">\'301\'</span>, ' +
+    'correr <b>crearHojas</b> y publicar una versión nueva. Hasta entonces la pestaña de Grupos ' +
+    'no va a traer nada.</p></div>';
+}
+
+/* ── arranque ── */
+function arrancar(){
+  RAIZ.innerHTML = '<div class="entrada">' + ESCUDO + '<h2>Un momento</h2>' +
+    '<p>Leyendo las lecciones de la app…</p></div>';
+  cargarMaterial().then(function(){ pintar(); })
+    .catch(function(e){
+      RAIZ.innerHTML = '<div class="entrada">' + ESCUDO + '<h2>No pude leer la app</h2>' +
+        '<p>' + esc(e.message) + '</p><p class="es">Este panel tiene que estar en la misma carpeta ' +
+        'que <b>index.html</b>, o la app tiene que estar publicada en GitHub Pages.</p></div>';
+    });
+}
+
+var entrado = false;
+try{ entrado = localStorage.getItem(KEY_LS) === '1'; }catch(e){}
+entrado ? arrancar() : pintarEntrada();
+})();
+</script>
+</body>
+</html>
