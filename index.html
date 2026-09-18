@@ -1545,7 +1545,7 @@ if('serviceWorker' in navigator){
 <script>
 (function(){
 "use strict";
-var VERSION="v134 · 15 sep · examen final por nivel, con conversación en dos fases";
+var VERSION="v135 · 18 sep · las evaluaciones del Colegio ya son repaso del bloque, no examen CEFR";
 
 /* ═══════════ almacenamiento ═══════════ */
 var KEY='efa_tutor_v2',mem={};
@@ -11197,6 +11197,26 @@ var CLAVE_JEFE_HCM='hcm2026'; // clave para el panel del maestro
 var GRUPOS_HCM=['301','302','303','304','305','306'];
 var PARADAS_HCM=19;
 var EXAMENES_HCM=[9,18,19];
+// Que lecciones entran en cada evaluacion del Colegio. La app NO aplica esas
+// evaluaciones: esas las pasa el cadete en clase, con su maestro y su ALC.
+// Aqui solo se repasa el bloque, para que llegue listo.
+var BLOQUES_HCM = {
+  9:  [1,2,3,4,5,6,7,8],
+  18: [10,11,12,13,14,15,16,17],
+  19: [1,2,3,4,5,6,7,8,10,11,12,13,14,15,16,17]
+};
+function esEvaluacionHCM(n){ return !!BLOQUES_HCM[+n]; }
+// Baraja estable: la misma parada arma siempre el mismo repaso, para que el
+// cadete pueda volver a intentarlo sin que le cambie el examen debajo.
+function revolverHCM_(lista, semilla){
+  var a = lista.slice(), x = (semilla || 1) * 9301 + 49297;
+  for (var i = a.length - 1; i > 0; i--) {
+    x = (x * 9301 + 49297) % 233280;
+    var j = Math.floor((x / 233280) * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
 var LECCIONES_HCM=[null,
   {titulo:"I'd like to open an account",    sub:"Present progressive · banca",              fecha:"17 Sep"},
   {titulo:"The cake is delicious",           sub:"Because clauses · verbos copulativos",        fecha:"25 Sep"},
@@ -11555,7 +11575,21 @@ function armarSesionHCM(n){
   var lec=LECCIONES_HCM[n];if(!lec)return null;
   var D2=hcmLoad();var P2=D2.perfil||{};
   var carril=CARRILES_HCM[P2.carril||'medio']||CARRILES_HCM.medio;
-  var raw=MATERIAL_HCM[n]||MATERIAL_HCM[1]||[];
+  var raw;
+  if (esEvaluacionHCM(n)) {
+    // Repaso de evaluacion: se junta el material de las lecciones del bloque.
+    // Antes esto caia en MATERIAL_HCM[1] y el cadete repasaba la leccion 1
+    // creyendo que repasaba para su parcial.
+    raw = [];
+    var bl = BLOQUES_HCM[n];
+    for (var b = 0; b < bl.length; b++) {
+      var mb = MATERIAL_HCM[bl[b]] || [];
+      for (var q = 0; q < mb.length; q++) raw.push(mb[q]);
+    }
+    raw = revolverHCM_(raw, n).slice(0, 12);
+  } else {
+    raw = MATERIAL_HCM[n] || MATERIAL_HCM[1] || [];
+  }
   var items=raw.filter(function(x){
     // los ejercicios marcados solo:"alto" son el material del ALC 11-12:
     // solo los ve el cadete que va sobrado.
@@ -11582,6 +11616,15 @@ function armarSesionHCM(n){
     }
     return y;
   });
+  if (esEvaluacionHCM(n)) {
+    return {
+      t: 'Repaso para la ' + lec.titulo,
+      hoy: lec.sub + ' \u00b7 esto es repaso, no es la evaluaci\u00f3n',
+      obj: 'llegar listo a la evaluaci\u00f3n que aplica tu maestro en clase',
+      enc: 'Repaso del bloque \u00b7 la ' + lec.titulo + ' se presenta en clase el ' + lec.fecha,
+      items: items
+    };
+  }
   return {
     t:lec.titulo,
     hoy:lec.sub,
@@ -11592,10 +11635,16 @@ function armarSesionHCM(n){
 }
 function irAParadaHCM(n){
   var lec=LECCIONES_HCM[n];if(!lec)return;
-  if(lec.examen){
+  if(lec.examen && !esEvaluacionHCM(n)){
     try{avisito('El examen llega el '+lec.fecha+'. Sigue practicando.');}
     catch(e){alert('El examen llega el '+lec.fecha);}
     return;
+  }
+  if(esEvaluacionHCM(n)){
+    // Antes esto era una puerta cerrada: el cadete tocaba su parcial y la app
+    // le decia "espera". Ahora entra a repasar el bloque, y se le dice con
+    // todas sus letras que la evaluacion de verdad la aplica su maestro.
+    try{avisito('Esto es repaso. La '+lec.titulo+' la presentas en clase el '+lec.fecha+'.');}catch(e){}
   }
   hcmSincronizarPerfil();
   var S=armarSesionHCM(n);
@@ -11721,7 +11770,11 @@ function hcmSincronizarPerfil(){
 }
 function esRepaso(n){return EXAMENES_HCM.indexOf(+n)>=0;}
 function contenidoDe(n){return n;}
-function esExamen(n){return EXAMENES_HCM.indexOf(+n)>=0;}
+// En el HCM no hay examen CEFR: los cadetes no van por niveles A1-C1, van por
+// el ALC y por carril. Si esto devolviera true, el cadete caia en el examen
+// oral de English For All, etiquetado "nivel Pre-A1" porque no encuentra
+// nivel en su perfil. Devuelve false a proposito.
+function esExamen(n){return false;}
 function esExamenFinal(n){return +n===PARADAS_HCM;}
 function afinarPorNivel(mat,p){return mat;}
 function materialDe(p){
