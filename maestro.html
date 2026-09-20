@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Inglés IV · Panel del docente</title>
+<title>Panel del docente · HCM y EFA</title>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
@@ -41,6 +41,16 @@
   nav.tabs button.on{color:#F5E9C9;border-bottom-color:var(--oro-luz)}
 
   main{max-width:1080px;margin:0 auto;padding:22px 18px 70px}
+
+  /* ── selector de escuela ── */
+  .escuelas{background:#0F0C07;border-bottom:1px solid rgba(201,168,76,.28)}
+  .escuelas .in{max-width:1080px;margin:0 auto;padding:8px 18px;display:flex;gap:8px;flex-wrap:wrap}
+  .escuelas button{font:inherit;font-size:13px;font-weight:600;cursor:pointer;border-radius:20px;
+    padding:7px 15px;background:transparent;color:#C8BBA4;border:1.5px solid rgba(201,168,76,.35)}
+  .escuelas button.on{background:var(--oro-luz);color:var(--negro);border-color:var(--oro-luz)}
+  .efa-barra{max-width:1080px;margin:0 auto;padding:10px 18px;display:flex;gap:12px;align-items:center;
+    flex-wrap:wrap;font-size:13px;color:var(--tinta-2)}
+  .efa-marco{display:block;width:100%;border:0;background:#fff;height:calc(100vh - 170px);min-height:520px}
 
   /* ── entrada ── */
   .entrada{max-width:380px;margin:12vh auto;text-align:center}
@@ -391,6 +401,9 @@ var DATOS   = '';                      // se toma del index.html
 var RAIZ = document.getElementById('raiz');
 var LEC = null, MAT = null, CARR = null, PARADAS = 19, EXAM = [];
 var vista = 'lecciones', leccionAbierta = null, carrilVista = 'todos';
+var EFA_URL = 'https://brianmartinezroz-alt.github.io/English-for-all/?jefe';
+var escuela = 'hcm';
+try{ escuela = localStorage.getItem('maestro_escuela') === 'efa' ? 'efa' : 'hcm'; }catch(e){}
 var panel = null, panelError = '', ordenCol = null, ordenAsc = true;
 var esCopia = false;   // true si se usó la copia de respaldo en lugar de la app en vivo
 
@@ -474,7 +487,7 @@ function pintarEntrada(msg){
   RAIZ.innerHTML =
     '<div class="entrada">' + ESCUDO +
     '<h2>Panel del docente</h2>' +
-    '<p>Idioma Extranjero IV · 3<sup>er</sup> año LAM<br>Heroico Colegio Militar</p>' +
+    '<p>Colegio Militar · Inglés IV<br>English For All · Speaking</p>' +
     '<div class="campo">' +
       '<input type="password" id="cl" placeholder="Clave del maestro" style="flex:1" autocomplete="current-password">' +
       '<button class="bt" id="ok">Entrar</button>' +
@@ -496,21 +509,36 @@ function pintarEntrada(msg){
 /* ── armazón ── */
 function pintar(){
   var tabs = [['lecciones','Lecciones'],['grupos','Grupos'],['ayuda','Cómo se usa']];
+  var esEFA = escuela === 'efa';
+  var selector =
+    '<div class="escuelas"><div class="in">' +
+      '<button data-e="hcm"' + (!esEFA ? ' class="on"' : '') + '>Colegio Militar · Inglés IV</button>' +
+      '<button data-e="efa"' + (esEFA ? ' class="on"' : '') + '>English For All</button>' +
+    '</div></div>';
+  if(esEFA){
+    RAIZ.innerHTML =
+      '<header><div class="cab">' + ESCUDO +
+        '<div><span class="sub">English For All · Speaking</span><h1>Panel del docente · todos los niveles</h1></div>' +
+        '<div class="sp"></div><button class="salir" id="salir">Salir</button>' +
+      '</div></header>' + selector +
+      '<div class="efa-barra"><span>Modo jefe de la app de EFA: Pre-A1 a B2, las lecciones y los 20 tipos de ejercicio. Nada de esto lo ve el alumno.</span>' +
+        '<a href="' + EFA_URL + '" target="_blank" rel="noopener">Abrir en pestaña aparte ↗</a></div>' +
+      '<iframe class="efa-marco" title="English For All · modo jefe" src="' + EFA_URL + '" allow="microphone; autoplay; clipboard-write"></iframe>';
+    ligarComunes();
+    return;
+  }
   RAIZ.innerHTML =
     '<header><div class="cab">' + ESCUDO +
       '<div><span class="sub">Heroico Colegio Militar</span><h1>Inglés IV · Panel del docente</h1></div>' +
       '<div class="sp"></div><button class="salir" id="salir">Salir</button>' +
-    '</div></header>' +
+    '</div></header>' + selector +
     '<nav class="tabs"><div class="in">' +
       tabs.map(function(t){
         return '<button data-v="' + t[0] + '"' + (vista === t[0] ? ' class="on"' : '') + '>' + t[1] + '</button>';
       }).join('') +
     '</div></nav><main id="cuerpo"></main>';
 
-  document.getElementById('salir').onclick = function(){
-    try{ localStorage.removeItem(KEY_LS); }catch(e){}
-    pintarEntrada();
-  };
+  ligarComunes();
   RAIZ.querySelectorAll('nav.tabs button').forEach(function(b){
     b.onclick = function(){ vista = b.dataset.v; leccionAbierta = null; pintar(); };
   });
@@ -519,6 +547,20 @@ function pintar(){
   if(vista === 'lecciones') leccionAbierta ? pintarLeccion(c) : pintarLecciones(c);
   else if(vista === 'grupos') pintarGrupos(c);
   else pintarAyuda(c);
+}
+
+function ligarComunes(){
+  document.getElementById('salir').onclick = function(){
+    try{ localStorage.removeItem(KEY_LS); }catch(e){}
+    pintarEntrada();
+  };
+  RAIZ.querySelectorAll('.escuelas button').forEach(function(b){
+    b.onclick = function(){
+      escuela = b.dataset.e;
+      try{ localStorage.setItem('maestro_escuela', escuela); }catch(e){}
+      leccionAbierta = null; pintar(); window.scrollTo(0, 0);
+    };
+  });
 }
 
 /* ── lecciones ── */
@@ -806,6 +848,12 @@ function pintarAyuda(c){
 
 /* ── arranque ── */
 function arrancar(){
+  if(escuela === 'efa'){
+    // EFA no necesita leer el material del Colegio: se abre de una vez.
+    pintar();
+    cargarMaterial().catch(function(){});
+    return;
+  }
   RAIZ.innerHTML = '<div class="entrada">' + ESCUDO + '<h2>Un momento</h2>' +
     '<p>Leyendo las lecciones de la app…</p></div>';
   cargarMaterial().then(function(){ pintar(); })
