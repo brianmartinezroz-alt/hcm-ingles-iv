@@ -1545,7 +1545,7 @@ if('serviceWorker' in navigator){
 <script>
 (function(){
 "use strict";
-var VERSION="v136 · 19 sep · el avance del cadete va solo al servidor del Colegio (ya no a English For All)";
+var VERSION="v137 · 20 sep · bitácora de la sesión y perfil del cadete para el panel";
 
 /* ═══════════ almacenamiento ═══════════ */
 var KEY='efa_tutor_v2',mem={};
@@ -9974,6 +9974,53 @@ function correr(){
 
 var vistos={},intentosDe={};
 var VECES_OIDO=0;
+/* ═══════════ BITÁCORA DE LA SESIÓN ═══════════
+   Brian quiere ver TODO, no solo los errores: cada ejercicio que salió,
+   cada botón que se tocó, cada intento con lo que dijo y su porcentaje,
+   y cuándo se salió de la app y cuándo regresó. Todo con el segundo exacto
+   desde que empezó la sesión. Se reinicia sola cuando empieza otra sesión
+   (cuando cambia t0) y viaja con la sesión al servidor. */
+var BITACORA=[], BIT_T0=0, BIT_VISTOS=0, BIT_FUERA=0, BIT_SALIO=0;
+function bitacora(ev,extra){
+  try{
+    if(!t0) return;
+    if(BIT_T0!==t0){ BITACORA=[]; BIT_T0=t0; BIT_VISTOS=0; BIT_FUERA=0; BIT_SALIO=0; }
+    // los intentos nuevos desde la ultima vez, con lo que dijo y cuanto saco
+    while(attempts && BIT_VISTOS<attempts.length){
+      var a=attempts[BIT_VISTOS++]||{};
+      BITACORA.push({s:Math.round((Date.now()-t0)/1000),ev:'intento',it:it,
+        tipo:a.tipo||'',dijo:String(a.oido||'').slice(0,160),
+        meta:String(a.meta||a.en||'').slice(0,120),
+        pct:(a.pct===null||a.pct===undefined)?null:a.pct});
+    }
+    if(!ev) return;
+    var o={s:Math.round((Date.now()-t0)/1000),ev:ev,it:it};
+    if(extra) for(var k in extra) o[k]=extra[k];
+    BITACORA.push(o);
+    if(BITACORA.length>700) BITACORA.splice(0,BITACORA.length-700);
+  }catch(e){}
+}
+// segundos que de verdad estuvo con la app abierta (sin contar cuando se salio)
+function segundosActivos(){
+  var tot=Math.round((Date.now()-t0)/1000);
+  var fuera=BIT_FUERA+(BIT_SALIO?Math.round((Date.now()-BIT_SALIO)/1000):0);
+  return Math.max(0,tot-fuera);
+}
+try{
+  document.addEventListener('click',function(e){
+    var b=e.target&&e.target.closest&&e.target.closest('button,a,[role=button],label,.op,.opt,.resb');
+    if(!b) return;
+    var txt=(b.getAttribute('aria-label')||b.title||b.innerText||b.textContent||'')
+      .replace(/\s+/g,' ').trim().slice(0,60);
+    bitacora('clic',{que:(b.id?('#'+b.id+' '):'')+txt});
+  },true);
+  document.addEventListener('visibilitychange',function(){
+    if(!t0) return;
+    if(document.hidden){ BIT_SALIO=Date.now(); bitacora('salio'); }
+    else { if(BIT_SALIO){ BIT_FUERA+=Math.round((Date.now()-BIT_SALIO)/1000); BIT_SALIO=0; } bitacora('regreso'); }
+  });
+}catch(e){}
+
 function paso(){
   callarTodo();
   aplicarIdiomaUI();
@@ -9987,6 +10034,8 @@ function paso(){
   if(it>=S.items.length){cierre();return;}
   avisarSiYaCasi();
   var x=S.items[it];
+  bitacora('ejercicio',{k:x.k||'',area:x.area||'',
+    frase:String(x.en||x.q||x.audio||x.frase||x.titulo||x.pide||'').slice(0,110)});
   var INS={
     model:{en:'Listen and say it out loud.',            es:'Escucha y dilo en voz alta.'},
     drill:{en:'Same sentence, one piece changed.',      es:'La misma frase, con una pieza cambiada.'},
@@ -11036,7 +11085,13 @@ function cierre(){
     perfil:P,intentos:attempts.slice(),promedio_repeticion:prom,
     dudas:DUDAS.slice(),observacion:''
   };
-  D.sesiones.push(rec);save(D);
+  bitacora('fin');
+  rec.activo=segundosActivos();
+  rec.bitacora=BITACORA.slice();
+  rec.items_total=(S.items||[]).length;
+  // en el telefono se guarda sin la bitacora, para no llenar la memoria
+  var recLocal={}; for(var kk in rec) if(kk!=='bitacora') recLocal[kk]=rec[kk];
+  D.sesiones.push(recLocal);save(D);
   try{hcmCerrarLeccion(rec);}catch(e){console.error(e);}
 
   // la IA propone los tres errores; Brian los valida. Sin IA, no pasa nada.
@@ -11683,7 +11738,9 @@ function irAParadaHCM(n){
 function hcmCerrarLeccion(rec){
   var Dh=hcmLoad();var Ph=Dh.perfil||{};
   var n=Ph.parada_actual||Ph.parada||1;
-  try{hcmGuardarAvance(n,(rec&&rec.intentos)||[],(rec&&rec.dur)||0);}catch(e){}
+  try{hcmGuardarAvance(n,(rec&&rec.intentos)||[],(rec&&rec.dur)||0,{
+    titulo:rec&&rec.titulo, activo:rec&&rec.activo, bitacora:rec&&rec.bitacora,
+    items_total:rec&&rec.items_total, perfil:perfilParaMaestro(Ph)});}catch(e){}
   var sig=n+1;
   while(sig<=PARADAS_HCM&&LECCIONES_HCM[sig]&&LECCIONES_HCM[sig].examen)sig++;
   if(sig>PARADAS_HCM)sig=PARADAS_HCM;
@@ -11808,7 +11865,7 @@ var ENVIO_HCM=null;   // la promesa del ultimo envio, para decirle al cadete si 
 // telefono y sale solo la siguiente vez que haya conexion: nada se pierde.
 var PEND_HCM='hcm_pendientes';
 function pendientesHCM(){ try{ return JSON.parse(localStorage.getItem(PEND_HCM)||'[]'); }catch(e){ return []; } }
-function guardaPendientesHCM(l){ try{ localStorage.setItem(PEND_HCM, JSON.stringify(l.slice(-60))); }catch(e){} }
+function guardaPendientesHCM(l){ try{ localStorage.setItem(PEND_HCM, JSON.stringify(l.slice(-15))); }catch(e){ try{ localStorage.setItem(PEND_HCM, JSON.stringify(l.slice(-3))); }catch(e2){} } }
 function mandarHCM_(cuerpo){
   return fetch(HCM_DATOS_ENDPOINT, {
     method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
@@ -11832,7 +11889,21 @@ function vaciarPendientesHCM(){
   };
   sigue();
 }
-function hcmGuardarAvance(leccion, intentos, segundos) {
+// Lo que Brian quiere ver del cadete: gustos, necesidad, a que se dedica.
+// Se manda sin la foto ni cosas pesadas.
+function perfilParaMaestro(p){
+  var o={}; p=p||{};
+  for(var k in p){
+    var v=p[k];
+    if(k==='foto'||k==='hechas'||k==='sesiones') continue;
+    if(v===null||v===undefined||typeof v==='function') continue;
+    if(typeof v==='object'){ try{ v=JSON.stringify(v); }catch(e){ continue; } }
+    v=String(v); if(v.length>300) v=v.slice(0,300);
+    o[k]=v;
+  }
+  return o;
+}
+function hcmGuardarAvance(leccion, intentos, segundos, extra) {
   if (!HCM_DATOS_ENDPOINT) return;
   var D2 = hcmLoad(); var P2 = D2.perfil || {};
   var cuerpo = {
@@ -11845,6 +11916,7 @@ function hcmGuardarAvance(leccion, intentos, segundos) {
     intentos: intentos || [],
     segundos: segundos || 0
   };
+  if (extra) for (var ek in extra) if (extra[ek] !== undefined) cuerpo[ek] = extra[ek];
   try {
     ENVIO_HCM = mandarHCM_(cuerpo).then(function(ok){
       // solo se guarda para despues lo que trae practica de verdad
