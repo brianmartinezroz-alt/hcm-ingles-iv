@@ -1545,7 +1545,7 @@ if('serviceWorker' in navigator){
 <script>
 (function(){
 "use strict";
-var VERSION="v135 · 18 sep · las evaluaciones del Colegio ya son repaso del bloque, no examen CEFR";
+var VERSION="v136 · 19 sep · el avance del cadete va solo al servidor del Colegio (ya no a English For All)";
 
 /* ═══════════ almacenamiento ═══════════ */
 var KEY='efa_tutor_v2',mem={};
@@ -8358,7 +8358,11 @@ var IA_ENDPOINT='https://script.google.com/macros/s/AKfycbxlAGlMVpdjqLZ_yh-Oh393
 var VOZ_ENDPOINT='https://script.google.com/macros/s/AKfycbxJgynQD_GCLvdzlDNUrc8AnnWbTeS-1G6_lqIkNjelpB7Mqbjeg-qH3_tpidzNMGiK/exec';
 // Servidor de datos: si lo pones, cada sesión se guarda sola en tu hoja.
 // Si está vacío, el alumno tiene que mandarla por correo.
-var DATOS_ENDPOINT='https://script.google.com/macros/s/AKfycbyW4nHbMi8a4pcOS_0PUOYR053PEYwQ0tFjm9hZM4Tx7kq2hK6VdrZy9PGqyrlsSrimng/exec';
+// v136: VACIO a proposito. Esta direccion era la del servidor de English For All
+// y se quedo pegada cuando se copio la app: cada leccion que cerraba un cadete
+// se guardaba ADEMAS en la hoja de EFA y aparecia como alumno particular.
+// El avance del cadete va solo a HCM_DATOS_ENDPOINT (hcmGuardarAvance).
+var DATOS_ENDPOINT='';
 
 /* Buscador de videos. Si esta linea queda vacia, la app sigue funcionando
    igual que antes: en vez del recuadro ofrece abrir la busqueda en YouTube. */
@@ -11076,9 +11080,9 @@ function cierre(){
     '<textarea class="typebox" id="obs" placeholder="Lo que se te hizo difícil, lo que no entendiste, lo que le cambiarías…"></textarea>'+
     (HAY_MIC?'<button class="btn ghost" id="obsmic"><span class="pulse"></span> Decirlo en voz alta</button>':'')+
     '<p class="tiny" style="text-align:left;margin:6px 0 0">Es opcional, pero es lo que más le sirve a Brian.</p></div>'+
-    '<p class="why" id="stat"></p><div class="actrow" id="manual"'+((ONLINE||DATOS_ENDPOINT)?' hidden':'')+'>'+
+    '<p class="why" id="stat"></p><div class="actrow" id="manual"'+((ONLINE||DATOS_ENDPOINT||HCM_DATOS_ENDPOINT)?' hidden':'')+'>'+
     '<button id="cop">Copiar código</button></div>'+
-    '<textarea class="code" id="cd" readonly'+((ONLINE||DATOS_ENDPOINT)?' hidden':'')+'></textarea></div>';
+    '<textarea class="code" id="cd" readonly'+((ONLINE||DATOS_ENDPOINT||HCM_DATOS_ENDPOINT)?' hidden':'')+'></textarea></div>';
   APP.innerHTML=h;
   say(msgVoz,'es-MX');
 
@@ -11113,6 +11117,17 @@ function cierre(){
   document.getElementById('cd').value=codigo;
   document.getElementById('menu').onclick=function(){sIdx=null;mostrarMapa();};
 
+  // v136: el avance ya salio al servidor del Colegio en hcmCerrarLeccion.
+  // Aqui solo se le dice al cadete si llego.
+  if(HCM_DATOS_ENDPOINT && !DATOS_ENDPOINT){
+    var st=document.getElementById('stat');
+    if(st) st.textContent='Guardando tu avance…';
+    Promise.resolve(ENVIO_HCM).then(function(ok){
+      var st2=document.getElementById('stat'); if(!st2) return;
+      st2.textContent = ok ? '✓ Guardada. Tu instructor ya la ve.'
+                           : 'Sin internet ahorita. Tu avance quedó guardado y se manda solo en cuanto haya conexión.';
+    });
+  }
   // se manda sola al servidor de datos
   if(DATOS_ENDPOINT){
     document.getElementById('stat').textContent='Enviando a Brian…';
@@ -11788,26 +11803,64 @@ function irA(pg){try{if(pg==='saludo')mostrarMapa();else{forzar=pg;router();}}ca
 
 
 // ── HCM: guardar avance en el servidor ─────────────────────────────
+var ENVIO_HCM=null;   // la promesa del ultimo envio, para decirle al cadete si llego
+// Los cadetes tienen internet a ratos. Si un envio falla, se guarda en el
+// telefono y sale solo la siguiente vez que haya conexion: nada se pierde.
+var PEND_HCM='hcm_pendientes';
+function pendientesHCM(){ try{ return JSON.parse(localStorage.getItem(PEND_HCM)||'[]'); }catch(e){ return []; } }
+function guardaPendientesHCM(l){ try{ localStorage.setItem(PEND_HCM, JSON.stringify(l.slice(-60))); }catch(e){} }
+function mandarHCM_(cuerpo){
+  return fetch(HCM_DATOS_ENDPOINT, {
+    method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(cuerpo)
+  }).then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){ return !!(d && d.ok); })
+    .catch(function(){ return false; });
+}
+var VACIANDO_HCM=false;
+function vaciarPendientesHCM(){
+  if(!HCM_DATOS_ENDPOINT || VACIANDO_HCM) return;
+  var l=pendientesHCM(); if(!l.length) return;
+  VACIANDO_HCM=true;
+  var sigue=function(){
+    var l2=pendientesHCM();
+    if(!l2.length){ VACIANDO_HCM=false; return; }
+    mandarHCM_(l2[0]).then(function(ok){
+      if(!ok){ VACIANDO_HCM=false; return; }          // sin red todavia: otro dia
+      var l3=pendientesHCM(); l3.shift(); guardaPendientesHCM(l3); sigue();
+    });
+  };
+  sigue();
+}
 function hcmGuardarAvance(leccion, intentos, segundos) {
   if (!HCM_DATOS_ENDPOINT) return;
   var D2 = hcmLoad(); var P2 = D2.perfil || {};
+  var cuerpo = {
+    accion: 'guardar',
+    nombre: P2.nombre || '',
+    num_cadete: claveCadete(P2.nombre),
+    grupo: P2.grupo || '301',
+    carril: P2.carril || 'medio',
+    leccion: leccion,
+    intentos: intentos || [],
+    segundos: segundos || 0
+  };
   try {
-    fetch(HCM_DATOS_ENDPOINT, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({
-        accion: 'guardar',
-        nombre: P2.nombre || '',
-        num_cadete: claveCadete(P2.nombre),
-        grupo: P2.grupo || '301',
-        carril: P2.carril || 'medio',
-        leccion: leccion,
-        intentos: intentos || [],
-        segundos: segundos || 0
-      })
-    }).catch(function(){});
+    ENVIO_HCM = mandarHCM_(cuerpo).then(function(ok){
+      // solo se guarda para despues lo que trae practica de verdad
+      if(!ok && (segundos || (intentos && intentos.length))){
+        var l=pendientesHCM(); l.push(cuerpo); guardaPendientesHCM(l);
+      }
+      if(ok) vaciarPendientesHCM();
+      return ok;
+    });
   } catch(e) {}
 }
+// al abrir la app y al recuperar la red, sale lo que se quedo guardado
+try{
+  window.addEventListener('online', function(){ vaciarPendientesHCM(); });
+  setTimeout(vaciarPendientesHCM, 4000);
+}catch(e){}
 
 // ── HCM: pedir ayuda al cerebro IA ──────────────────────────────────
 function hcmPedirAyuda(pregunta, leccion) {

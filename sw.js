@@ -1,7 +1,7 @@
 /* Ayudante de instalación de la app.
    Guarda la app en el teléfono para que abra rápido y funcione sin
    internet. El audio y la IA sí necesitan internet. */
-var CACHE = 'hcm-ingles-iv-v1';
+var CACHE = 'hcm-ingles-iv-v2';
 var BASE  = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', function (e) {
@@ -26,8 +26,13 @@ self.addEventListener('fetch', function (e) {
   if (r.method !== 'GET') return;                       // nada de POST al caché
   if (r.url.indexOf('script.google.com') !== -1) return; // IA, voz y datos: siempre en vivo
 
+  // La pagina misma se pide siempre fresca (sin la cache del navegador):
+  // asi cada cadete recibe la version nueva en cuanto abre con internet.
+  var pide = (r.mode === 'navigate' || /\/(index\.html)?$/.test(new URL(r.url).pathname))
+    ? fetch(r.url, { cache: 'reload', credentials: 'same-origin' })
+    : fetch(r);
   e.respondWith(
-    fetch(r).then(function (resp) {
+    pide.then(function (resp) {
       if (resp && resp.status === 200 && resp.type === 'basic') {
         var copia = resp.clone();
         caches.open(CACHE).then(function (c) { c.put(r, copia); });
