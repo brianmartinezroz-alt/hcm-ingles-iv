@@ -871,5 +871,70 @@ try{ entrado = localStorage.getItem(KEY_LS) === '1'; }catch(e){}
 entrado ? arrancar() : pintarEntrada();
 })();
 </script>
+<!-- AVISO_VERSION_NUEVA: avisa cuando hay una versión publicada más nueva que la que está abierta -->
+<script>
+(function(){
+  try{ if(window.top!==window.self) return; }catch(e){ return; }
+  var PREFIJO_CACHE = '';           // cajas propias de esta app que se pueden tirar
+  var CLAVE = 'aviso_ver_' + location.pathname;
+  var ultima = 0, mostrado = false;
+  function tamLocal(){
+    try{ var n = performance.getEntriesByType('navigation')[0]; return n && n.decodedBodySize ? n.decodedBodySize : 0; }catch(e){ return 0; }
+  }
+  function tamServidor(r){
+    var et = r.headers.get('etag') || '';
+    var m = et.match(/-([0-9a-f]+)"?$/i);
+    return m ? parseInt(m[1],16) : 0;
+  }
+  function revisar(){
+    if(mostrado || !navigator.onLine) return;
+    var ahora = Date.now(); if(ahora - ultima < 60000) return; ultima = ahora;
+    try{ if(+sessionStorage.getItem('aviso_callar') > ahora) return; }catch(e){}
+    fetch(location.pathname, {method:'HEAD', cache:'no-store'}).then(function(r){
+      if(!r.ok) return;
+      var srv = tamServidor(r); if(!srv) return;
+      var loc = tamLocal(), base = loc;
+      if(!base){
+        try{ base = +localStorage.getItem(CLAVE) || 0; if(!base){ localStorage.setItem(CLAVE, srv); return; } }catch(e){ return; }
+      }
+      if(srv !== base) pintar(srv);
+    }).catch(function(){});
+  }
+  function actualizar(srv){
+    try{ localStorage.setItem(CLAVE, srv); sessionStorage.setItem('aviso_callar', Date.now()+5*60000); }catch(e){}
+    var pasos = [];
+    if('serviceWorker' in navigator){
+      pasos.push(navigator.serviceWorker.getRegistrations().then(function(rs){ return Promise.all(rs.map(function(g){ return g.update().catch(function(){}); })); }).catch(function(){}));
+    }
+    if(PREFIJO_CACHE && window.caches){
+      pasos.push(caches.keys().then(function(ks){ return Promise.all(ks.filter(function(k){ return k.indexOf(PREFIJO_CACHE)===0; }).map(function(k){ return caches.delete(k); })); }).catch(function(){}));
+    }
+    pasos.push(fetch(location.href, {cache:'reload'}).catch(function(){}));
+    Promise.all(pasos).then(function(){ location.reload(); });
+    setTimeout(function(){ location.reload(); }, 4000);
+  }
+  function pintar(srv){
+    mostrado = true;
+    var b = document.createElement('div');
+    b.id = 'aviso-version';
+    b.setAttribute('role','status');
+    b.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom));'+
+      'z-index:2147483000;display:flex;align-items:center;gap:12px;background:#0E2A5C;color:#F2F7FF;'+
+      'padding:10px 10px 10px 16px;border-radius:999px;box-shadow:0 8px 28px rgba(8,20,48,.35);'+
+      'font:500 14px/1.2 "DM Sans",system-ui,-apple-system,sans-serif;max-width:calc(100vw - 24px);white-space:nowrap';
+    b.innerHTML = '<span>Hay una versión nueva</span>'+
+      '<button type="button" style="font:inherit;font-weight:700;border:0;border-radius:999px;padding:8px 14px;background:#6FA0FF;color:#0A1D40;cursor:pointer">Actualizar</button>'+
+      '<button type="button" aria-label="Ahora no" style="font:inherit;border:0;background:none;color:#BCD3FF;font-size:18px;padding:0 6px;cursor:pointer">×</button>';
+    var bs = b.querySelectorAll('button');
+    bs[0].onclick = function(){ bs[0].textContent = 'Cargando…'; actualizar(srv); };
+    bs[1].onclick = function(){ b.remove(); mostrado = false; try{ sessionStorage.setItem('aviso_callar', Date.now()+30*60000); }catch(e){} };
+    document.body.appendChild(b);
+  }
+  setTimeout(revisar, 3000);
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible') revisar(); });
+  window.addEventListener('focus', revisar);
+})();
+</script>
+
 </body>
 </html>
