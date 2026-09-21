@@ -764,6 +764,13 @@
     background:var(--papel);color:var(--tinta);cursor:pointer;font-family:var(--body)}
   .actrow button.p{background:var(--verde);color:#fff;border-color:var(--verde)}
   .why{font-size:11.5px;color:var(--tenue);margin-top:9px;line-height:1.6}
+
+/* velocidad del audio */
+.velbar{display:flex;align-items:center;flex-wrap:nowrap;gap:5px;margin:8px 0 12px}
+.velbar-t{flex:0 0 auto;font-size:11.5px;font-weight:700;letter-spacing:.3px;opacity:.7;margin-right:2px}
+.velbar-b{flex:1 1 0;min-width:0;min-height:40px;padding:0 2px;border-radius:999px;border:1.5px solid rgba(0,0,0,.16);background:rgba(255,255,255,.7);color:inherit;font-weight:700;font-size:13px;font-variant-numeric:tabular-nums;cursor:pointer}
+.velbar-b.on{background:var(--verde,#1D9E75);border-color:var(--verde,#1D9E75);color:#fff}
+.velbar-b:active{transform:scale(.95)}
 </style>
 <style>
   .cargando-audio{position:relative;opacity:.75}
@@ -1545,7 +1552,7 @@ if('serviceWorker' in navigator){
 <script>
 (function(){
 "use strict";
-var VERSION="v137 · 20 sep · bitácora de la sesión y perfil del cadete para el panel";
+var VERSION="v138 · 21 sep · velocidad del audio en los listenings (0.5x a 1.5x)";
 
 /* ═══════════ almacenamiento ═══════════ */
 var KEY='efa_tutor_v2',mem={};
@@ -1625,7 +1632,7 @@ function aplicarVoz(id){
 }
 
 // vel: 0.7 lento · nada = normal. Solo aplica a ESA frase, no a toda la app.
-function sayLento(t,lang,cb){ return say(t,lang,cb,0.7); }
+function sayLento(t,lang,cb){ return say(t,lang,cb,Math.max(0.45,(VEL_AUDIO||1)*0.7)); }
 function say(t,lang,cb,vel){
   callarTodo();          // ← al primer clic se hace silencio, sin esperar la descarga
   marcarCargando(true);  // ← el botón avisa que viene en camino
@@ -1651,7 +1658,8 @@ function hablar(t,lang,cb){
   else{u.lang=es?'es-MX':'en-US';}
   // Si el alumno pidió "Más lento", también aquí se le baja.
   var base=es?Math.min(1.15,(RATE||0.85)+0.12):(RATE||0.85);
-  u.rate=VEL_PEDIDA?Math.max(0.5,base*VEL_PEDIDA):base;
+  var _f=VEL_PEDIDA||(es?1:(VEL_AUDIO||1));
+  u.rate=Math.max(0.4,Math.min(2,base*_f));
   u.pitch=1;
   if(cb)u.onend=cb;
   speechSynthesis.speak(u);
@@ -1837,6 +1845,60 @@ function vozDelServidor(texto,lang,cb,onFalla){
    Ahora las frases de la pantalla se piden desde que la pantalla se dibuja,
    una por una y sin sonar. Cuando el alumno toca, ya están en memoria. */
 var VEL_PEDIDA=null;
+
+/* ═══ velocidad del audio en los listenings ═══
+   Cinco velocidades, iguales en toda la app. Sale sola debajo del botón de
+   Escuchar de cualquier ejercicio que tenga audio. Si algo está sonando,
+   cambia en ese momento; si no, lo vuelve a poner con la nueva velocidad.
+   Se guarda: la próxima lección arranca a la velocidad que dejó. */
+var VELS=[0.5,0.75,1,1.25,1.5];
+function barraVel(){
+  var h='<div class="velbar" role="group" aria-label="Velocidad del audio">'+
+        '<span class="velbar-t">Velocidad</span>';
+  VELS.forEach(function(v){
+    h+='<button type="button" class="velbar-b'+(Math.abs(v-(VEL_AUDIO||1))<0.01?' on':'')+
+       '" data-vel="'+v+'" aria-label="Velocidad '+v+'">'+v+'×</button>';
+  });
+  return h+'</div>';
+}
+function ponerVelocidad(v){
+  VEL_AUDIO=v;
+  try{ var d=load(); d.velAudio=v; d.vel=v; save(d); D=d; }catch(e){}
+  try{ if(AUDIO_ACTUAL)AUDIO_ACTUAL.playbackRate=v; }catch(e){}
+  var bs=document.querySelectorAll('.velbar-b');
+  for(var i=0;i<bs.length;i++){
+    bs[i].classList.toggle('on',Math.abs(parseFloat(bs[i].getAttribute('data-vel'))-v)<0.01);
+  }
+}
+function engancharVelocidad(raiz){
+  if(!raiz||raiz.querySelector('.velbar'))return;
+  var oir=raiz.querySelector('#oir');
+  if(!oir)return;
+  var ancla=(oir.closest&&oir.closest('.oirfila'))||oir;
+  ancla.insertAdjacentHTML('afterend',barraVel());
+  var bar=raiz.querySelector('.velbar');
+  if(!bar)return;
+  bar.addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('.velbar-b');
+    if(!b)return;
+    e.stopPropagation();
+    ponerVelocidad(parseFloat(b.getAttribute('data-vel')));
+    var sonando=false;
+    try{ sonando=!!(AUDIO_ACTUAL&&!AUDIO_ACTUAL.paused&&!AUDIO_ACTUAL.ended); }catch(e2){}
+    if(!sonando){ var o=document.getElementById('oir'); if(o)o.click(); }
+  });
+}
+(function(){
+  function arranca(){
+    var app=document.getElementById('app');
+    if(!app||!window.MutationObserver)return;
+    engancharVelocidad(app);
+    new MutationObserver(function(){ engancharVelocidad(app); })
+      .observe(app,{childList:true,subtree:true});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',arranca);
+  else setTimeout(arranca,0);
+})();
 var PRECARGANDO=false;
 function precargarVoz(texto,lang,listo){
   if(!VOZ_ENDPOINT||!texto){listo&&listo();return;}
