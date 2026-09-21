@@ -12409,6 +12409,139 @@ function hcmTutorial(){
   try{ arrancarTutor(); }catch(e){}
 }
 
+/* GUARDADO_AUTOMATICO_HCM: el avance se guarda solo, en cada actividad y en cada leccion */
+(function(){
+  var CP_KEY = 'hcm_iv_punto';            // donde se quedo el cadete dentro de una leccion
+  var CP_ACTIVO = false, ENTRANDO = false, ULT_IT = -1;
+
+  function leerCP(){ try{ var r = localStorage.getItem(CP_KEY); return r ? JSON.parse(r) : null; }catch(e){ return null; } }
+  function borrarCP(){ try{ localStorage.removeItem(CP_KEY); }catch(e){} }
+  function sinAudio(lista){
+    // las grabaciones pesan mucho; se guarda lo que dijo, no el audio
+    return (lista || []).map(function(a){
+      var b = {}; for(var k in a){ if(k !== 'audio') b[k] = a[k]; } return b;
+    });
+  }
+  function guardarCP(mostrar){
+    if(!CP_ACTIVO || !MAT || !MAT.length || sIdx == null || !MAT[sIdx]) return;
+    var S = MAT[sIdx], total = (S.items || []).length;
+    if(it >= total) return;                         // ya va al cierre: eso lo guarda la leccion
+    if(it <= 0 && sIdx <= 0 && !(attempts && attempts.length)) return;
+    var P2 = {}; try{ P2 = hcmLoad().perfil || {}; }catch(e){}
+    var cp = {
+      n: P2.parada_actual || P2.viendo || 1, ses: HCM_SESION, carril: P2.carril || 'medio',
+      sIdx: sIdx, it: it, total: total, nsec: MAT.length, titulo: S.t || '',
+      attempts: sinAudio(attempts), intentosDe: (typeof intentosDe === 'object' ? intentosDe : {}),
+      dur: Math.round((Date.now() - (t0 || Date.now())) / 1000), cuando: Date.now()
+    };
+    try{ localStorage.setItem(CP_KEY, JSON.stringify(cp)); }
+    catch(e){ try{ cp.attempts = []; localStorage.setItem(CP_KEY, JSON.stringify(cp)); }catch(e2){} }
+    if(mostrar) aviso('✓ Avance guardado');
+  }
+  function aviso(txt){
+    var v = document.getElementById('hcm-guardado');
+    if(!v){
+      v = document.createElement('div'); v.id = 'hcm-guardado';
+      v.style.cssText = 'position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top));transform:translateX(-50%);'+
+        'z-index:2147482000;background:#1A150E;color:#F5E9C9;border:1px solid #C9A84C;border-radius:999px;'+
+        'padding:6px 14px;font:600 12px/1.2 system-ui,-apple-system,sans-serif;letter-spacing:.02em;'+
+        'opacity:0;transition:opacity .25s;pointer-events:none';
+      document.body.appendChild(v);
+    }
+    v.textContent = txt; v.style.opacity = '1';
+    clearTimeout(v._t); v._t = setTimeout(function(){ v.style.opacity = '0'; }, 1400);
+  }
+  function restaurar(cp){
+    if(!cp || !MAT || MAT.length !== cp.nsec || !MAT[cp.sIdx]) return false;
+    if((MAT[cp.sIdx].items || []).length !== cp.total) return false;
+    sIdx = cp.sIdx; it = Math.max(0, Math.min(cp.it, cp.total - 1));
+    attempts = cp.attempts || [];
+    try{ intentosDe = cp.intentosDe || {}; }catch(e){}
+    t0 = Date.now() - (cp.dur || 0) * 1000;
+    ULT_IT = it;
+    try{ paso(); }catch(e){ return false; }
+    try{ avisito('Seguimos donde te quedaste: actividad ' + (it + 1) + ' de ' + cp.total + '.'); }catch(e){}
+    return true;
+  }
+
+  // 1) cada actividad terminada: al pasar a la siguiente se guarda el punto
+  if(typeof paso === 'function'){
+    var pasoBase = paso;
+    paso = function(){
+      var avanzo = CP_ACTIVO && typeof it === 'number' && it > ULT_IT && it > 0;
+      var r = pasoBase.apply(this, arguments);
+      if(CP_ACTIVO){ guardarCP(avanzo); ULT_IT = it; }
+      return r;
+    };
+  }
+  // tambien si cierra la app o cambia de pantalla a medio ejercicio
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState === 'hidden') guardarCP(false); });
+  window.addEventListener('pagehide', function(){ guardarCP(false); });
+
+  // 2) cada leccion terminada: se guarda la leccion (eso ya lo hacia la app) y se borra el punto
+  if(typeof hcmCerrarLeccion === 'function'){
+    var cerrarBase = hcmCerrarLeccion;
+    hcmCerrarLeccion = function(){
+      var r = cerrarBase.apply(this, arguments);
+      borrarCP(); CP_ACTIVO = false; ULT_IT = -1;
+      try{ aviso('✓ Lección guardada'); }catch(e){}
+      return r;
+    };
+  }
+
+  // 3) al entrar a una leccion: si se habia quedado a medias, sigue ahi
+  function envolverEntrada(base){
+    return function(n){
+      if(ENTRANDO) return base.apply(this, arguments);
+      ENTRANDO = true;
+      try{ base.apply(this, arguments); } finally { ENTRANDO = false; }
+      CP_ACTIVO = !!(MAT && MAT.length); ULT_IT = 0;
+      var cp = leerCP();
+      if(cp && cp.n === n && cp.ses === HCM_SESION){
+        var P2 = {}; try{ P2 = hcmLoad().perfil || {}; }catch(e){}
+        if(cp.carril === (P2.carril || 'medio')) restaurar(cp);
+      }
+    };
+  }
+  if(typeof irAParadaHCM === 'function') irAParadaHCM = envolverEntrada(irAParadaHCM);
+  if(typeof hcmEntrar === 'function') hcmEntrar = envolverEntrada(hcmEntrar);
+
+  // 4) en el mapa: una tarjeta para seguir donde se quedo
+  if(typeof mostrarMapa === 'function'){
+    var mapaBase = mostrarMapa;
+    mostrarMapa = function(){
+      guardarCP(false); CP_ACTIVO = false;
+      var r = mapaBase.apply(this, arguments);
+      try{
+        var cp = leerCP();
+        if(!cp) return r;
+        if(Date.now() - (cp.cuando || 0) > 21 * 864e5){ borrarCP(); return r; }
+        var caja = document.querySelector('.hcm-mapa');
+        if(!caja || document.getElementById('hcm-seguir')) return r;
+        var lec = (typeof LECCIONES_HCM !== 'undefined' && LECCIONES_HCM[cp.n]) || {};
+        var d = document.createElement('div'); d.id = 'hcm-seguir';
+        d.style.cssText = 'margin:14px 16px 4px;padding:14px 16px;border-radius:14px;background:#1A150E;color:#F5E9C9;border:1.5px solid #C9A84C';
+        d.innerHTML =
+          '<div style="font:600 11px/1.3 system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#C9A84C">Te quedaste a medias</div>'+
+          '<div style="font-size:17px;font-weight:700;margin:4px 0 2px">Lección ' + cp.n + (lec.titulo ? ' · ' + String(lec.titulo).replace(/[<>&]/g,'') : '') + '</div>'+
+          '<div style="font-size:13px;opacity:.8;margin-bottom:10px">Ibas en la actividad ' + (cp.it + 1) + ' de ' + cp.total + '. Tu avance está guardado.</div>'+
+          '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+            '<button type="button" id="hcm-seguir-si" style="font:inherit;font-weight:700;border:0;border-radius:10px;padding:10px 16px;background:#C9A84C;color:#1A150E;cursor:pointer">Seguir donde me quedé</button>'+
+            '<button type="button" id="hcm-seguir-no" style="font:inherit;border:1px solid rgba(201,168,76,.5);border-radius:10px;padding:10px 14px;background:none;color:#F5E9C9;cursor:pointer">Empezar de nuevo</button>'+
+          '</div>';
+        var cab = caja.querySelector('.hcm-mapa-cab');
+        if(cab && cab.nextSibling) caja.insertBefore(d, cab.nextSibling); else caja.insertBefore(d, caja.firstChild);
+        document.getElementById('hcm-seguir-si').onclick = function(){
+          try{ HCM_SESION = cp.ses || HCM_SESION; }catch(e){}
+          (typeof hcmEntrar === 'function' ? hcmEntrar : irAParadaHCM)(cp.n);
+        };
+        document.getElementById('hcm-seguir-no').onclick = function(){ borrarCP(); d.remove(); };
+      }catch(e){}
+      return r;
+    };
+  }
+})();
+
 })();
 
 </script>
