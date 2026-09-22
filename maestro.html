@@ -144,6 +144,22 @@
   .car.medio{color:#8F5A20;border-color:#D9A04C;background:#FBEBD9}
   .car.alto{color:#8B2B2B;border-color:#C96A6A;background:#FBE0E0}
   .vacio{color:var(--tenue);font-size:14px;padding:18px 0}
+  .gchips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+  .gchip{font:inherit;font-weight:700;font-size:15px;border-radius:12px;padding:9px 14px;cursor:pointer;
+    background:var(--tarjeta);border:1.5px solid var(--linea);color:var(--tinta);display:flex;gap:8px;align-items:center}
+  .gchip span{font-family:var(--mono);font-size:11px;font-weight:500;background:var(--papel-2);border-radius:20px;padding:1px 7px}
+  .gchip.on{background:var(--negro);color:#F5E9C9;border-color:var(--negro)}
+  .gchip.on span{background:var(--oro-luz);color:var(--negro)}
+  tr.fila{cursor:pointer} tr.fila:hover td{background:var(--oro-s)}
+  .cst{font-family:var(--mono);font-size:11px;border-radius:20px;padding:2px 7px;background:var(--negro);color:var(--oro-luz);white-space:nowrap}
+  .cst.mala{background:var(--rojo);color:#fff}
+  .ficha{background:var(--tarjeta);border:1.5px solid var(--oro);border-radius:14px;padding:18px;margin-top:22px}
+  .ficha h4{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--oro);margin:18px 0 8px}
+  .cstf{border:1.5px solid var(--oro);border-radius:10px;padding:10px 12px;margin-bottom:8px;display:flex;flex-direction:column;gap:2px}
+  .cstf span{font-family:var(--mono);font-size:12px;color:var(--tinta-2)} .cstf em{font-style:normal;font-size:12px;color:var(--verde);font-weight:600}
+  .cstf.mala{border-color:var(--rojo)} .cstf.mala em{color:var(--rojo)}
+  .lchip{display:inline-block;font-family:var(--mono);font-size:11px;border-radius:20px;padding:2px 8px;margin:2px;border:1px solid var(--linea)}
+  .lchip.lB{background:#FBF3D9} .lchip.lI{background:#FBEBD9} .lchip.lA{background:#FBE0E0}
   .nota{background:var(--oro-s);border:1.5px solid var(--oro);border-radius:12px;padding:13px 16px;
         font-size:14px;margin-bottom:20px}
   .nota b{color:var(--oro-h)}
@@ -705,115 +721,211 @@ function pintarGrupos(c){
       'así que no puedo traer el avance de los cadetes.</p>';
     return;
   }
+  var GRUPOS6 = ['301','302','303','304','305','306'];
+  var NIV = {bajo:'Básico', medio:'Intermedio', alto:'Avanzado'};
+  var PAR = {P1:'Primer parcial', P2:'Segundo parcial', CF:'Curso completo'};
+  function pase(){
+    try{
+      var p = JSON.parse(sessionStorage.getItem('hcm_pase') || 'null');
+      if(p && p.v && p.hasta > Date.now()) return p.v;
+    }catch(e){}
+    return '';
+  }
+  function guardaPase(v){ try{ sessionStorage.setItem('hcm_pase', JSON.stringify({v:v, hasta:Date.now() + 11 * 3600e3})); }catch(e){} }
+  function tiraPase(){ try{ sessionStorage.removeItem('hcm_pase'); }catch(e){} }
+  function pedir(cuerpo){
+    return fetch(DATOS, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(cuerpo)})
+      .then(function(r){ return r.ok ? r.json() : null; });
+  }
+  function normNom(s){
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  // la misma cuenta que hace la app del cadete al dar la constancia
+  function folioDe(nombre, grupo, p, niv, fecha){
+    var s = normNom(nombre) + '|' + grupo + '|' + p + '|' + niv + '|' + fecha, h = 0x811c9dc5;
+    for(var i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    return 'HCM-' + p + '-' + niv.charAt(0).toUpperCase() + '-' + ('000000' + h.toString(36).toUpperCase()).slice(-6);
+  }
+  function leerConstancias(txt, nombre, grupo){
+    var inv = {'Básico':'bajo', 'Intermedio':'medio', 'Avanzado':'alto'};
+    return String(txt || '').split('|').map(function(t){ return t.trim(); }).filter(Boolean).map(function(t){
+      var m = t.match(/^(P1|P2|CF)\s+(Básico|Intermedio|Avanzado)\s+(HCM-\S+)\s+(\d{4}-\d{2}-\d{2})$/);
+      if(!m) return {crudo:t};
+      var niv = inv[m[2]];
+      return {p:m[1], niv:niv, folio:m[3], fecha:m[4], valida: folioDe(nombre, grupo, m[1], niv, m[4]) === m[3]};
+    });
+  }
+
+  // 1) sin pase: se pide la clave del servidor de calificaciones
+  if(!pase()){
+    c.innerHTML = '<div class="entrada" style="margin:4vh auto">' +
+      '<h2>Avance de los cadetes</h2>' +
+      '<p>Esta parte lee la hoja de calificaciones, así que pide la clave del servidor ' +
+      '(la de <b>Propiedades del script → CLAVE_MAESTRO</b>). No es la misma que la de este panel.</p>' +
+      '<div class="campo"><input type="password" id="clsrv" placeholder="Clave del servidor" style="flex:1" autocomplete="current-password">' +
+      '<button class="bt" id="oksrv">Entrar</button></div>' +
+      (panelError ? '<p class="err">' + esc(panelError) + '</p>' : '') + '</div>';
+    var inp = document.getElementById('clsrv');
+    function probar(){
+      var v = inp.value.trim(); if(!v) return;
+      document.getElementById('oksrv').textContent = 'Revisando…';
+      pedir({accion:'entrar', clave:v}).then(function(d){
+        if(d && d.ok && d.pase){ guardaPase(d.pase); panelError = ''; panel = null; pintar(); }
+        else { panelError = (d && d.mensaje) || 'Esa no es la clave.'; pintar(); }
+      }).catch(function(){ panelError = 'Sin conexión con el servidor.'; pintar(); });
+    }
+    document.getElementById('oksrv').onclick = probar;
+    inp.onkeydown = function(e){ if(e.key === 'Enter') probar(); };
+    return;
+  }
+
+  // 2) con pase: se trae el avance
   if(panel === null && !panelError){
     c.innerHTML = '<p class="vacio">Trayendo el avance de los seis grupos…</p>';
-    fetch(DATOS, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({accion:'panel_maestro', clave:CLAVE})
-    }).then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(d){
-        if(d && d.ok) panel = d.grupos || [];
-        else panelError = (d && d.error) || 'El servidor no contestó bien.';
-        pintar();
-      })
-      .catch(function(){
-        panelError = 'Sin conexión con el servidor de datos.';
-        pintar();
-      });
+    pedir({accion:'panel_maestro', pase:pase()}).then(function(d){
+      if(d && d.ok){ panel = d; }
+      else if(d && (d.error === 'sin_permiso')){ tiraPase(); panelError = 'El pase venció. Vuelve a poner la clave.'; }
+      else panelError = (d && (d.mensaje || d.error)) || 'El servidor no contestó bien.';
+      pintar();
+    }).catch(function(){ panelError = 'Sin conexión con el servidor de datos.'; pintar(); });
     return;
   }
   if(panelError){
-    c.innerHTML = '<p class="nota"><b>No pude traer los datos.</b> ' + esc(panelError) +
-      '<br><br>Lo más probable: el servidor de datos todavía tiene la lista de grupos de primer año ' +
-      '(101 a 115) en lugar de 301 a 306. Hay que editar esas dos líneas en el Apps Script, ' +
-      'correr <b>crearHojas</b> y publicar versión nueva.</p>' +
+    c.innerHTML = '<p class="nota"><b>No pude traer los datos.</b> ' + esc(panelError) + '</p>' +
       '<button class="bt claro" id="reintentar">Reintentar</button>';
-    document.getElementById('reintentar').onclick = function(){
-      panelError = ''; panel = null; pintar();
-    };
+    document.getElementById('reintentar').onclick = function(){ panelError = ''; panel = null; pintar(); };
     return;
   }
 
+  // el servidor viejo mandaba [{grupo,cadetes}]; el nuevo manda {grupos, cadetes}
   var todos = [];
-  panel.forEach(function(g){ (g.cadetes || []).forEach(function(x){ x._g = g.grupo; todos.push(x); }); });
-  if(!todos.length){
-    c.innerHTML = '<p class="nota">Todavía no hay cadetes registrados. En cuanto alguno cierre su ' +
-      'primera lección aparece aquí, con su grupo, su carril y sus minutos.</p>';
+  if(Array.isArray(panel)) panel.forEach(function(g){ (g.cadetes || []).forEach(function(x){ x.grupo = x.grupo || g.grupo; todos.push(x); }); });
+  else (panel.cadetes || []).forEach(function(x){ todos.push(x); });
+  var porGrupo = {};
+  GRUPOS6.forEach(function(g){ porGrupo[g] = []; });
+  todos.forEach(function(x){ var g = String(x.grupo || ''); (porGrupo[g] = porGrupo[g] || []).push(x); });
+  var gruposVisibles = Object.keys(porGrupo).filter(function(g){ return GRUPOS6.indexOf(g) >= 0 || porGrupo[g].length; }).sort();
+  if(!window.__grupoSel || !porGrupo[window.__grupoSel]) window.__grupoSel = gruposVisibles.filter(function(g){ return porGrupo[g].length; })[0] || '301';
+  var sel = window.__grupoSel;
+
+  var html = '<div class="gchips">' + gruposVisibles.map(function(g){
+      return '<button class="gchip' + (g === sel ? ' on' : '') + '" data-g="' + esc(g) + '">' + esc(g) +
+        '<span>' + porGrupo[g].length + '</span></button>';
+    }).join('') + '<button class="gchip todos' + (sel === '*' ? ' on' : '') + '" data-g="*">Todos<span>' + todos.length + '</span></button></div>' +
+    '<div id="gcuerpo"></div>';
+  c.innerHTML = html;
+  c.querySelectorAll('.gchip').forEach(function(b){ b.onclick = function(){ window.__grupoSel = b.dataset.g; pintar(); }; });
+  var lista = sel === '*' ? todos.slice() : (porGrupo[sel] || []).slice();
+  var cu = document.getElementById('gcuerpo');
+  if(!lista.length){
+    cu.innerHTML = '<p class="vacio">Nadie del grupo ' + esc(sel) + ' ha cerrado su primera lección todavía.</p>';
     return;
   }
-  var minutos = 0, sesiones = 0, part = 0;
-  todos.forEach(function(x){
-    minutos += (+x.minutos || 0); sesiones += (+x.sesiones || 0); part += (+x.particip || 0);
-  });
-
-  var html = '<div class="resumen">' +
-    caja('Cadetes', todos.length) +
-    caja('Grupos', panel.length) +
-    caja('Minutos', minutos) +
-    caja('Sesiones', sesiones) +
-    caja('Participación', Math.round(part / todos.length) + '%') +
-    '</div>' +
+  var min = 0, ses = 0, part = 0, niv = {bajo:0, medio:0, alto:0};
+  lista.forEach(function(x){ min += (+x.minutos || 0); ses += (+x.sesiones || 0); part += (+x.particip || 0); niv[x.carril || 'medio'] = (niv[x.carril || 'medio'] || 0) + 1; });
+  cu.innerHTML = '<div class="resumen">' +
+      cajaR('Cadetes', lista.length) + cajaR('Minutos', min) + cajaR('Sesiones', ses) +
+      cajaR('Participación', Math.round(part / lista.length) + '%') +
+      cajaR('Niveles', 'B ' + niv.bajo + ' · I ' + niv.medio + ' · A ' + niv.alto) + '</div>' +
     '<div class="filtro"><input id="busca" placeholder="Buscar cadete por nombre" style="flex:1;max-width:320px">' +
-    '<button class="bt claro" id="imprimir2">Imprimir</button></div><div id="tablas"></div>';
-  c.innerHTML = html;
+      '<button class="bt claro" id="cargaconst">Ver constancias del grupo</button>' +
+      '<button class="bt claro" id="imprimir2">Imprimir</button></div><div id="tablas"></div><div id="ficha"></div>';
   document.getElementById('imprimir2').onclick = function(){ window.print(); };
   var bus = document.getElementById('busca');
-  bus.oninput = function(){ tablas(bus.value); };
-  tablas('');
+  bus.oninput = function(){ tabla(bus.value); };
+  var CONST = window.__constCache || (window.__constCache = {});
+  document.getElementById('cargaconst').onclick = function(){
+    var bt = this, i = 0;
+    (function sig(){
+      if(i >= lista.length){ bt.textContent = 'Constancias al día'; tabla(bus.value); return; }
+      var x = lista[i++];
+      bt.textContent = 'Leyendo ' + i + ' de ' + lista.length + '…';
+      pedir({accion:'detalle_cadete', pase:pase(), nombre:x.nombre}).then(function(d){
+        if(d && d.ok) CONST[normNom(x.nombre)] = d;
+        tabla(bus.value); sig();
+      }).catch(sig);
+    })();
+  };
+  tabla('');
 
-  function tablas(q){
-    q = (q || '').toLowerCase().trim();
-    var out = '';
-    panel.forEach(function(g){
-      var cs = (g.cadetes || []).filter(function(x){
-        return !q || String(x.nombre || '').toLowerCase().indexOf(q) >= 0;
-      });
-      if(!cs.length) return;
+  function tabla(q){
+    q = normNom(q);
+    var cs = lista.filter(function(x){ return !q || normNom(x.nombre).indexOf(q) >= 0; });
+    cs.sort(function(a, b){
       if(ordenCol){
-        cs = cs.slice().sort(function(a, b){
-          var va = a[ordenCol], vb = b[ordenCol];
-          if(typeof va === 'string' || typeof vb === 'string'){
-            va = String(va || '').toLowerCase(); vb = String(vb || '').toLowerCase();
-            return ordenAsc ? (va < vb ? -1 : va > vb ? 1 : 0) : (va > vb ? -1 : va < vb ? 1 : 0);
-          }
-          return ordenAsc ? (va || 0) - (vb || 0) : (vb || 0) - (va || 0);
-        });
+        var va = a[ordenCol], vb = b[ordenCol];
+        if(typeof va === 'string' || typeof vb === 'string'){
+          va = String(va || '').toLowerCase(); vb = String(vb || '').toLowerCase();
+          return ordenAsc ? (va < vb ? -1 : va > vb ? 1 : 0) : (va > vb ? -1 : va < vb ? 1 : 0);
+        }
+        return ordenAsc ? (va || 0) - (vb || 0) : (vb || 0) - (va || 0);
       }
-      out += '<h3 class="grupo">Grupo ' + esc(g.grupo) + ' · ' + cs.length + ' cadetes</h3>' +
-        '<table><thead><tr>' +
-        th('nombre','Cadete') + th('carril','Carril') + th('leccion','Lección') +
-        th('minutos','Min') + th('sesiones','Ses') + th('particip','Part.') +
-        th('ultima','Última') + '</tr></thead><tbody>' +
-        cs.map(function(x){
-          var cr = x.carril || 'medio';
-          var nom = (LEC[+x.leccion] || {}).titulo || '';
-          return '<tr><td>' + esc(x.nombre) + '</td>' +
-            '<td><span class="car ' + esc(cr) + '">' + esc((CARR[cr] || {}).nombre || cr) + '</span></td>' +
-            '<td>' + esc(x.leccion) + (nom ? ' · <span class="es">' + esc(nom) + '</span>' : '') + '</td>' +
-            '<td class="num">' + esc(x.minutos) + '</td>' +
-            '<td class="num">' + esc(x.sesiones) + '</td>' +
-            '<td class="num">' + esc(x.particip) + '%</td>' +
-            '<td class="es">' + esc(x.ultima) + '</td></tr>';
-        }).join('') + '</tbody></table>';
+      return String(a.grupo).localeCompare(String(b.grupo)) || normNom(a.nombre).localeCompare(normNom(b.nombre));
     });
-    document.getElementById('tablas').innerHTML = out ||
-      '<p class="vacio">Ningún cadete con ese nombre.</p>';
+    document.getElementById('tablas').innerHTML = cs.length ? '<table><thead><tr>' +
+      (sel === '*' ? th('grupo', 'Grupo') : '') + th('nombre', 'Cadete') + th('carril', 'Nivel') + th('leccion', 'Lección') +
+      th('minutos', 'Min') + th('sesiones', 'Ses') + th('particip', 'Part.') + '<th>Constancias</th>' + th('ultima', 'Última') +
+      '</tr></thead><tbody>' + cs.map(function(x){
+        var cr = x.carril || 'medio', det = CONST[normNom(x.nombre)];
+        var cons = det && det.perfil ? leerConstancias(det.perfil.constancias, x.nombre, x.grupo) : null;
+        var nom = (LEC[+x.leccion] || {}).titulo || '';
+        return '<tr class="fila" data-n="' + esc(x.nombre) + '">' + (sel === '*' ? '<td>' + esc(x.grupo) + '</td>' : '') +
+          '<td><b>' + esc(x.nombre) + '</b></td>' +
+          '<td><span class="car ' + esc(cr) + '">' + esc(NIV[cr] || cr) + '</span></td>' +
+          '<td>' + esc(x.leccion) + (nom ? ' · <span class="es">' + esc(nom) + '</span>' : '') + '</td>' +
+          '<td class="num">' + esc(x.minutos) + '</td><td class="num">' + esc(x.sesiones) + '</td>' +
+          '<td class="num">' + esc(x.particip) + '%</td>' +
+          '<td>' + (cons === null ? '<span class="es">—</span>' : (cons.length ? cons.map(function(k){
+              return k.p ? '<span class="cst' + (k.valida ? '' : ' mala') + '" title="' + esc(k.folio) + '">' + k.p + ' ' + esc((NIV[k.niv] || '').charAt(0)) + '</span>' : '';
+            }).join(' ') : '<span class="es">ninguna</span>')) + '</td>' +
+          '<td class="es">' + esc(x.ultima) + '</td></tr>';
+      }).join('') + '</tbody></table>' : '<p class="vacio">Ningún cadete con ese nombre.</p>';
     document.querySelectorAll('#tablas th[data-c]').forEach(function(h){
       h.onclick = function(){
         var col = h.dataset.c;
         if(ordenCol === col) ordenAsc = !ordenAsc; else { ordenCol = col; ordenAsc = true; }
-        tablas(bus.value);
+        tabla(bus.value);
       };
     });
+    document.querySelectorAll('#tablas tr.fila').forEach(function(tr){
+      tr.onclick = function(){ ficha(lista.filter(function(x){ return x.nombre === tr.dataset.n; })[0]); };
+    });
+  }
+  function ficha(x){
+    if(!x) return;
+    var f = document.getElementById('ficha');
+    f.innerHTML = '<div class="ficha"><p class="vacio">Leyendo la ficha de ' + esc(x.nombre) + '…</p></div>';
+    f.scrollIntoView({behavior:'smooth', block:'start'});
+    pedir({accion:'detalle_cadete', pase:pase(), nombre:x.nombre}).then(function(d){
+      if(!d || !d.ok){ f.innerHTML = '<p class="nota">No pude leer la ficha. ' + esc((d && d.error) || '') + '</p>'; return; }
+      CONST[normNom(x.nombre)] = d;
+      var pf = d.perfil || {}, cons = leerConstancias(pf.constancias, x.nombre, x.grupo);
+      var hechas = String(pf.lecciones_hechas || '').trim();
+      var h = '<div class="ficha"><button class="bt claro" id="cfcerrar" style="float:right">Cerrar</button>' +
+        '<h3 class="tit" style="font-size:21px">' + esc(x.nombre) + '</h3>' +
+        '<p class="meta">Grupo ' + esc(x.grupo) + ' · ' + esc(NIV[x.carril] || x.carril || '') + ' · ' + esc(x.minutos) + ' min · ' + esc(x.sesiones) + ' sesiones</p>' +
+        '<h4>Constancias</h4>' + (cons.length ? cons.map(function(k){
+          if(!k.p) return '<div class="cstf mala">' + esc(k.crudo) + '</div>';
+          return '<div class="cstf' + (k.valida ? '' : ' mala') + '"><b>' + esc(PAR[k.p] || k.p) + ' · ' + esc(NIV[k.niv] || k.niv) + '</b>' +
+            '<span>' + esc(k.fecha) + ' · folio ' + esc(k.folio) + '</span><em>' + (k.valida ? '✓ Folio verificado' : '✗ El folio no coincide') + '</em></div>';
+        }).join('') : '<p class="vacio">Todavía no gana ninguna. Se ganan terminando todas las lecciones de un parcial.</p>') +
+        '<h4>Lecciones terminadas</h4><p>' + (hechas ? esc(hechas).replace(/(\d+)([BIA])/g, '<span class="lchip l$2">$1 $2</span>') : '<span class="es">—</span>') + '</p>' +
+        '<p class="es" style="font-size:12px">B = Básico · I = Intermedio · A = Avanzado (el nivel más alto con el que la terminó)</p>' +
+        '<h4>Sesiones</h4>' + ((d.sesiones || []).length ? '<table><thead><tr><th>Fecha</th><th>Lección</th><th>Min</th><th>Frases</th><th>Parecido</th></tr></thead><tbody>' +
+          d.sesiones.slice().reverse().map(function(s){
+            return '<tr><td>' + esc(s.fecha) + ' ' + esc(s.hora || '') + '</td><td>' + esc(s.titulo || s.leccion || '') + '</td>' +
+              '<td class="num">' + esc(s.segundos) + '</td><td class="num">' + esc(s.frases || '') + '</td><td class="num">' + (s.promedio === null || s.promedio === undefined ? '—' : esc(s.promedio) + '%') + '</td></tr>';
+          }).join('') + '</tbody></table>' : '<p class="vacio">Sin sesiones registradas.</p>') + '</div>';
+      f.innerHTML = h;
+      document.getElementById('cfcerrar').onclick = function(){ f.innerHTML = ''; };
+      tabla(bus.value);
+    }).catch(function(){ f.innerHTML = '<p class="nota">Sin conexión con el servidor.</p>'; });
   }
   function th(col, et){
     var fl = ordenCol === col ? (ordenAsc ? ' ↑' : ' ↓') : '';
     return '<th data-c="' + col + '">' + et + fl + '</th>';
   }
-  function caja(k, v){
-    return '<div class="caja"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
-  }
+  function cajaR(k, v){ return '<div class="caja"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>'; }
 }
 
 /* ── cómo se usa ── */
