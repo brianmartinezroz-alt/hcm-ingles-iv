@@ -13544,7 +13544,7 @@ function hcmTutorial(){
    múltiple. Se abren en el navegador, fuera de la app, y no cuentan
    para el avance ni para las constancias: son repaso de salón.        */
 (function(){
-  var JUEGOS = {"1": {"v": "4820652", "g": "4820653", "m": "4820654"}, "2": {"v": "4820658", "g": "4820659", "m": "4820664"}, "3": {"v": "4820665", "g": "4820666", "m": "4820670"}, "4": {"v": "4820672", "g": "4820673", "m": "4820675"}, "5": {"v": "4820676", "g": "4820681", "m": "4820682"}, "6": {"v": "4820683", "g": "4820686", "m": "4820687"}, "7": {"v": "4820688", "g": "4820690", "m": "4820691"}, "8": {"v": "4820692", "g": "4820693", "m": "4820695"}, "10": {"v": "4820696", "g": "4820697", "m": "4820698"}, "11": {"v": "4820953", "g": "4820699", "m": "4820700"}, "12": {"v": "4820701", "g": "4820702", "m": "4820703"}, "13": {"v": "4820704", "g": "4820791", "m": "4820792"}, "14": {"v": "4820796", "g": "4820797", "m": "4820802"}, "15": {"v": "4820804", "g": "4820809", "m": "4820810"}, "16": {"v": "4820817", "g": "4820829", "m": "4820838"}, "17": {"v": "4820955", "g": "4820846", "m": "4820850"}};
+  var JUEGOS = {"1": {"v": "4821148", "g": "4821149"}, "2": {"v": "4821150", "g": "4821151"}, "3": {"v": "4821152", "g": "4821154"}, "4": {"v": "4821155", "g": "4821157"}, "5": {"v": "4821159", "g": "4821160"}, "6": {"v": "4821162", "g": "4821163"}, "7": {"v": "4821164", "g": "4821165"}, "8": {"v": "4821167", "g": "4821169"}, "10": {"v": "4821171", "g": "4821172"}, "11": {"v": "4821175", "g": "4821179"}, "12": {"v": "4821181", "g": "4821182"}, "13": {"v": "4821183", "g": "4821184"}, "14": {"v": "4821185", "g": "4821186"}, "15": {"v": "4821187", "g": "4821189"}, "16": {"v": "4821190", "g": "4821192"}, "17": {"v": "4821193", "g": "4821194"}};
   var TITULOS = {"1": "I'd like to open an account", "2": "The cake is delicious", "3": "He was talking when he hit the car", "4": "You must obey traffic laws", "5": "Ted can repair the car", "6": "Should I ask Lt Clark for help?", "7": "He realized the tank was empty", "8": "I apologize for breaking your window", "10": "Tell me how to", "11": "Sue exercises before she goes to work", "12": "Like shopping in the mall", "13": "Let me introduce", "14": "Can you change a flat tire?", "15": "Would you introduce your family?", "16": "What kind of work can I do?", "17": "How far is it from El Paso to Houston?"};
   var BASE = 'https://www.baamboozle.com/game/';
 
@@ -13555,8 +13555,7 @@ function hcmTutorial(){
     var j = JUEGOS[n]; if(!j) return '';
     var cls = chico ? 'btn ghost' : 'btn ghost';
     return '<button class="'+cls+'" data-baam="'+j.v+'" style="margin-top:6px">Vocabulario</button>'+
-           '<button class="'+cls+'" data-baam="'+j.g+'" style="margin-top:6px">Gramática</button>'+
-           '<button class="'+cls+'" data-baam="'+j.m+'" style="margin-top:6px">Mixto</button>';
+           '<button class="'+cls+'" data-baam="'+j.g+'" style="margin-top:6px">Gramática</button>';
   }
   function ligar(raiz){
     if(!raiz) return;
@@ -13571,7 +13570,7 @@ function hcmTutorial(){
     var h = (typeof atras==='function'?atras():'') +
       '<div class="qcard"><div class="qlbl">Extra</div>'+
       '<div class="qtxt">Juegos de repaso</div>'+
-      '<div class="qsub">50 preguntas por juego, opción múltiple, como el examen ALC. '+
+      '<div class="qsub">Dos juegos por lección, 50 preguntas cada uno, de opción múltiple, como el examen ALC. '+
       'Se abren fuera de la app y no cuentan para tu avance.</div></div>';
     var ns = Object.keys(JUEGOS).map(Number).sort(function(a,b){return a-b;});
     for(var i=0;i<ns.length;i++){
