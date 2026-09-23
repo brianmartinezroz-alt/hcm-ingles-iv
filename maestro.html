@@ -526,7 +526,7 @@ function pintarEntrada(msg){
 
 /* ── armazón ── */
 function pintar(){
-  var tabs = [['lecciones','Lecciones'],['grupos','Grupos'],['ayuda','Cómo se usa']];
+  var tabs = [['lecciones','Lecciones'],['grupos','Grupos'],['juegos','Juegos'],['ayuda','Cómo se usa']];
   var esEFA = escuela === 'efa';
   var selector =
     '<div class="escuelas"><div class="in">' +
@@ -564,6 +564,7 @@ function pintar(){
   var c = document.getElementById('cuerpo');
   if(vista === 'lecciones') leccionAbierta ? pintarLeccion(c) : pintarLecciones(c);
   else if(vista === 'grupos') pintarGrupos(c);
+  else if(vista === 'juegos') pintarJuegos(c);
   else pintarAyuda(c);
 }
 
@@ -579,6 +580,32 @@ function ligarComunes(){
       leccionAbierta = null; pintar(); window.scrollTo(0, 0);
     };
   });
+}
+
+/* ── juegos de Baamboozle ── */
+var JUEGOS_BAAM = {"1": {"v": "4820652", "g": "4820653", "m": "4820654"}, "2": {"v": "4820658", "g": "4820659", "m": "4820664"}, "3": {"v": "4820665", "g": "4820666", "m": "4820670"}, "4": {"v": "4820672", "g": "4820673", "m": "4820675"}, "5": {"v": "4820676", "g": "4820681", "m": "4820682"}, "6": {"v": "4820683", "g": "4820686", "m": "4820687"}, "7": {"v": "4820688", "g": "4820690", "m": "4820691"}, "8": {"v": "4820692", "g": "4820693", "m": "4820695"}, "10": {"v": "4820696", "g": "4820697", "m": "4820698"}, "11": {"v": "4820953", "g": "4820699", "m": "4820700"}, "12": {"v": "4820701", "g": "4820702", "m": "4820703"}, "13": {"v": "4820704", "g": "4820791", "m": "4820792"}, "14": {"v": "4820796", "g": "4820797", "m": "4820802"}, "15": {"v": "4820804", "g": "4820809", "m": "4820810"}, "16": {"v": "4820817", "g": "4820829", "m": "4820838"}, "17": {"v": "4820955", "g": "4820846", "m": "4820850"}};
+var TITULOS_BAAM = {"1": "I'd like to open an account", "2": "The cake is delicious", "3": "He was talking when he hit the car", "4": "You must obey traffic laws", "5": "Ted can repair the car", "6": "Should I ask Lt Clark for help?", "7": "He realized the tank was empty", "8": "I apologize for breaking your window", "10": "Tell me how to", "11": "Sue exercises before she goes to work", "12": "Like shopping in the mall", "13": "Let me introduce", "14": "Can you change a flat tire?", "15": "Would you introduce your family?", "16": "What kind of work can I do?", "17": "How far is it from El Paso to Houston?"};
+var CARPETA_BAAM = 'https://www.baamboozle.com/folder/316334';
+
+function pintarJuegos(c){
+  var filas = '';
+  var ns = Object.keys(JUEGOS_BAAM).map(Number).sort(function(a,b){return a-b;});
+  ns.forEach(function(n){
+    var j = JUEGOS_BAAM[n];
+    filas += '<div class="card" style="margin-bottom:10px">' +
+      '<div style="font-weight:700">Lección ' + n + ' · ' + esc(TITULOS_BAAM[n] || '') + '</div>' +
+      '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">' +
+        '<a class="lchip" target="_blank" rel="noopener" href="https://www.baamboozle.com/game/' + j.v + '">Vocabulario</a>' +
+        '<a class="lchip" target="_blank" rel="noopener" href="https://www.baamboozle.com/game/' + j.g + '">Gramática</a>' +
+        '<a class="lchip" target="_blank" rel="noopener" href="https://www.baamboozle.com/game/' + j.m + '">Mixto</a>' +
+      '</div></div>';
+  });
+  c.innerHTML =
+    '<p class="nota">Tres juegos por lección: vocabulario, gramática y mixto. ' +
+    '50 preguntas cada uno, opción múltiple A–D, con el mismo formato del examen ALC. ' +
+    'Se juegan en equipos desde el proyector; no cuentan para el avance ni para las constancias del cadete. ' +
+    'Los cadetes también los ven en su app, en “Todo lo demás → Juegos de repaso” y al terminar cada lección.<br>' +
+    '<a href="' + CARPETA_BAAM + '" target="_blank" rel="noopener">Abrir la carpeta completa en Baamboozle ↗</a></p>' + filas;
 }
 
 /* ── lecciones ── */

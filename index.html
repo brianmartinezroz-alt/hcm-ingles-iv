@@ -12944,6 +12944,694 @@ function hcmTutorial(){
   }
 })();
 
+
+/* NIVELES_CONSTANCIAS_AUDIO_HCM ════════════════════════════════════════
+   1. Audio: un solo reproductor que se desbloquea con el primer toque
+      (en iPhone el audio que llega tarde ya no se queda mudo), lo que ya
+      se oyó se guarda en el teléfono, y si el servidor de voz no contesta
+      habla la voz del teléfono en lugar de quedarse en silencio.
+   2. Carriles: Básico con mucho apoyo en español, Intermedio con apoyo en
+      inglés sencillo, Avanzado puro inglés y sin red.
+   3. Constancias por parcial y por nivel, en Más → Mis constancias, y se
+      mandan al panel del maestro dentro del perfil del cadete.
+   ═════════════════════════════════════════════════════════════════════ */
+(function(){
+
+  /* ── 1. AUDIO ─────────────────────────────────────────────────────── */
+  var AU = null;
+  var SILENCIO = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=';
+  function audioUnico(){
+    if(!AU){
+      AU = new Audio();
+      AU.preload = 'auto';
+      try{ AU.setAttribute('playsinline',''); AU.setAttribute('webkit-playsinline',''); }catch(e){}
+    }
+    return AU;
+  }
+  function desbloquear(){
+    var a = audioUnico();
+    if(a._ok || !a.paused) return;
+    if(a.src && a.src.indexOf('data:audio/wav') !== 0 && a.src !== location.href) return;
+    try{
+      a.src = SILENCIO;
+      var p = a.play();
+      if(p && p.then) p.then(function(){ a._ok = true; try{ a.pause(); }catch(e){} }).catch(function(){});
+      else a._ok = true;
+    }catch(e){}
+  }
+  document.addEventListener('touchend', desbloquear, true);
+  document.addEventListener('click', desbloquear, true);
+
+  if(typeof reproducir === 'function'){
+    reproducir = function(url, onOk, onNoExiste, onBloqueado, vel){
+      callarTodo();
+      var miTurno = TURNO, a = audioUnico(), resuelto = false;
+      try{ a.pause(); }catch(e){}
+      a.onended = a.onerror = a.onplaying = null;
+      var v = vel || VEL_AUDIO || 1;
+      try{
+        a.defaultPlaybackRate = v; a.playbackRate = v;
+        if('preservesPitch' in a) a.preservesPitch = true;
+        if('webkitPreservesPitch' in a) a.webkitPreservesPitch = true;
+      }catch(e){}
+      a.onerror = function(){ if(resuelto) return; resuelto = true; onNoExiste && onNoExiste(); };
+      a.onplaying = function(){
+        resuelto = true;
+        if(miTurno !== TURNO){ try{ a.pause(); }catch(e){} return; }
+        try{ a.playbackRate = v; }catch(e){}
+        marcarCargando(false);
+      };
+      a.onended = function(){ if(miTurno === TURNO) onOk && onOk(); };
+      a.src = url;
+      AUDIO_ACTUAL = a;
+      var p;
+      try{ p = a.play(); }catch(e){ p = null; }
+      if(p && p.then){
+        p.then(function(){ a._ok = true; }).catch(function(err){
+          if(resuelto) return; resuelto = true;
+          if(err && err.name === 'NotAllowedError') onBloqueado && onBloqueado();
+          else onNoExiste && onNoExiste();
+        });
+      }
+      return a;
+    };
+  }
+
+  // lo que ya se oyó se queda guardado en el teléfono
+  var CAJA_VOZ = 'hcm-voz-v1';
+  function llaveVoz(k){ return location.pathname.replace(/[^\/]*$/, '') + '__voz__/' + encodeURIComponent(k); }
+  function vozGuardada(k){
+    if(!window.caches) return Promise.resolve(null);
+    return caches.open(CAJA_VOZ).then(function(c){ return c.match(llaveVoz(k)); })
+      .then(function(r){ return r ? r.text() : null; }).catch(function(){ return null; });
+  }
+  function guardarVoz(k, b64){
+    if(!window.caches || !b64) return;
+    caches.open(CAJA_VOZ).then(function(c){ return c.put(llaveVoz(k), new Response(b64)); }).catch(function(){});
+  }
+  function llaveFrase(texto){ return clave(texto) + '|' + (PAQUETE_ACTIVO || 'audio-us') + '|' + sexoDeLaFrase(texto); }
+  function pedirVoz(texto, lang){
+    return fetch(VOZ_ENDPOINT, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({texto:texto, idioma:(lang === 'es-MX' ? 'es' : 'en'),
+        paquete: PAQUETE_ACTIVO || 'audio-us', sexo: sexoDeLaFrase(texto)})})
+      .then(function(r){ return r.ok ? r.json() : null; });
+  }
+  // si el servidor no contesta, habla el teléfono: nunca un botón mudo
+  function vozDelTelefono(texto, lang, cb, onFalla){
+    if(!('speechSynthesis' in window)){ onFalla && onFalla(); return; }
+    try{ marcarCargando(false); hablar(texto, lang, cb); }catch(e){ onFalla && onFalla(); }
+  }
+  if(typeof vozDelServidor === 'function'){
+    vozDelServidor = function(texto, lang, cb, onFalla){
+      var miTurno = TURNO, vel = VEL_PEDIDA, k = llaveFrase(texto);
+      function falla(){ if(miTurno !== TURNO) return; vozDelTelefono(texto, lang, cb, onFalla); }
+      function suena(url){
+        if(miTurno !== TURNO) return;
+        reproducir(url, function(){ cb && cb(); }, falla, function(){ cb && cb(); }, vel);
+      }
+      if(!VOZ_ENDPOINT){ falla(); return; }
+      if(VOZ_CACHE[k]){ suena(VOZ_CACHE[k]); return; }
+      vozGuardada(k).then(function(b64){
+        if(b64){ VOZ_CACHE[k] = 'data:audio/mpeg;base64,' + b64; suena(VOZ_CACHE[k]); return; }
+        var listo = false;
+        var reloj = setTimeout(function(){ if(listo) return; listo = true; falla(); }, 9000);
+        pedirVoz(texto, lang).then(function(d){
+          if(!d || !d.ok || !d.audio){ if(!listo){ listo = true; clearTimeout(reloj); falla(); } return; }
+          VOZ_CACHE[k] = 'data:audio/mpeg;base64,' + d.audio;
+          guardarVoz(k, d.audio);
+          if(listo) return; listo = true; clearTimeout(reloj);
+          suena(VOZ_CACHE[k]);
+        }).catch(function(){ if(!listo){ listo = true; clearTimeout(reloj); falla(); } });
+      });
+    };
+  }
+  if(typeof precargarVoz === 'function'){
+    precargarVoz = function(texto, lang, listo){
+      if(!VOZ_ENDPOINT || !texto){ listo && listo(); return; }
+      var k = llaveFrase(texto);
+      if(VOZ_CACHE[k]){ listo && listo(); return; }
+      vozGuardada(k).then(function(b64){
+        if(b64){ VOZ_CACHE[k] = 'data:audio/mpeg;base64,' + b64; listo && listo(); return; }
+        pedirVoz(texto, lang).then(function(d){
+          if(d && d.ok && d.audio){ VOZ_CACHE[k] = 'data:audio/mpeg;base64,' + d.audio; guardarVoz(k, d.audio); }
+          listo && listo();
+        }).catch(function(){ listo && listo(); });
+      });
+    };
+  }
+
+  /* ── 2. CARRILES ──────────────────────────────────────────────────── */
+  var NIVEL_DE_CARRIL = {bajo:{n:1, cod:'A1'}, medio:{n:3, cod:'B1'}, alto:{n:5, cod:'C1'}};
+  var NOMBRE_NIV = {bajo:'Básico', medio:'Intermedio', alto:'Avanzado'};
+  function carrilActual(){ try{ return (hcmLoad().perfil || {}).carril || 'medio'; }catch(e){ return 'medio'; } }
+  function ajustarCarril(){
+    var c = carrilActual(), nv = NIVEL_DE_CARRIL[c] || NIVEL_DE_CARRIL.medio;
+    try{
+      if(P){ P.nivel = nv.cod; P.nivel_n = nv.n; }
+      var d = load(); if(P) d.perfil = P;
+      d.guiado = (c === 'bajo');          // cajas de "qué hago aquí", con audio
+      save(d); D = d;
+    }catch(e){}
+    try{ document.body.setAttribute('data-carril', c); }catch(e){}
+    try{ aplicarModo(); }catch(e){}
+    try{ pintarColorDelNivel(); }catch(e){}
+  }
+  if(typeof hcmSincronizarPerfil === 'function'){
+    var syncBase = hcmSincronizarPerfil;
+    hcmSincronizarPerfil = function(){ var r = syncBase.apply(this, arguments); ajustarCarril(); return r; };
+  }
+
+
+  // Avanzado: el contenido de los ejercicios también en inglés
+  var EN_DE_ES = {"Present Progressive para planes futuros": "Present progressive for future plans", "Usa 'be + verb-ing' para hablar de planes ya confirmados.": "Use 'be + verb-ing' to talk about plans that are already confirmed.", "El presente progresivo con tiempo futuro indica un plan organizado.": "Present progressive with a future time shows an organized plan.", "Está en un banco pidiendo información.": "He is at a bank asking for information.", "Está comprando en una tienda.": "He is shopping in a store.", "Está pagando una multa.": "He is paying a fine.", "Pásala al presente progresivo.": "Change it to the present progressive.", "Because + cláusula · verbos copulativos": "Because + clause · linking verbs", "'Because' va seguido de sujeto + verbo. Los verbos copulativos (taste, look, smell, sound, feel) van con adjetivo, no con adverbio.": "'Because' is followed by subject + verb. Linking verbs (taste, look, smell, sound, feel) take an adjective, not an adverb.", "'Tastes' pide adjetivo (good), y 'because' pide sujeto + verbo.": "'Tastes' takes an adjective (good), and 'because' takes subject + verb.", "Explica por qué el pastel está bueno.": "He explains why the cake is good.", "Pide la receta del pastel.": "He asks for the cake recipe.", "Se queja del sabor del pastel.": "He complains about the taste of the cake.", "Únelas con 'because'.": "Join them with 'because'.", "Reporta la razón con 'because'.": "Report the reason with 'because'.", "Usa un adjetivo en -ing y otro en -ed: satisfying / satisfied.": "Use one -ing adjective and one -ed adjective: satisfying / satisfied.", "-ing causa el sentimiento, -ed lo describe.": "-ing causes the feeling; -ed describes it.", "'Was/were + verb-ing' para la acción en progreso; 'when + pasado simple' para la interrupción.": "'Was/were + verb-ing' for the action in progress; 'when + simple past' for the interruption.", "La acción larga va en pasado progresivo; la interrupción en pasado simple.": "The long action goes in the past progressive; the interruption in the simple past.", "Hubo un accidente de tráfico.": "There was a traffic accident.", "Un policía ayudó a un conductor.": "A police officer helped a driver.", "Alguien se perdió en la carretera.": "Someone got lost on the highway.", "Pásala al pasado progresivo con 'when'.": "Change it to the past progressive with 'when'.", "Para reportar una orden: tell someone to do something. Para reportar una petición: ask someone to do something. Para comparar: the same as, similar to, different from, like, alike.": "To report an order: tell someone to do something. To report a request: ask someone to do something. To compare: the same as, similar to, different from, like, alike.", "Después de tell/ask + persona va el verbo con 'to'.": "After tell/ask + person, the verb goes with 'to'.", "Un oficial revisa a un conductor.": "An officer is checking a driver.", "Un mecánico arregla un carro.": "A mechanic is fixing a car.", "Un cadete pide direcciones.": "A cadet is asking for directions.", "Repórtalo con 'told'.": "Report it with 'told'.", "Repórtalo con 'asked'.": "Report it with 'asked'.", "Pásalo a pregunta indirecta.": "Change it to an indirect question.", "Repaso: el taller, el compañero de cuarto y la mentira piadosa": "Review: the garage, the roommate and the white lie", "Esta lección no trae gramática nueva: repasa todo el vocabulario de las lecciones 1 a 4 en tres escenas — el taller mecánico, la vida con el roommate y una conversación con una mentira piadosa.": "No new grammar in this lesson: review all the vocabulary from lessons 1 to 4 in three scenes: the repair shop, life with a roommate, and a conversation with a white lie.", "Después de 'can' va el verbo solo, y el plan confirmado va en presente progresivo.": "After 'can' the verb goes alone, and a confirmed plan goes in the present progressive.", "Su compañero de cuarto le arregló el carro.": "His roommate fixed his car.", "Compró un carro nuevo.": "He bought a new car.", "Fue al banco a pedir un préstamo.": "He went to the bank to ask for a loan.", "Usa el causativo: have something done.": "Use the causative: have something done.", "Should / could · adverbios de modo en -ly": "Should / could · adverbs of manner in -ly", "'Should' da consejo y 'could' ofrece una posibilidad; los dos van con el verbo solo. Los adverbios de modo terminan en -ly y dicen cómo se hace algo: 'How does he drive?' — 'He drives carefully.'": "'Should' gives advice and 'could' offers a possibility; both take the base verb. Adverbs of manner end in -ly and say how something is done: 'How does he drive?' — 'He drives carefully.'", "Después de should/could va el verbo sin 'to', y el modo se dice con adverbio en -ly.": "After should/could the verb goes without 'to', and manner is expressed with an -ly adverb.", "Dan consejos sobre cómo conduce Mike.": "They give advice about how Mike drives.", "Compran un carro para Mike.": "They buy a car for Mike.", "Reportan un accidente de Mike.": "They report Mike's accident.", "Usa un adverbio en -ly.": "Use an -ly adverb.", "Dilo con un adverbio de modo.": "Say it with an adverb of manner.", "Haz una deducción con 'must be' o 'can't be'.": "Make a deduction with 'must be' or 'can't be'.", "Muchos verbos van seguidos de 'that + oración'. En pasado, la cláusula también usa pasado.": "Many verbs are followed by 'that + clause'. In the past, the clause is also in the past.", "Después de verbos en pasado la cláusula con 'that' también usa pasado.": "After verbs in the past, the 'that' clause is also in the past.", "El auto se quedó sin gasolina de noche.": "The car ran out of gas at night.", "Llegaron tarde al motel.": "They got to the motel late.", "El auto tuvo una llanta ponchada.": "The car had a flat tire.", "Repórtalo usando 'He realized that...'": "Report it using 'He realized that...'", "Para disculparte: apologize + for + verbo-ing. Para expresar sentimiento: I'm sorry + that + oración.": "To apologize: apologize + for + verb-ing. To express a feeling: I'm sorry + that + clause.", "Después de 'for' siempre va el gerundio; después de 'sorry' va 'that + oración'.": "After 'for' always use the gerund; after 'sorry' use 'that + clause'.", "Un cadete se disculpa por romper una ventana.": "A cadet apologizes for breaking a window.", "Un cadete pide permiso para salir.": "A cadet asks for permission to leave.", "Un oficial regaña a un cadete.": "An officer scolds a cadet.", "Conviértela en disculpa con 'I apologize for...'": "Turn it into an apology with 'I apologize for...'", "How + to-infinitive para instrucciones": "How + to-infinitive for instructions", "Usa 'how + to + infinitivo' para pedir o dar instrucciones. El 'to' nunca se omite.": "Use 'how + to + infinitive' to ask for or give instructions. Never drop the 'to'.", "Después de 'how' va siempre 'to + infinitivo'.": "After 'how' always use 'to + infinitive'.", "Alguien explica cómo usar una máquina expendedora.": "Someone explains how to use a vending machine.", "Alguien repara una máquina rota.": "Someone repairs a broken machine.", "Alguien compra una máquina nueva.": "Someone buys a new machine.", "Conviértela con 'Let me show you how to...'": "Change it with 'Let me show you how to...'", "Cláusulas de tiempo · be supposed to": "Time clauses · be supposed to", "Con after, before, until, when y while se une lo que pasa antes con lo que pasa después, y el verbo va en presente: 'Sue exercises before she goes to work.' Y 'be supposed to' es lo que se espera de ti: 'You're supposed to be there at 06:00.'": "After, before, until, when and while connect what happens first with what happens next, and the verb goes in the present: 'Sue exercises before she goes to work.' 'Be supposed to' is what is expected of you: 'You're supposed to be there at 06:00.'", "Después de before, after, when, until y while el verbo va en presente, aunque hable del futuro.": "After before, after, when, until and while the verb goes in the present, even when it talks about the future.", "Describe la rutina de Sue por la mañana.": "She describes Sue's morning routine.", "Explica cómo llegar a la oficina.": "She explains how to get to the office.", "Pide permiso para faltar al trabajo.": "She asks for permission to miss work.", "Únelas con 'before'.": "Join them with 'before'.", "Dilo con 'be supposed to'.": "Say it with 'be supposed to'.", "Usa 'used to' o 'would' para el hábito pasado.": "Use 'used to' or 'would' for the past habit.", "Para ubicar algo: above, across from, at, behind, below, by, in, in front of, in back of, near, next to, on, under. Y después de begin, enjoy, finish, like, mind y start, el verbo va en -ing.": "To say where something is: above, across from, at, behind, below, by, in, in front of, in back of, near, next to, on, under. After begin, enjoy, finish, like, mind and start, the verb goes in -ing.", "'Enjoy' pide gerundio, y 'frente a' es 'across from', no 'across'.": "'Enjoy' takes a gerund, and 'frente a' is 'across from', not 'across'.", "Describe dónde están las tiendas del centro comercial.": "He describes where the stores in the mall are.", "Compra un carro en una agencia.": "He buys a car at a dealership.", "Pide direcciones para llegar al cuartel.": "He asks for directions to the barracks.", "Únelas con el gerundio.": "Join them with the gerund.", "Contrasta con 'used to'.": "Contrast it with 'used to'.", "Después de afraid, glad, happy, pleased, ready, sorry y upset, el verbo va con 'to': 'I'm glad to meet you.' Es la fórmula de las presentaciones.": "After afraid, glad, happy, pleased, ready, sorry and upset, the verb goes with 'to': 'I'm glad to meet you.' It is the formula for introductions.", "Esos adjetivos piden 'to + verbo'; y después de 'let me' va el verbo solo.": "Those adjectives take 'to + verb'; after 'let me' the verb goes alone.", "Presenta a un vecino nuevo.": "He introduces a new neighbor.", "Se despide de un vecino.": "He says goodbye to a neighbor.", "Se queja del ruido del vecino.": "He complains about the neighbor's noise.", "Únelas con adjetivo + to-infinitive.": "Join them with adjective + to-infinitive.", "Pásalo a discurso indirecto.": "Change it to reported speech.", "Para horarios fijos —camiones, aviones, clases, formaciones— se usa el presente simple, no el futuro: 'The bus from Dallas arrives early tomorrow morning.'": "For fixed schedules (buses, planes, classes, formations) use the simple present, not the future: 'The bus from Dallas arrives early tomorrow morning.'", "Un horario publicado es un hecho programado: va en presente simple.": "A published schedule is a programmed fact: it goes in the simple present.", "Explica cómo cambiar una llanta.": "He explains how to change a tire.", "Reporta un choque en la carretera.": "He reports a crash on the highway.", "Usa el presente simple: It starts at...": "Use the simple present: It starts at...", "The bus will arrive at seven. (es el horario oficial)": "The bus will arrive at seven. (it's the official schedule)", "Dilo como horario, en presente simple.": "Say it as a schedule, in the simple present.", "Would/Could para solicitudes · Reported commands": "Would/Could for requests · Reported commands", "'Would/Could you' para solicitudes formales. 'Told/asked + to + infinitivo' para reportar órdenes.": "'Would/Could you' for formal requests. 'Told/asked + to + infinitive' to report orders.", "Después de asked/told + objeto va 'to + infinitivo', nunca 'that'.": "After asked/told + object use 'to + infinitive', never 'that'.", "Un oficial presenta a su familia en una ceremonia.": "An officer introduces his family at a ceremony.", "Un oficial recibe una medalla.": "An officer receives a medal.", "Un cadete conoce a sus compañeros.": "A cadet meets his classmates.", "Conviértela en solicitud cortés con 'Could you...'": "Turn it into a polite request with 'Could you...'", "Be able to — habilidad en todos los tiempos": "Be able to — ability in every tense", "'Be able to' = 'can' pero funciona en todos los tiempos verbales.": "'Be able to' = 'can', but it works in every verb tense.", "'Could to' no existe. Usa 'was/were able to' para habilidad específica en el pasado.": "'Could to' does not exist. Use 'was/were able to' for a specific ability in the past.", "Un cadete describe sus habilidades en una entrevista.": "A cadet describes his skills in an interview.", "Un cadete pide un aumento de salario.": "A cadet asks for a raise.", "Un oficial evalúa el entrenamiento físico.": "An officer evaluates physical training.", "Cámbiala usando 'be able to'.": "Change it using 'be able to'.", "'How far' para distancia; 'How long' para duración. 'It' como sujeto impersonal para clima, distancia y tiempo.": "'How far' for distance; 'How long' for duration. 'It' as the impersonal subject for weather, distance and time.", "En inglés las oraciones necesitan sujeto. 'It' es el sujeto impersonal.": "In English every sentence needs a subject. 'It' is the impersonal subject.", "Dos soldados hablan sobre un viaje por carretera.": "Two soldiers are talking about a road trip.", "Dos soldados hablan sobre el clima.": "Two soldiers are talking about the weather.", "Un soldado pide indicaciones.": "A soldier asks for directions.", "Conviértela en pregunta con 'How far...'": "Turn it into a question with 'How far...'"};
+  function aIngles(v){
+    if(typeof v === 'string') return EN_DE_ES[v] || v;
+    if(Array.isArray(v)) return v.map(aIngles);
+    return v;
+  }
+  if(typeof armarSesionHCM === 'function'){
+    var armarBase = armarSesionHCM;
+    armarSesionHCM = function(){
+      var S = armarBase.apply(this, arguments);
+      try{
+        if(S && S.items && carrilActual() === 'alto'){
+          S.items = S.items.map(function(x){
+            ['ops','pide','pista','regla','porque','titulo','origen','bien'].forEach(function(k){ if(x[k] !== undefined) x[k] = aIngles(x[k]); });
+            return x;
+          });
+          if(S.hoy) S.hoy = aIngles(S.hoy);
+        }
+      }catch(e){}
+      return S;
+    };
+  }
+
+  function leccionActual(){
+    try{
+      var S = MAT && MAT[sIdx];
+      if(S && S.t){ for(var i = 1; i <= PARADAS_HCM; i++){ if(LECCIONES_HCM[i] && LECCIONES_HCM[i].titulo === S.t) return i; } }
+      var Pp = hcmLoad().perfil || {};
+      return Pp.viendo || Pp.parada_actual || 1;
+    }catch(e){ return 1; }
+  }
+  function reglaDe(n){
+    var raw = MATERIAL_HCM[n] || [];
+    for(var i = 0; i < raw.length; i++) if(raw[i].k === 'regla') return raw[i];
+    return null;
+  }
+
+  // Cerebro: habla como le toca a cada carril
+  var PIDE_IA = {
+    bajo:  '[Instrucción para el tutor: el cadete va en nivel BÁSICO. Contesta en español sencillo, paso a paso, con un ejemplo en inglés y su traducción. Sé paciente y dale ánimo. Máximo 6 renglones.] ',
+    medio: '[Tutor instruction: the cadet is INTERMEDIATE. Answer in simple English (A2-B1) with two short examples. Add one short line in Spanish only if the idea is hard. Max 6 lines.] ',
+    alto:  '[Tutor instruction: the cadet is ADVANCED. Answer ONLY in English, never in Spanish, even if the question is in Spanish. Be direct like an ALC instructor. Max 5 lines.] '
+  };
+  function respaldoEnIngles(n){
+    var r = reglaDe(n);
+    if(!r) return 'Go back to the rule of this lesson and read the examples again.';
+    return '<b>' + esc(r.titulo || '') + '</b>' + (r.bien ? '<br>Right: <i>' + esc(r.bien) + '</i>' : '') +
+      (r.mal ? '<br>Wrong: ' + esc(r.mal) : '');
+  }
+  if(typeof hcmCerebro === 'function'){
+    hcmCerebro = function(){
+      var c = carrilActual(), en = (c === 'alto');
+      var n = leccionActual(), lec = LECCIONES_HCM[n] || {};
+      var titulo = en ? 'What’s not clear?' : (c === 'medio' ? '¿Qué no te cuadra? · What’s not clear?' : '¿Qué no te cuadra?');
+      var sub = en ? 'Ask in English. You are in lesson ' + n + (lec.titulo ? ': ' + esc(lec.titulo) : '') + '.'
+        : (c === 'medio' ? 'Pregunta en inglés o en español. Te contesto en inglés sencillo. Lección ' + n + (lec.titulo ? ': ' + esc(lec.titulo) : '') + '.'
+          : 'Pregúntame lo que sea, en español. No hay pregunta tonta. Estás en la lección ' + n + (lec.titulo ? ': ' + esc(lec.titulo) : '') + '.');
+      var ph = en ? 'Example: when do I use "because" and when "because of"?' : 'Por ejemplo: ¿cuándo uso because y cuándo because of?';
+      var h = hcmHoja('<h3>' + titulo + '</h3><p class="sub">' + sub + '</p>' +
+        '<textarea id="hcm-duda" placeholder="' + esc(ph) + '"></textarea>' +
+        '<button class="hcm-op sel" id="hcm-duda-ok" style="text-align:center;margin-top:10px"><b>' + (en ? 'Ask' : 'Preguntar') + '</b></button>' +
+        (c === 'bajo' ? '<button class="hcm-op" id="hcm-duda-regla" style="text-align:center;margin-top:8px"><b>Explícame la regla de esta lección</b></button>' : '') +
+        '<div id="hcm-duda-resp"></div>');
+      var ta = h.querySelector('#hcm-duda');
+      setTimeout(function(){ try{ ta.focus(); }catch(e){} }, 300);
+      var caja = h.querySelector('#hcm-duda-resp');
+      function pintarR(txt, de){ caja.innerHTML = '<div class="hcm-resp"><div class="de">' + de + '</div>' + txt + '</div>'; }
+      function respaldo(){ return en || c === 'medio' ? respaldoEnIngles(n) : hcmRespaldoEscrito(n); }
+      var rb = h.querySelector('#hcm-duda-regla');
+      if(rb) rb.onclick = function(){ pintarR(hcmRespaldoEscrito(n), 'La regla de esta lección'); };
+      h.querySelector('#hcm-duda-ok').onclick = function(){
+        var q = (ta.value || '').trim(); if(!q) return;
+        pintarR(en ? 'Thinking…' : 'Pensando…', en ? 'Your instructor' : 'Tu maestro');
+        if(!IA_ENDPOINT){ pintarR(respaldo(), en ? 'Offline · the rule' : 'Sin conexión · la regla'); return; }
+        var corto = setTimeout(function(){ pintarR(respaldo(), en ? 'Offline · the rule' : 'Sin conexión · la regla'); corto = null; }, 12000);
+        fetch(IA_ENDPOINT, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify({accion:'ayuda', datos:{pregunta:(PIDE_IA[c] || '') + q, leccion:n, carril:c,
+            idioma:(en ? 'en' : (c === 'medio' ? 'en-simple' : 'es'))}})})
+          .then(function(r){ return r.ok ? r.json() : null; })
+          .then(function(d){
+            if(corto === null) return; clearTimeout(corto);
+            var res = d && d.ok && d.resultado, txt = res && (res.respuesta || res.texto);
+            if(txt) pintarR(esc(txt).replace(/\n/g, '<br>'), en ? 'Your instructor' : 'Tu maestro');
+            else pintarR(respaldo(), en ? 'The rule' : 'La regla de esta lección');
+          })
+          .catch(function(){ if(corto === null) return; clearTimeout(corto); pintarR(respaldo(), en ? 'Offline · the rule' : 'Sin conexión · la regla'); });
+      };
+    };
+  }
+
+  // la caja de "Tengo una duda" también cambia con el carril
+  if(typeof abrirDuda === 'function'){
+    var dudaBase = abrirDuda;
+    abrirDuda = function(){
+      var r = dudaBase.apply(this, arguments);
+      try{
+        var c = carrilActual(), box = document.getElementById('dudabox');
+        if(!box) return r;
+        var hl = box.querySelector('.hl'), tx = box.querySelector('#dudatx');
+        if(c === 'alto'){
+          if(hl) hl.textContent = 'Ask anything — in English';
+          if(tx) tx.placeholder = 'Example: why "I am" and not "I is"?';
+        }else if(c === 'medio'){
+          if(hl) hl.textContent = 'Pregunta en inglés o en español';
+        }else if(!box.querySelector('#hcm-ya')){
+          box.insertAdjacentHTML('beforeend', '<button class="btn ghost" id="hcm-ya" style="margin-top:8px">Necesito ayuda ya: explícame la regla</button>');
+          box.querySelector('#hcm-ya').onclick = function(e){ e.stopPropagation(); hcmCerebro(); };
+        }
+      }catch(e){}
+      return r;
+    };
+  }
+
+  // cuando se equivoca: Básico e Intermedio reciben la explicación y
+  // deciden cuándo seguir; Avanzado no tiene red
+  var DETENIDO = false;
+  if(typeof paso === 'function'){
+    var pasoAntes = paso;
+    paso = function(){
+      if(DETENIDO){
+        if(document.getElementById('hcm-ayuda')){
+          var sg = document.getElementById('hcm-ayuda-sigue');
+          if(sg){ sg.classList.add('late'); }
+          return;
+        }
+        DETENIDO = false;
+      }
+      return pasoAntes.apply(this, arguments);
+    };
+  }
+  function cajaDeAyuda(c){
+    var n = leccionActual(), r = reglaDe(n);
+    if(c === 'bajo'){
+      return '<div class="hcm-ayuda" id="hcm-ayuda"><div class="hcm-ayuda-t">No pasa nada. Así funciona:</div>' +
+        '<div class="hcm-ayuda-r">' + hcmRespaldoEscrito(n) + '</div>' +
+        '<div class="hcm-ayuda-b"><button type="button" id="hcm-ayuda-sigue">Entendido, sigo →</button>' +
+        '<button type="button" class="sec" id="hcm-ayuda-mas">Todavía no entiendo</button></div></div>';
+    }
+    return '<div class="hcm-ayuda" id="hcm-ayuda"><div class="hcm-ayuda-t">Check the rule</div>' +
+      '<div class="hcm-ayuda-r">' + respaldoEnIngles(n) +
+      (r && r.regla ? '<br><button type="button" class="hcm-ayuda-es" id="hcm-ayuda-es">¿qué dice?</button><span id="hcm-ayuda-es-t" hidden><br>' + esc(r.regla) + '</span>' : '') +
+      '</div><div class="hcm-ayuda-b"><button type="button" id="hcm-ayuda-sigue">Got it, next →</button>' +
+      '<button type="button" class="sec" id="hcm-ayuda-mas">Ask your teacher</button></div></div>';
+  }
+  function alEquivocarse(nodo){
+    var c = carrilActual();
+    if(c === 'alto' || document.getElementById('hcm-ayuda')) return;
+    var res = nodo.closest ? (nodo.closest('#res') || nodo.parentNode) : nodo.parentNode;
+    if(!res) return;
+    res.insertAdjacentHTML('beforeend', cajaDeAyuda(c));
+    DETENIDO = true;
+    var sg = document.getElementById('hcm-ayuda-sigue');
+    if(sg) sg.onclick = function(e){
+      e.stopPropagation();
+      var caja = document.getElementById('hcm-ayuda');
+      if(caja) caja.remove();
+      DETENIDO = false;
+      // si el ejercicio ya quería avanzar, avanza; si no, se queda para reintentar
+      var S = MAT && MAT[sIdx];
+      var yaPaso = sg.classList.contains('late');
+      if(yaPaso && S) paso();
+    };
+    var mas = document.getElementById('hcm-ayuda-mas');
+    if(mas) mas.onclick = function(e){ e.stopPropagation(); hcmCerebro(); };
+    var es = document.getElementById('hcm-ayuda-es');
+    if(es) es.onclick = function(e){ e.stopPropagation(); var t = document.getElementById('hcm-ayuda-es-t'); if(t) t.hidden = false; es.remove(); };
+  }
+
+  // Avanzado: la interfaz de los ejercicios también en inglés
+  var AL_INGLES = [
+    [/Tengo una duda/g, 'I have a question'], [/Casi\. Era /g, 'Almost. It was '], [/\bEra\s/g, 'It was '],
+    [/Correcto\./g, 'Correct.'], [/Perfecto:/g, 'Perfect:'], [/Ese era\. Buen o[ií]do\./g, 'That’s the one. Good ear.'],
+    [/Esc[uú]chalo otra vez\./g, 'Listen again.'], [/Eso es\./g, 'That’s it.'], [/Escuchar otra vez/g, 'Listen again'],
+    [/Escuchar/g, 'Listen'], [/Siguiente/g, 'Next'], [/Anterior/g, 'Back'], [/^\s*Atr[aá]s\s*$/i, 'Back'],
+    [/Velocidad/g, 'Speed'], [/Llena el hueco/gi, 'Fill in the blank'], [/Grabar otra vez/g, 'Record again'],
+    [/Grabar/g, 'Record'], [/(\d+) de (\d+)/g, '$1 of $2'], [/Volver al camino/g, 'Back to the map'],
+    [/Buen trabajo/g, 'Good job'], [/Pista/g, 'Hint'], [/Comprobar/g, 'Check'], [/Revisar/g, 'Check'],
+    [/No sé · dame la pista/gi, 'I don\u2019t know · give me a hint'], [/Cambia la frase · dilo hablando/gi, 'Change the sentence · say it out loud'],
+    [/Oír la original/gi, 'Hear the original'], [/Oír la pregunta/gi, 'Hear the question'], [/Oír el ejemplo/gi, 'Hear the example'],
+    [/Oírla otra vez/gi, 'Hear it again'], [/Más lento/gi, 'Slower'], [/Escucha · ¿de qué se trata\?/gi, 'Listen · What is it about?'],
+    [/No tienes que entender cada palabra\. Solo de qué habla\./gi, 'You don\u2019t need every word. Just what it\u2019s about.'],
+    [/La regla · míralo una vez/gi, 'The rule · look at it once'], [/¿Cuál oíste\?/gi, 'Which one did you hear?'],
+    [/Se parecen mucho\. Escúchalo otra vez si hace falta\./gi, 'They sound very similar. Listen again if you need to.'],
+    [/Esc[uú]chalo las veces que quieras\./gi, 'Listen as many times as you want.'], [/Atrás/g, 'Back'], [/Así sí:/g, 'Right:'], [/Así no:/g, 'Wrong:']
+  ];
+  function traducir(raiz){
+    if(!raiz || carrilActual() !== 'alto') return;
+    var w = document.createTreeWalker(raiz, NodeFilter.SHOW_TEXT, null, false), t, lista = [];
+    while((t = w.nextNode())) lista.push(t);
+    lista.forEach(function(n){
+      var p = n.parentNode; if(!p) return;
+      var tag = p.nodeName;
+      if(tag === 'SCRIPT' || tag === 'STYLE' || tag === 'TEXTAREA' || tag === 'INPUT') return;
+      if(p.closest && p.closest('#hcm-seguir, .hcm-resp')) return;
+      var v = n.nodeValue, v2 = v;
+      AL_INGLES.forEach(function(par){ v2 = v2.replace(par[0], par[1]); });
+      if(v2 !== v) n.nodeValue = v2;
+    });
+  }
+  (function vigilar(){
+    function arranca(){
+      var app = document.getElementById('app');
+      if(!app || !window.MutationObserver) return;
+      var pend = false;
+      new MutationObserver(function(muts){
+        muts.forEach(function(m){
+          (m.addedNodes || []).forEach(function(nd){
+            if(nd.nodeType !== 1) return;
+            var malo = (nd.matches && nd.matches('.fb.no, .no2')) ? nd : (nd.querySelector && nd.querySelector('.fb.no, .no2'));
+            if(malo && malo.closest && malo.closest('#res')) alEquivocarse(malo);
+          });
+        });
+        if(!pend){ pend = true; setTimeout(function(){ pend = false; traducir(app); }, 30); }
+      }).observe(app, {childList:true, subtree:true});
+    }
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arranca);
+    else setTimeout(arranca, 0);
+  })();
+  (function estilos(){
+    var css = 'body[data-carril="alto"] #oires, body[data-carril="alto"] .varmx, body[data-carril="alto"] #sig1, body[data-carril="alto"] .ins-b, body[data-carril="alto"] .ins-es{display:none!important}' +
+      '.hcm-ayuda{margin-top:12px;padding:14px 15px;border-radius:14px;background:#FFF8E6;border:1.5px solid #C9A84C;color:#2A2217;text-align:left;line-height:1.5}' +
+      '.hcm-ayuda-t{font-weight:700;font-size:14px;margin-bottom:6px}' +
+      '.hcm-ayuda-r{font-size:14px}' +
+      '.hcm-ayuda-b{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}' +
+      '.hcm-ayuda-b button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:10px 14px;background:#1A150E;color:#F5E9C9;cursor:pointer}' +
+      '.hcm-ayuda-b button.sec{background:none;border:1.5px solid #C9A84C;color:#1A150E;font-weight:600}' +
+      '#hcm-ayuda-sigue.late{animation:hcmlate 1s ease-in-out infinite alternate}' +
+      '@keyframes hcmlate{to{box-shadow:0 0 0 4px rgba(201,168,76,.45)}}' +
+      '.hcm-ayuda-es{font:inherit;font-size:12px;border:1px solid #C9A84C;background:none;border-radius:20px;padding:2px 10px;margin-top:6px;cursor:pointer}' +
+      '.const-lista{display:flex;flex-direction:column;gap:12px;margin-top:14px}' +
+      '.const-p{background:#FBF7EC;border:1.5px solid #D9CFB6;border-radius:14px;padding:14px 15px}' +
+      '.const-p h3{margin:0 0 2px;font-size:17px}.const-p .s{font-size:13px;color:#6b5f4b}' +
+      '.const-barra{height:8px;border-radius:6px;background:#E5DDC8;overflow:hidden;margin:10px 0 8px}.const-barra i{display:block;height:100%;background:#C9A84C}' +
+      '.const-lec{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 4px}.const-lec span{font-size:11px;font-weight:700;border-radius:20px;padding:3px 8px;background:#EEE6D2;color:#8A7C66}' +
+      '.const-lec span.ok{background:#1A150E;color:#F5E9C9}' +
+      '.const-gan{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}' +
+      '.const-gan button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:10px 14px;background:#C9A84C;color:#1A150E;cursor:pointer}' +
+      '#hcm-const-doc{background:#FFFDF6;color:#1A150E;border:3px double #8F7320;border-radius:6px;padding:26px 22px;text-align:center;font-family:Georgia,"Libre Baskerville",serif;max-width:640px;margin:0 auto}' +
+      '#hcm-const-doc .lema{font:600 10px/1.4 system-ui,sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#8F7320;margin-top:8px}' +
+      '#hcm-const-doc h1{font-size:25px;margin:14px 0 4px}#hcm-const-doc .quien{font-size:22px;font-weight:700;margin:14px 0 2px;border-bottom:1px solid #C9A84C;display:inline-block;padding:0 10px 4px}' +
+      '#hcm-const-doc p{font-size:14px;line-height:1.6;margin:8px 0}#hcm-const-doc .datos{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;text-align:left;font:13px/1.4 system-ui,sans-serif;margin:16px 0}' +
+      '#hcm-const-doc .datos b{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8A7C66}' +
+      '#hcm-const-doc .firma{margin-top:30px;display:inline-block;border-top:1px solid #1A150E;padding-top:6px;font:13px system-ui,sans-serif;min-width:240px}' +
+      '#hcm-const-doc .folio{font:12px ui-monospace,Menlo,monospace;margin-top:14px;color:#6b5f4b}' +
+      '@media print{body *{visibility:hidden!important}#hcm-const-doc,#hcm-const-doc *{visibility:visible!important}#hcm-const-doc{position:absolute;left:0;top:0;width:100%;max-width:none;border:3px double #8F7320}}';
+    var st = document.createElement('style'); st.textContent = css;
+    (document.head || document.documentElement).appendChild(st);
+  })();
+
+  /* ── 3. CONSTANCIAS ───────────────────────────────────────────────── */
+  var PARCIALES = [
+    {id:'P1', nombre:'Primer parcial',  ex:9,  det:'Lecciones 1 a 8'},
+    {id:'P2', nombre:'Segundo parcial', ex:18, det:'Lecciones 9 a 16'},
+    {id:'CF', nombre:'Curso completo',  ex:19, det:'Las 16 lecciones del curso'}
+  ];
+  var ORDEN = {bajo:1, medio:2, alto:3};
+  var K_NIV = 'hcm_iv_niveles', K_CONST = 'hcm_iv_constancias';
+  function leerJ(k, d){ try{ var r = localStorage.getItem(k); return r ? JSON.parse(r) : d; }catch(e){ return d; } }
+  function guardarJ(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  function hoy(){ return new Date().toISOString().slice(0, 10); }
+  function normNom(s){
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  // la misma cuenta la hace el panel del maestro para comprobar el folio
+  function folioDe(nombre, grupo, p, niv, fecha){
+    var s = normNom(nombre) + '|' + grupo + '|' + p + '|' + niv + '|' + fecha, h = 0x811c9dc5;
+    for(var i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    return 'HCM-' + p + '-' + niv.charAt(0).toUpperCase() + '-' + ('000000' + h.toString(36).toUpperCase()).slice(-6);
+  }
+  // las lecciones que ya tenía antes de esto cuentan con su carril de hoy
+  function niveles(){
+    var nv = leerJ(K_NIV, null);
+    if(nv) return nv;
+    nv = {};
+    try{
+      var Ph = hcmLoad().perfil || {}, h = Ph.hechas || {}, c = Ph.carril || 'medio';
+      Object.keys(h).forEach(function(n){ if(h[n]){ nv[n] = {}; nv[n][c] = Ph.ultima || hoy(); } });
+    }catch(e){}
+    guardarJ(K_NIV, nv);
+    return nv;
+  }
+  function nivelMaxDe(entrada){
+    var m = 0; for(var k in entrada) if(ORDEN[k] > m) m = ORDEN[k]; return m;
+  }
+  function evaluar(Ph){
+    var nv = niveles(), lista = leerJ(K_CONST, []), nuevas = [];
+    PARCIALES.forEach(function(pa){
+      var lecs = BLOQUES_HCM[pa.ex] || [];
+      if(!lecs.length) return;
+      var minimo = 3;
+      lecs.forEach(function(n){ minimo = Math.min(minimo, nivelMaxDe(nv[n] || {})); });
+      if(!minimo) return;
+      var niv = minimo === 3 ? 'alto' : (minimo === 2 ? 'medio' : 'bajo');
+      var ya = lista.some(function(x){ return x.p === pa.id && x.niv === niv; });
+      if(ya) return;
+      var f = hoy();
+      var cst = {p:pa.id, niv:niv, fecha:f, nombre:Ph.nombre || '', grupo:Ph.grupo || '',
+        folio: folioDe(Ph.nombre, Ph.grupo || '', pa.id, niv, f)};
+      lista.push(cst); nuevas.push(cst);
+    });
+    if(nuevas.length) guardarJ(K_CONST, lista);
+    return {lista:lista, nuevas:nuevas};
+  }
+  function resumenPerfil(Ph){
+    var nv = niveles(), letras = {1:'B', 2:'I', 3:'A'}, partes = [];
+    Object.keys(nv).map(Number).sort(function(a, b){ return a - b; }).forEach(function(n){
+      var m = nivelMaxDe(nv[n]); if(m) partes.push(n + letras[m]);
+    });
+    Ph.lecciones_hechas = partes.join(' ');
+    Ph.constancias = leerJ(K_CONST, []).map(function(x){
+      return x.p + ' ' + (NOMBRE_NIV[x.niv] || x.niv) + ' ' + x.folio + ' ' + x.fecha;
+    }).join(' | ');
+  }
+  if(typeof hcmCerrarLeccion === 'function'){
+    var cerrarAntes = hcmCerrarLeccion;
+    hcmCerrarLeccion = function(rec){
+      var nuevas = [];
+      try{
+        var Dh = hcmLoad(), Ph = Dh.perfil || {};
+        var n = Ph.parada_actual || Ph.parada || 1, c = Ph.carril || 'medio';
+        if(LECCIONES_HCM[n] && !LECCIONES_HCM[n].examen){
+          var nv = niveles(); nv[n] = nv[n] || {}; nv[n][c] = hoy(); guardarJ(K_NIV, nv);
+        }
+        var ev = evaluar(Ph); nuevas = ev.nuevas;
+        resumenPerfil(Ph);                 // viaja al servidor dentro del perfil
+        Dh.perfil = Ph; hcmSave(Dh);
+      }catch(e){}
+      var r = cerrarAntes.apply(this, arguments);
+      if(nuevas.length){
+        var x = nuevas[nuevas.length - 1], pa = PARCIALES.filter(function(p){ return p.id === x.p; })[0] || {};
+        setTimeout(function(){
+          try{ avisito('🎖 Ganaste tu constancia: ' + (pa.nombre || x.p) + ' · ' + NOMBRE_NIV[x.niv] + '. Está en Más → Mis constancias.'); }catch(e){}
+        }, 1600);
+      }
+      return r;
+    };
+  }
+
+  function pantallaConstancias(){
+    try{ soltarMapa(); }catch(e){}
+    try{ callarTodo(); }catch(e){}
+    var Ph = {}; try{ Ph = hcmLoad().perfil || {}; }catch(e){}
+    try{ var ev = evaluar(Ph); if(ev.nuevas.length){ resumenPerfil(Ph); var Dh = hcmLoad(); Dh.perfil = Ph; hcmSave(Dh); } }catch(e){}
+    var nv = niveles(), lista = leerJ(K_CONST, []);
+    var h = '<div class="card"><button class="volver" id="const-volver" style="background:none;border:0;font:inherit;color:#6E5716;cursor:pointer;padding:0;margin-bottom:10px">← Más</button>' +
+      '<div class="qlbl">Comprobante de tu trabajo</div><h2 class="met-t">Mis constancias</h2>' +
+      '<p class="qsub">Se ganan terminando <b>todas</b> las lecciones de un parcial. La constancia dice el nivel con el que las hiciste; ' +
+      'si después las repites en un nivel más alto, ganas otra. Tu maestro las ve en su panel, con el mismo folio.</p><div class="const-lista">';
+    PARCIALES.forEach(function(pa){
+      var lecs = BLOQUES_HCM[pa.ex] || [], hechas = 0, chips = '';
+      lecs.forEach(function(n, i){
+        var m = nivelMaxDe(nv[n] || {});
+        if(m) hechas++;
+        chips += '<span class="' + (m ? 'ok' : '') + '">' + (i + 1 + (pa.id === 'P2' ? 8 : 0)) + (m ? ' ' + ({1:'B', 2:'I', 3:'A'})[m] : '') + '</span>';
+      });
+      var gan = lista.filter(function(x){ return x.p === pa.id; });
+      h += '<div class="const-p"><h3>' + pa.nombre + '</h3><div class="s">' + pa.det + ' · llevas ' + hechas + ' de ' + lecs.length + '</div>' +
+        '<div class="const-barra"><i style="width:' + Math.round(hechas / Math.max(1, lecs.length) * 100) + '%"></i></div>' +
+        (pa.id !== 'CF' ? '<div class="const-lec">' + chips + '</div>' : '') +
+        (gan.length ? '<div class="const-gan">' + gan.map(function(x){
+          return '<button type="button" data-folio="' + esc(x.folio) + '">🎖 ' + NOMBRE_NIV[x.niv] + ' · ver</button>';
+        }).join('') + '</div>' : '<div class="s" style="margin-top:6px">' + (hechas === lecs.length ? '' : 'Te faltan ' + (lecs.length - hechas) + ' lecciones.') + '</div>') +
+        '</div>';
+    });
+    h += '</div><p class="tiny" style="margin-top:14px">B = Básico · I = Intermedio · A = Avanzado. Los exámenes parciales los aplica tu maestro en clase; esto comprueba tu práctica.</p></div>';
+    APP.innerHTML = h;
+    document.getElementById('const-volver').onclick = function(){ try{ menu(); }catch(e){ pantallaMas(); } };
+    APP.querySelectorAll('[data-folio]').forEach(function(b){
+      b.onclick = function(){
+        var x = lista.filter(function(y){ return y.folio === b.dataset.folio; })[0];
+        if(x) verConstancia(x, nv);
+      };
+    });
+  }
+  function verConstancia(x, nv){
+    var pa = PARCIALES.filter(function(p){ return p.id === x.p; })[0] || {nombre:x.p, det:''};
+    var lecs = (BLOQUES_HCM[pa.ex] || []).map(function(n){ return LECCIONES_HCM[n] ? LECCIONES_HCM[n].titulo : ''; });
+    var min = 0; try{ (load().sesiones || []).forEach(function(s){ min += (s.dur || 0); }); }catch(e){}
+    var esc2 = (typeof escudoHCM === 'function') ? escudoHCM(64) : '';
+    APP.innerHTML = '<div style="padding:14px 12px 90px"><div id="hcm-const-doc">' + esc2 +
+      '<div class="lema">Heroico Colegio Militar · Idioma Extranjero IV</div>' +
+      '<h1>Constancia de práctica</h1><p>Se hace constar que el cadete</p>' +
+      '<div class="quien">' + esc(x.nombre || '') + '</div>' +
+      '<p>completó en la app de práctica de inglés todas las lecciones del <b>' + esc(pa.nombre) + '</b> (' + esc(pa.det) + '), ' +
+      'en el nivel <b>' + esc(NOMBRE_NIV[x.niv]) + '</b>.</p>' +
+      '<div class="datos"><div><b>Grupo</b>' + esc(x.grupo || '—') + '</div><div><b>Nivel</b>' + esc(NOMBRE_NIV[x.niv]) + '</div>' +
+      '<div><b>Fecha</b>' + esc(x.fecha) + '</div><div><b>Tiempo de práctica</b>' + Math.round(min / 60) + ' min</div>' +
+      '<div style="grid-column:1/-1"><b>Lecciones</b>' + esc(lecs.filter(Boolean).join(' · ')) + '</div></div>' +
+      '<div class="firma">Brian Martínez Rodríguez<br><span style="font-size:11px;color:#6b5f4b">Instructor de Idioma Extranjero IV</span></div>' +
+      '<div class="folio">Folio ' + esc(x.folio) + '</div>' +
+      '<p style="font:11px system-ui,sans-serif;color:#8A7C66;margin-top:6px">Verificable con el folio en el panel del docente.</p></div>' +
+      '<div style="display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap">' +
+      '<button class="btn" id="const-print" style="max-width:280px">Guardar en PDF o imprimir</button>' +
+      '<button class="btn ghost" id="const-atras" style="max-width:200px">Volver</button></div>' +
+      '<p class="tiny" style="text-align:center;margin-top:8px">En el iPhone: toca Guardar, luego Compartir → Guardar en Archivos. También sirve una captura de pantalla.</p></div>';
+    document.getElementById('const-print').onclick = function(){ try{ window.print(); }catch(e){ avisito('Toma una captura de pantalla de la constancia.'); } };
+    document.getElementById('const-atras').onclick = pantallaConstancias;
+  }
+  if(typeof pantallaMas === 'function'){
+    var masBase = pantallaMas;
+    pantallaMas = function(){
+      var r = masBase.apply(this, arguments);
+      try{
+        var l = APP.querySelector('.maslista, .mas-lista');
+        if(l && !l.querySelector('[data-m="constancias"]')){
+          var n = leerJ(K_CONST, []).length;
+          l.insertAdjacentHTML('afterbegin', '<button class="masb" data-m="constancias"><span class="mas-ic">🎖️</span>' +
+            '<span class="mas-tx"><b>Mis constancias</b><small>' + (n ? n + ' ganada' + (n > 1 ? 's' : '') + ' · ' : '') + 'Por parcial y por nivel</small></span>' +
+            '<span class="mas-fl">›</span></button>');
+          l.querySelector('[data-m="constancias"]').onclick = pantallaConstancias;
+        }
+      }catch(e){}
+      return r;
+    };
+  }
+
+  // el menú de Ajustes del cadete (la pestaña Más)
+  if(typeof menu === 'function'){
+    var menuBase = menu;
+    menu = function(){
+      var r = menuBase.apply(this, arguments);
+      try{
+        if(!document.getElementById('hcm-const')){
+          var n = leerJ(K_CONST, []).length, ancla = document.getElementById('hcm-hoy');
+          var btn = '<button class="btn" id="hcm-const" style="margin-top:6px">\ud83c\udf96\ufe0f Mis constancias' + (n ? ' \u00b7 ' + n : '') + '</button>';
+          if(ancla) ancla.insertAdjacentHTML('afterend', btn);
+          var b = document.getElementById('hcm-const'); if(b) b.onclick = pantallaConstancias;
+        }
+      }catch(e){}
+      return r;
+    };
+  }
+  try{ window.__hcmConstancias = {folioDe:folioDe}; }catch(e){}
+})();
+
+/* JUEGOS_BAAMBOOZLE_HCM ══════════════════════════════════════════════
+   Extra opcional por lección: tres juegos de Baamboozle (vocabulario,
+   gramática y mixto), 50 reactivos cada uno en formato ALC de opción
+   múltiple. Se abren en el navegador, fuera de la app, y no cuentan
+   para el avance ni para las constancias: son repaso de salón.        */
+(function(){
+  var JUEGOS = {"1": {"v": "4820652", "g": "4820653", "m": "4820654"}, "2": {"v": "4820658", "g": "4820659", "m": "4820664"}, "3": {"v": "4820665", "g": "4820666", "m": "4820670"}, "4": {"v": "4820672", "g": "4820673", "m": "4820675"}, "5": {"v": "4820676", "g": "4820681", "m": "4820682"}, "6": {"v": "4820683", "g": "4820686", "m": "4820687"}, "7": {"v": "4820688", "g": "4820690", "m": "4820691"}, "8": {"v": "4820692", "g": "4820693", "m": "4820695"}, "10": {"v": "4820696", "g": "4820697", "m": "4820698"}, "11": {"v": "4820953", "g": "4820699", "m": "4820700"}, "12": {"v": "4820701", "g": "4820702", "m": "4820703"}, "13": {"v": "4820704", "g": "4820791", "m": "4820792"}, "14": {"v": "4820796", "g": "4820797", "m": "4820802"}, "15": {"v": "4820804", "g": "4820809", "m": "4820810"}, "16": {"v": "4820817", "g": "4820829", "m": "4820838"}, "17": {"v": "4820955", "g": "4820846", "m": "4820850"}};
+  var TITULOS = {"1": "I'd like to open an account", "2": "The cake is delicious", "3": "He was talking when he hit the car", "4": "You must obey traffic laws", "5": "Ted can repair the car", "6": "Should I ask Lt Clark for help?", "7": "He realized the tank was empty", "8": "I apologize for breaking your window", "10": "Tell me how to", "11": "Sue exercises before she goes to work", "12": "Like shopping in the mall", "13": "Let me introduce", "14": "Can you change a flat tire?", "15": "Would you introduce your family?", "16": "What kind of work can I do?", "17": "How far is it from El Paso to Houston?"};
+  var BASE = 'https://www.baamboozle.com/game/';
+
+  function tieneJuegos(n){ return !!(JUEGOS[n] && JUEGOS[n].v); }
+  function abrir(id){ try{ window.open(BASE+id,'_blank','noopener'); }catch(e){ location.href = BASE+id; } }
+
+  function botonesDe(n, chico){
+    var j = JUEGOS[n]; if(!j) return '';
+    var cls = chico ? 'btn ghost' : 'btn ghost';
+    return '<button class="'+cls+'" data-baam="'+j.v+'" style="margin-top:6px">Vocabulario</button>'+
+           '<button class="'+cls+'" data-baam="'+j.g+'" style="margin-top:6px">Gramática</button>'+
+           '<button class="'+cls+'" data-baam="'+j.m+'" style="margin-top:6px">Mixto</button>';
+  }
+  function ligar(raiz){
+    if(!raiz) return;
+    var bs = raiz.querySelectorAll('[data-baam]');
+    for(var i=0;i<bs.length;i++){
+      (function(b){ b.onclick = function(){ abrir(b.getAttribute('data-baam')); }; })(bs[i]);
+    }
+  }
+
+  /* Pantalla con las 16 lecciones */
+  function pantallaJuegos(){
+    var h = (typeof atras==='function'?atras():'') +
+      '<div class="qcard"><div class="qlbl">Extra</div>'+
+      '<div class="qtxt">Juegos de repaso</div>'+
+      '<div class="qsub">50 preguntas por juego, opción múltiple, como el examen ALC. '+
+      'Se abren fuera de la app y no cuentan para tu avance.</div></div>';
+    var ns = Object.keys(JUEGOS).map(Number).sort(function(a,b){return a-b;});
+    for(var i=0;i<ns.length;i++){
+      var n = ns[i];
+      h += '<div class="card" style="margin-top:10px">'+
+           '<h3 style="margin:0 0 2px">Lección '+n+'</h3>'+
+           '<p class="sub" style="margin:0 0 8px">'+esc(TITULOS[n]||'')+'</p>'+
+           botonesDe(n)+'</div>';
+    }
+    APP.innerHTML = h;
+    if(typeof ligarAtras==='function') ligarAtras(function(){ try{menu();}catch(e){ mostrarMapa(); } });
+    ligar(APP);
+    try{ window.scrollTo(0,0); }catch(e){}
+  }
+  try{ window.__hcmJuegos = pantallaJuegos; }catch(e){}
+
+  /* 1. Entrada desde "Todo lo demás" */
+  if(typeof menu === 'function'){
+    var menuBase = menu;
+    menu = function(){
+      var r = menuBase.apply(this, arguments);
+      try{
+        var ref = document.getElementById('hcm-niv') || document.getElementById('hcm-son');
+        if(ref && !document.getElementById('hcm-juegos')){
+          var b = document.createElement('button');
+          b.className = 'btn ghost'; b.id = 'hcm-juegos';
+          b.style.marginTop = '6px';
+          b.textContent = 'Juegos de repaso';
+          ref.parentNode.insertBefore(b, ref.nextSibling);
+          b.onclick = function(){ pantallaJuegos(); };
+        }
+      }catch(e){}
+      return r;
+    };
+  }
+
+  /* 2. Al cerrar la lección, el juego de esa lección */
+  if(typeof cierre === 'function'){
+    var cierreBase = cierre;
+    cierre = function(){
+      var n = 0;
+      try{ n = (hcmLoad().perfil||{}).parada || 0; }catch(e){}
+      var r = cierreBase.apply(this, arguments);
+      try{
+        if(!tieneJuegos(n)) return r;
+        var caja = document.getElementById('extra') || APP;
+        if(!caja || document.getElementById('hcm-baam-fin')) return r;
+        var d = document.createElement('div');
+        d.className = 'card'; d.id = 'hcm-baam-fin'; d.style.marginTop = '12px';
+        d.innerHTML = '<h3 style="margin:0 0 2px">Juego de repaso · lección '+n+'</h3>'+
+          '<p class="sub" style="margin:0 0 8px">Opcional. 50 preguntas de opción múltiple, '+
+          'como el examen. Se abre fuera de la app.</p>'+ botonesDe(n);
+        caja.appendChild(d);
+        ligar(d);
+      }catch(e){}
+      return r;
+    };
+  }
+})();
+
 })();
 
 </script>
