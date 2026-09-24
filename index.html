@@ -802,6 +802,14 @@
 .niv-pts i{width:9px;height:9px;border-radius:50%;background:rgba(31,27,22,.16)}
 .niv-pts i.on{background:var(--verde,#1D9E75)}
 .niv-pie{margin-top:9px;font-size:11.5px;line-height:1.4;opacity:.6}
+
+/* el cerebro leyendo el alta */
+.leyendo{display:flex;gap:7px;justify-content:center;padding:18px 0 6px}
+.leyendo i{width:9px;height:9px;border-radius:50%;background:var(--verde,#1D9E75);opacity:.35;animation:leyPulso 1.1s ease-in-out infinite}
+.leyendo i:nth-child(2){animation-delay:.16s}
+.leyendo i:nth-child(3){animation-delay:.32s}
+@keyframes leyPulso{0%,100%{opacity:.25;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.leyendo i{animation:none;opacity:.6}}
 </style>
 <style>
   .cargando-audio{position:relative;opacity:.75}
@@ -1583,7 +1591,7 @@ if('serviceWorker' in navigator){
 <script>
 (function(){
 "use strict";
-var VERSION="v140 · 23 sep · estimacion de nivel en las revisiones y trabalenguas del Colegio";
+var VERSION="v142 · 24 sep · el alta la lee la IA y el perfil del cadete crece con lo que dice";
 
 /* ═══════════ almacenamiento ═══════════ */
 var KEY='efa_tutor_v2',mem={};
@@ -2532,7 +2540,7 @@ var ACCIONES=[
 var HORAS=[['6','at six'],['7','at seven'],['8','at eight'],['9','at nine'],['10','at ten'],['más tarde','later']];
 var GUSTOS=[
   ['mi familia','my family'],['la música','music'],['cocinar','cooking'],
-  ['el fútbol','football'],['viajar','traveling'],['leer','reading'],
+  ['el deporte','sports'],['viajar','traveling'],['leer','reading'],
   ['las series y el cine','films and series'],['hacer ejercicio','working out'],
   ['los videojuegos','video games'],['salir con amigos','going out with friends'],
   ['mis animales','my pets'],['mi trabajo','my job']
@@ -8394,12 +8402,47 @@ function pruebaNivel(){
 function cerrar(){
     var nv=nivelDe(pts);
     edatos.nivel=nv.cod;edatos.nivel_n=nv.n;edatos.nivel_pts=pts;edatos.nivel_resp=resp;
-    escogerNivel(nv);
+    // Una sola llamada al cerebro con TODO lo que escribió, incluido lo que
+    // puso en "otra cosa" y lo que contestó en inglés. De ahí salen su oficio,
+    // sus temas y, si la ve distinta, otra sugerencia de nivel.
+    leerPerfilConIA(function(){
+      var nv2=nv;
+      try{
+        var s=edatos.ia&&edatos.ia.nivel_sugerido;
+        if(s){
+          var i=['Pre-A1','A1','A2','B1','B2','C1','C2'].indexOf(String(s).trim());
+          if(i>=0) nv2={cod:(i>=4?'B2 o más':s),n:i,alto:i>=4,txt:nv.txt};
+        }
+      }catch(e){}
+      escogerNivel(nv2);
+    });
   }
 
   // Hoy solo dos niveles tienen el curso completo. En vez de mandar al alumno
   // a ciegas a uno que todavia no existe, se le ensenan los abiertos y el
   // escoge. El cuestionario ya no decide: sugiere.
+  function leerPerfilConIA(sigue){
+    if(!hayIA()){ sigue(); return; }
+    var ido=false;
+    var reloj=setTimeout(function(){ if(!ido){ido=true;sigue();} },9000);
+    try{
+      var g=(typeof hojaPspIni==='function')
+        ? hojaPspIni({et:'PARTE 1 · TUS DATOS',lbl:'UN MOMENTO',
+            q:'Estoy leyendo lo que me contaste.',
+            sub:'Con eso armo tus frases. Tarda unos segundos.'})+
+          '<div class="leyendo"><i></i><i></i><i></i></div>'+hojaPspFin()
+        : '<div class="qcard"><div class="qtxt">Estoy leyendo lo que me contaste.</div>'+
+          '<div class="qsub">Con eso armo tus frases. Tarda unos segundos.</div></div>';
+      APP.innerHTML=g;
+      var _h=document.getElementById('pspH'); if(_h)_h.classList.add('entra');
+    }catch(e){}
+    perfilarConIA(edatos,function(res){
+      if(ido)return; ido=true; clearTimeout(reloj);
+      if(res) edatos.ia=res;
+      sigue();
+    },function(){ if(ido)return; ido=true; clearTimeout(reloj); sigue(); });
+  }
+
   function escogerNivel(nv){
     var sug=nivelAbiertoCercano(nv.n);
     var eleg=sug;
@@ -8595,6 +8638,7 @@ function quienEs(){
   else
     p+=' ENFOQUE: mitad vida diaria y mitad trabajo. Alterna: si el ultimo ejemplo '+
        'fue de oficina, el siguiente que sea de su vida.';
+  try{ p+=vivoEnPalabras(); }catch(e){}
   p+=' Todo lo que inventes debe sonar a SU mundo, no a un libro de negocios.';
   return p;
 }
@@ -8611,6 +8655,120 @@ function pedirIA(accion,datos,ok,falla){
   .then(function(d){ if(d&&d.ok)ok&&ok(d.resultado); else falla&&falla(); })
   .catch(function(){falla&&falla();});
 }
+
+/* ═══════════ el perfil lo lee la IA, no una tabla ═══════════
+   La tabla de oficios sigue ahí y sigue siendo el piso: si no hay internet
+   o el cerebro no contesta, el alta funciona igual que siempre. Pero cuando
+   sí contesta, quien manda es él: lee lo que el alumno escribió con sus
+   palabras — incluido lo que puso en "otra cosa" — y devuelve el oficio, el
+   lugar, lo que hace, sus gustos y su meta ya en inglés, más los temas de
+   los que de verdad se le puede hablar. */
+function perfilarConIA(e,cb){
+  if(!hayIA()){cb&&cb(null);return;}
+  pedirIA('perfilar',{
+    nombre:  e.nombre||'',
+    trabajo: e.trabajo_es||'',
+    accion:  e.accion_es||'',
+    hora:    e.hora_es||'',
+    gustos:  [e.gusto_es,e.gusto_otra].filter(Boolean).join(', '),
+    metas:   [e.meta_es,e.meta_otra].filter(Boolean).join(', '),
+    enfoque: e.enfoque_es||'',
+    familia: e.familia||'',
+    respuestas_nivel:(e.nivel_resp||[]).map(function(r){
+      return {pregunta:r.q, dijo:r.r};
+    }),
+    puntos: e.nivel_pts
+  },function(res){cb&&cb(res);},function(){cb&&cb(null);});
+}
+function _txt(x){ return String(x==null?'':x).trim(); }
+function aplicarPerfilIA(p,res){
+  if(!p||!res)return p;
+  if(_txt(res.oficio_en)){ p.trabajo_en=_txt(res.oficio_en); p.reconocido=true; p.por_ia=true; }
+  if(_txt(res.oficio_es)) p.trabajo_et=_txt(res.oficio_es);
+  if(_txt(res.lugar_es))  p.lugar_es=_txt(res.lugar_es);
+  if(_txt(res.lugar_en))  p.lugar_en=_txt(res.lugar_en);
+  if(_txt(res.accion_es)) p.accion_es=_txt(res.accion_es);
+  if(_txt(res.accion_en)) p.accion_en=_txt(res.accion_en);
+  if(_txt(res.accion_en2))p.accion_en2=_txt(res.accion_en2);
+  if(_txt(res.gusto_es))  p.gusto_es=_txt(res.gusto_es);
+  if(_txt(res.gusto_en))  p.gusto_en=_txt(res.gusto_en);
+  if(_txt(res.meta_es))   p.meta_es=_txt(res.meta_es);
+  if(_txt(res.meta_en))   p.meta_en=_txt(res.meta_en);
+  if(res.temas&&res.temas.length) p.temas_ia=res.temas.slice(0,8);
+  if(_txt(res.resumen))   p.resumen_ia=_txt(res.resumen).slice(0,400);
+  return p;
+}
+
+/* ═══════════ el perfil vivo ═══════════
+   Lo que el alumno dice en los ejercicios vale más que lo que contestó el
+   primer día: ahí sale su jefe, su turno, su hijo, el nombre de la máquina
+   que opera. Se recoge al cerrar cada sesión y se acumula. De ahí salen los
+   temas que rotan y el párrafo que va al cerebro, así que el nivel siguiente
+   ya nace con todo lo que fue contando en el anterior. */
+var VIVO_K='efa_vivo';
+function perfilVivo(){
+  try{ return JSON.parse(localStorage.getItem(VIVO_K)||'null')||
+       {temas:[],palabras:[],gente:[],lugares:[],resumen:'',sesiones:0}; }
+  catch(e){ return {temas:[],palabras:[],gente:[],lugares:[],resumen:'',sesiones:0}; }
+}
+function _unir(viejo,nuevo,tope){
+  var out=[], visto={};
+  (viejo||[]).concat(nuevo||[]).forEach(function(x){
+    var t=_txt(x); if(!t)return;
+    var k=t.toLowerCase();
+    if(visto[k])return; visto[k]=1; out.push(t);
+  });
+  // lo nuevo pesa más: si se llena, se van los más viejos
+  return out.length>tope ? out.slice(out.length-tope) : out;
+}
+function guardarPerfilVivo(res){
+  if(!res)return;
+  var v=perfilVivo();
+  v.temas   =_unir(v.temas,   res.temas,   12);
+  v.palabras=_unir(v.palabras,res.palabras,40);
+  v.gente   =_unir(v.gente,   res.gente,   10);
+  v.lugares =_unir(v.lugares, res.lugares, 10);
+  if(_txt(res.resumen)) v.resumen=_txt(res.resumen).slice(0,400);
+  v.sesiones=(v.sesiones||0)+1;
+  try{ localStorage.setItem(VIVO_K,JSON.stringify(v)); }catch(e){}
+  // los temas nuevos entran a la rueda de una vez
+  try{ if(typeof sembrarTemas==='function'&&P){ var d=load(); d.temas=sembrarTemas(P); save(d); D=d; } }catch(e){}
+}
+function loQueDijo(lista){
+  var fuera={pista:1,correccion:1,regla:1};
+  return (lista||[]).filter(function(a){
+    if(!a||!a.oido||fuera[a.tipo])return false;
+    if(String(a.oido).charAt(0)==='[')return false;
+    // lo que solo repitió no cuenta: buscamos lo que dijo con sus palabras
+    if(a.tipo==='model'||a.tipo==='drill'||a.tipo==='leer'||
+       a.tipo==='ritmo'||a.tipo==='trabalenguas')return false;
+    return String(a.oido).trim().split(/\s+/).length>=3;
+  }).map(function(a){ return {pregunta:_txt(a.meta), dijo:_txt(a.oido).slice(0,180)}; });
+}
+function crecerPerfil(rec,cb){
+  if(!hayIA()){cb&&cb();return;}
+  var dichos=loQueDijo(rec&&rec.intentos);
+  if(dichos.length<2){cb&&cb();return;}
+  var v=perfilVivo();
+  pedirIA('perfilvivo',{
+    alumno:quienEs(), nivel:(P&&P.nivel)||'', sesion:(rec&&rec.titulo)||'',
+    dijo:dichos.slice(0,25),
+    vivo:{temas:v.temas,palabras:v.palabras,gente:v.gente,lugares:v.lugares,resumen:v.resumen}
+  },function(res){ try{ guardarPerfilVivo(res); }catch(e){} cb&&cb(); },
+    function(){ cb&&cb(); });
+}
+function vivoEnPalabras(){
+  var v=perfilVivo();
+  if(!v.sesiones)return '';
+  var t='';
+  if(v.resumen) t+=' LO QUE HE APRENDIDO DE EL/ELLA HABLANDO: '+v.resumen;
+  if(v.temas.length)   t+=' TEMAS SUYOS: '+v.temas.slice(-8).join(', ')+'.';
+  if(v.gente.length)   t+=' GENTE QUE MENCIONA: '+v.gente.slice(-6).join(', ')+'.';
+  if(v.lugares.length) t+=' LUGARES SUYOS: '+v.lugares.slice(-6).join(', ')+'.';
+  if(v.palabras.length)t+=' PALABRAS QUE YA USA: '+v.palabras.slice(-14).join(', ')+'.';
+  return t;
+}
+
 function evaluarConIA(rec,cb){
   if(!hayIA()){cb&&cb(null);return;}
   pedirIA('evaluar',{
@@ -9781,6 +9939,8 @@ function cerrarPerfil(){
   }else{
     P=interpretar(P);
   }
+  // La tabla es el piso; si el cerebro contestó, lo suyo manda.
+  try{ if(edatos.ia) P=aplicarPerfilIA(P,edatos.ia); }catch(e){}
   D.perfil=P;save(D);
   mandarPerfil();
   bienvenida();
@@ -11479,10 +11639,32 @@ function cierre(){
   rec.activo=segundosActivos();
   rec.bitacora=BITACORA.slice();
   rec.items_total=(S.items||[]).length;
+  /* Lo que el alumno ve al cerrar, también viaja al panel. Sin esto Brian
+     veía los intentos uno por uno pero no el ritmo, las muletillas, ni el
+     nivel estimado, que es justo lo que se lee de un vistazo con treinta
+     alumnos. */
+  try{
+    var _infR=informeFluidez(attempts);
+    rec.fluidez={veces:_infR.veces, palabras:_infR.palabras, segundos:_infR.seg,
+                 ppm:_infR.ppm, muletillas:_infR.totalMule,
+                 cuales:_infR.mule.slice(0,5), larga:_infR.larga,
+                 promedio:_infR.prom};
+    rec.tres=tresDeHoy(attempts);
+    if(tocaEstimar()){
+      var _eR=estimarNivel(attempts,_infR);
+      rec.nivel_est={total:_eR.total, titulo:_eR.titulo,
+                     fluidez:_eR.f, precision:_eR.pr,
+                     alcance:_eR.alc.p, palabras_distintas:_eR.alc.n,
+                     turnos:_eR.tur.p, turno_largo:_eR.tur.w};
+    }
+  }catch(e){}
   // en el telefono se guarda sin la bitacora, para no llenar la memoria
   var recLocal={}; for(var kk in rec) if(kk!=='bitacora') recLocal[kk]=rec[kk];
   D.sesiones.push(recLocal);save(D);
   try{hcmCerrarLeccion(rec);}catch(e){console.error(e);}
+
+  // lo que dijo hoy se suma a su perfil vivo, para las paradas que siguen
+  try{ crecerPerfil(rec,function(){}); }catch(e){}
 
   // la IA propone los tres errores; Brian los valida. Sin IA, no pasa nada.
   if(hayIA()){
@@ -13535,7 +13717,7 @@ function hcmTutorial(){
       return r;
     };
   }
-  try{ window.__hcmConstancias = {folioDe:folioDe}; window.__hcmConstanciasPantalla = pantallaConstancias; }catch(e){}
+  try{ window.__hcmConstancias = {folioDe:folioDe}; }catch(e){}
 })();
 
 /* JUEGOS_BAAMBOOZLE_HCM ══════════════════════════════════════════════
@@ -13550,15 +13732,12 @@ function hcmTutorial(){
 
   function tieneJuegos(n){ return !!(JUEGOS[n] && JUEGOS[n].v); }
   function abrir(id){ try{ window.open(BASE+id,'_blank','noopener'); }catch(e){ location.href = BASE+id; } }
-  function abrirPres(n){ var u = 'presentaciones/l'+n+'.pdf';
-    try{ window.open(u,'_blank','noopener'); }catch(e){ location.href = u; } }
 
   function botonesDe(n, chico){
     var j = JUEGOS[n]; if(!j) return '';
     var cls = chico ? 'btn ghost' : 'btn ghost';
-    return '<button class="'+cls+'" data-pres="'+n+'" style="margin-top:6px">📊 Presentación de la clase</button>'+
-           '<button class="'+cls+'" data-baam="'+j.v+'" style="margin-top:6px">🎮 Juego · Vocabulario</button>'+
-           '<button class="'+cls+'" data-baam="'+j.g+'" style="margin-top:6px">🎮 Juego · Gramática</button>';
+    return '<button class="'+cls+'" data-baam="'+j.v+'" style="margin-top:6px">Vocabulario</button>'+
+           '<button class="'+cls+'" data-baam="'+j.g+'" style="margin-top:6px">Gramática</button>';
   }
   function ligar(raiz){
     if(!raiz) return;
@@ -13566,23 +13745,19 @@ function hcmTutorial(){
     for(var i=0;i<bs.length;i++){
       (function(b){ b.onclick = function(){ abrir(b.getAttribute('data-baam')); }; })(bs[i]);
     }
-    var ps = raiz.querySelectorAll('[data-pres]');
-    for(var k=0;k<ps.length;k++){
-      (function(b){ b.onclick = function(){ abrirPres(b.getAttribute('data-pres')); }; })(ps[k]);
-    }
   }
 
   /* Pantalla con las 16 lecciones */
   function pantallaJuegos(){
     var h = (typeof atras==='function'?atras():'') +
       '<div class="qcard"><div class="qlbl">Extra</div>'+
-      '<div class="qtxt">Material de cada lección</div>'+
-      '<div class="qsub">La presentación que vimos en clase y dos juegos de repaso de 50 preguntas, '+
-      'de opción múltiple como el examen. Se abren fuera de la app y no cuentan para tu avance.</div></div>';
+      '<div class="qtxt">Juegos de repaso</div>'+
+      '<div class="qsub">Dos juegos por lección, 50 preguntas cada uno, de opción múltiple, como el examen ALC. '+
+      'Se abren fuera de la app y no cuentan para tu avance.</div></div>';
     var ns = Object.keys(JUEGOS).map(Number).sort(function(a,b){return a-b;});
     for(var i=0;i<ns.length;i++){
       var n = ns[i];
-      h += '<div class="sumcard" style="margin-top:10px">'+
+      h += '<div class="card" style="margin-top:10px">'+
            '<h3 style="margin:0 0 2px">Lección '+n+'</h3>'+
            '<p class="sub" style="margin:0 0 8px">'+esc(TITULOS[n]||'')+'</p>'+
            botonesDe(n)+'</div>';
@@ -13605,7 +13780,7 @@ function hcmTutorial(){
           var b = document.createElement('button');
           b.className = 'btn ghost'; b.id = 'hcm-juegos';
           b.style.marginTop = '6px';
-          b.textContent = 'Material de cada lección';
+          b.textContent = 'Juegos de repaso';
           ref.parentNode.insertBefore(b, ref.nextSibling);
           b.onclick = function(){ pantallaJuegos(); };
         }
@@ -13626,83 +13801,16 @@ function hcmTutorial(){
         var caja = document.getElementById('extra') || APP;
         if(!caja || document.getElementById('hcm-baam-fin')) return r;
         var d = document.createElement('div');
-        d.className = 'sumcard'; d.id = 'hcm-baam-fin'; d.style.marginTop = '12px';
-        d.innerHTML = '<h3 style="margin:0 0 2px">Material de la lección '+n+'</h3>'+
-          '<p class="sub" style="margin:0 0 8px">Opcional. La presentación de la clase y los dos juegos '+
-          'de repaso. Se abren fuera de la app.</p>'+ botonesDe(n);
+        d.className = 'card'; d.id = 'hcm-baam-fin'; d.style.marginTop = '12px';
+        d.innerHTML = '<h3 style="margin:0 0 2px">Juego de repaso · lección '+n+'</h3>'+
+          '<p class="sub" style="margin:0 0 8px">Opcional. 50 preguntas de opción múltiple, '+
+          'como el examen. Se abre fuera de la app.</p>'+ botonesDe(n);
         caja.appendChild(d);
         ligar(d);
       }catch(e){}
       return r;
     };
   }
-})();
-
-/* BARRA_BAJA_HCM ══════════════════════════════════════════════════════
-   La tercera pestaña decía "Maestro" y abría el panel con clave del
-   profesor: nada que el cadete deba ver. Ahora es su propia pestaña
-   (su nombre → Ajustes) y la cuarta lleva al material de la lección.
-   El panel del docente sigue en maestro.html, que es donde vive.     */
-(function(){
-  function nombreCorto(){
-    var n = '';
-    try{ n = ((hcmLoad().perfil)||{}).nombre || ''; }catch(e){}
-    n = String(n).trim().replace(/\s+/g,' ');
-    if(!n) return '';
-    var partes = n.split(' ');
-    var chicas = ['de','del','la','las','los','san','santa','da','di','mac','mc','y'];
-    var pila = partes[0];                         // el mismo criterio que usa el saludo del mapa
-    if(chicas.indexOf(pila.toLowerCase()) >= 0 && partes[1]) pila = pila + ' ' + partes[1];
-    if(chicas.indexOf(String(partes[1]||'').toLowerCase()) >= 0 && partes[2]) pila = pila + ' ' + partes[2];
-    if(pila.length > 12) pila = pila.slice(0,11) + '.';
-    return pila.split(' ').map(function(x){
-      return x.charAt(0).toUpperCase() + x.slice(1).toLowerCase();
-    }).join(' ');
-  }
-
-  function acomodar(){
-    var bb = document.getElementById('barrabaja'); if(!bb) return;
-    var b3 = bb.querySelector('[data-t="maestro"], [data-t="yo"]');
-    var b4 = bb.querySelector('[data-t="mas"], [data-t="material"]');
-    if(b3){
-      b3.dataset.t = 'yo';
-      b3.classList.remove('maestro');
-      var ico = b3.querySelector('span');
-      if(ico){ ico.className = 'ic'; ico.textContent = '👤'; }
-      var txt = nombreCorto() || 'Ajustes';
-      b3.innerHTML = (ico ? ico.outerHTML : '<span class="ic">👤</span>') + txt;
-    }
-    if(b4){
-      b4.dataset.t = 'mas';                       // el botón de siempre, tal cual
-      var ico2 = b4.querySelector('span');
-      if(ico2){ ico2.className = 'ic'; ico2.textContent = '☰'; }
-      b4.innerHTML = (ico2 ? ico2.outerHTML : '<span class="ic">☰</span>') + 'Más';
-    }
-  }
-
-  function ligarBarra(){
-    var bb = document.getElementById('barrabaja'); if(!bb || bb.__hcmLigada) return;
-    bb.__hcmLigada = true;
-    bb.addEventListener('click', function(e){
-      var b = e.target.closest('[data-t]'); if(!b) return;
-      var t = b.dataset.t;
-      if(t === 'yo'){
-        e.stopPropagation();
-        var f = window.__hcmConstanciasPantalla;
-        try{ if(typeof f === 'function') f(); else menu(); }catch(err){ try{ menu(); }catch(e2){} }
-      }
-      else return;
-      var todos = document.querySelectorAll('.tabb');
-      for(var i=0;i<todos.length;i++) todos[i].classList.toggle('on', todos[i] === b);
-    }, true);
-  }
-
-  function arrancar(){ ligarBarra(); acomodar(); }
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar);
-  else arrancar();
-  setTimeout(arrancar, 800);
-  setTimeout(acomodar, 2500);
-  try{ window.__hcmBarra = acomodar; }catch(e){}
 })();
 
 })();
