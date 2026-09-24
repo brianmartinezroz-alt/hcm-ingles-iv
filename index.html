@@ -1583,7 +1583,7 @@ if('serviceWorker' in navigator){
 <script>
 (function(){
 "use strict";
-var VERSION="v140 · 23 sep · estimacion de nivel en las revisiones y trabalenguas del Colegio";
+var VERSION="v141 · 24 sep · fluidez y nivel al panel del Colegio";
 
 /* ═══════════ almacenamiento ═══════════ */
 var KEY='efa_tutor_v2',mem={};
@@ -11479,6 +11479,25 @@ function cierre(){
   rec.activo=segundosActivos();
   rec.bitacora=BITACORA.slice();
   rec.items_total=(S.items||[]).length;
+  /* Lo que el alumno ve al cerrar, también viaja al panel. Sin esto Brian
+     veía los intentos uno por uno pero no el ritmo, las muletillas, ni el
+     nivel estimado, que es justo lo que se lee de un vistazo con treinta
+     alumnos. */
+  try{
+    var _infR=informeFluidez(attempts);
+    rec.fluidez={veces:_infR.veces, palabras:_infR.palabras, segundos:_infR.seg,
+                 ppm:_infR.ppm, muletillas:_infR.totalMule,
+                 cuales:_infR.mule.slice(0,5), larga:_infR.larga,
+                 promedio:_infR.prom};
+    rec.tres=tresDeHoy(attempts);
+    if(tocaEstimar()){
+      var _eR=estimarNivel(attempts,_infR);
+      rec.nivel_est={total:_eR.total, titulo:_eR.titulo,
+                     fluidez:_eR.f, precision:_eR.pr,
+                     alcance:_eR.alc.p, palabras_distintas:_eR.alc.n,
+                     turnos:_eR.tur.p, turno_largo:_eR.tur.w};
+    }
+  }catch(e){}
   // en el telefono se guarda sin la bitacora, para no llenar la memoria
   var recLocal={}; for(var kk in rec) if(kk!=='bitacora') recLocal[kk]=rec[kk];
   D.sesiones.push(recLocal);save(D);
@@ -13550,15 +13569,12 @@ function hcmTutorial(){
 
   function tieneJuegos(n){ return !!(JUEGOS[n] && JUEGOS[n].v); }
   function abrir(id){ try{ window.open(BASE+id,'_blank','noopener'); }catch(e){ location.href = BASE+id; } }
-  function abrirPres(n){ var u = 'presentaciones/l'+n+'.pdf';
-    try{ window.open(u,'_blank','noopener'); }catch(e){ location.href = u; } }
 
   function botonesDe(n, chico){
     var j = JUEGOS[n]; if(!j) return '';
     var cls = chico ? 'btn ghost' : 'btn ghost';
-    return '<button class="'+cls+'" data-pres="'+n+'" style="margin-top:6px">📊 Presentación de la clase</button>'+
-           '<button class="'+cls+'" data-baam="'+j.v+'" style="margin-top:6px">🎮 Juego · Vocabulario</button>'+
-           '<button class="'+cls+'" data-baam="'+j.g+'" style="margin-top:6px">🎮 Juego · Gramática</button>';
+    return '<button class="'+cls+'" data-baam="'+j.v+'" style="margin-top:6px">Vocabulario</button>'+
+           '<button class="'+cls+'" data-baam="'+j.g+'" style="margin-top:6px">Gramática</button>';
   }
   function ligar(raiz){
     if(!raiz) return;
@@ -13566,23 +13582,19 @@ function hcmTutorial(){
     for(var i=0;i<bs.length;i++){
       (function(b){ b.onclick = function(){ abrir(b.getAttribute('data-baam')); }; })(bs[i]);
     }
-    var ps = raiz.querySelectorAll('[data-pres]');
-    for(var k=0;k<ps.length;k++){
-      (function(b){ b.onclick = function(){ abrirPres(b.getAttribute('data-pres')); }; })(ps[k]);
-    }
   }
 
   /* Pantalla con las 16 lecciones */
   function pantallaJuegos(){
     var h = (typeof atras==='function'?atras():'') +
       '<div class="qcard"><div class="qlbl">Extra</div>'+
-      '<div class="qtxt">Material de cada lección</div>'+
-      '<div class="qsub">La presentación que vimos en clase y dos juegos de repaso de 50 preguntas, '+
-      'de opción múltiple como el examen. Se abren fuera de la app y no cuentan para tu avance.</div></div>';
+      '<div class="qtxt">Juegos de repaso</div>'+
+      '<div class="qsub">Dos juegos por lección, 50 preguntas cada uno, de opción múltiple, como el examen ALC. '+
+      'Se abren fuera de la app y no cuentan para tu avance.</div></div>';
     var ns = Object.keys(JUEGOS).map(Number).sort(function(a,b){return a-b;});
     for(var i=0;i<ns.length;i++){
       var n = ns[i];
-      h += '<div class="sumcard" style="margin-top:10px">'+
+      h += '<div class="card" style="margin-top:10px">'+
            '<h3 style="margin:0 0 2px">Lección '+n+'</h3>'+
            '<p class="sub" style="margin:0 0 8px">'+esc(TITULOS[n]||'')+'</p>'+
            botonesDe(n)+'</div>';
@@ -13605,7 +13617,7 @@ function hcmTutorial(){
           var b = document.createElement('button');
           b.className = 'btn ghost'; b.id = 'hcm-juegos';
           b.style.marginTop = '6px';
-          b.textContent = 'Material de cada lección';
+          b.textContent = 'Juegos de repaso';
           ref.parentNode.insertBefore(b, ref.nextSibling);
           b.onclick = function(){ pantallaJuegos(); };
         }
@@ -13626,10 +13638,10 @@ function hcmTutorial(){
         var caja = document.getElementById('extra') || APP;
         if(!caja || document.getElementById('hcm-baam-fin')) return r;
         var d = document.createElement('div');
-        d.className = 'sumcard'; d.id = 'hcm-baam-fin'; d.style.marginTop = '12px';
-        d.innerHTML = '<h3 style="margin:0 0 2px">Material de la lección '+n+'</h3>'+
-          '<p class="sub" style="margin:0 0 8px">Opcional. La presentación de la clase y los dos juegos '+
-          'de repaso. Se abren fuera de la app.</p>'+ botonesDe(n);
+        d.className = 'card'; d.id = 'hcm-baam-fin'; d.style.marginTop = '12px';
+        d.innerHTML = '<h3 style="margin:0 0 2px">Juego de repaso · lección '+n+'</h3>'+
+          '<p class="sub" style="margin:0 0 8px">Opcional. 50 preguntas de opción múltiple, '+
+          'como el examen. Se abre fuera de la app.</p>'+ botonesDe(n);
         caja.appendChild(d);
         ligar(d);
       }catch(e){}
