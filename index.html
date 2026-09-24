@@ -1591,7 +1591,7 @@ if('serviceWorker' in navigator){
 <script>
 (function(){
 "use strict";
-var VERSION="v142 · 24 sep · el alta la lee la IA y el perfil del cadete crece con lo que dice";
+var VERSION="v143 · 24 sep · la meta se arregla en codigo, no se le ruega al cerebro";
 
 /* ═══════════ almacenamiento ═══════════ */
 var KEY='efa_tutor_v2',mem={};
@@ -8681,6 +8681,18 @@ function perfilarConIA(e,cb){
   },function(res){cb&&cb(res);},function(){cb&&cb(null);});
 }
 function _txt(x){ return String(x==null?'':x).trim(); }
+/* La meta se mete dentro de "estudias inglés para ___", así que tiene que
+   ser un infinitivo sin pronombre pegado: "irme a Canadá" da "estudias
+   inglés para irme a Canadá", que mezcla el tú con el yo. Se lo pedimos al
+   cerebro y lo ignora, así que se corrige aquí, que es seguro. */
+function _metaNeutra(t){
+  t=_txt(t).replace(/^\s*(para (poder )?|por )/i,'');
+  // los cortos e irregulares, que no caben en la regla general
+  t=t.replace(/\b(ir|ser|dar|ver|oír|oir)(?:me|te|se|nos)\b/gi,'$1');
+  // y los demás: raíz de tres letras o más que acaba en -ar, -er o -ir
+  t=t.replace(/\b([a-záéíóúñ]{3,}?[aei]r)(?:me|te|se|nos)\b/gi,'$1');
+  return t;
+}
 function aplicarPerfilIA(p,res){
   if(!p||!res)return p;
   if(_txt(res.oficio_en)){ p.trabajo_en=_txt(res.oficio_en); p.reconocido=true; p.por_ia=true; }
@@ -8692,7 +8704,7 @@ function aplicarPerfilIA(p,res){
   if(_txt(res.accion_en2))p.accion_en2=_txt(res.accion_en2);
   if(_txt(res.gusto_es))  p.gusto_es=_txt(res.gusto_es);
   if(_txt(res.gusto_en))  p.gusto_en=_txt(res.gusto_en);
-  if(_txt(res.meta_es))   p.meta_es=_txt(res.meta_es);
+  if(_txt(res.meta_es))   p.meta_es=_metaNeutra(res.meta_es);
   if(_txt(res.meta_en))   p.meta_en=_txt(res.meta_en);
   if(res.temas&&res.temas.length) p.temas_ia=res.temas.slice(0,8);
   if(_txt(res.resumen))   p.resumen_ia=_txt(res.resumen).slice(0,400);
