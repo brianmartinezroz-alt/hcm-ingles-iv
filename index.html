@@ -1591,7 +1591,7 @@ if('serviceWorker' in navigator){
 <script>
 (function(){
 "use strict";
-var VERSION="v143 · 24 sep · la meta se arregla en codigo, no se le ruega al cerebro";
+var VERSION="v144 · 24 sep · temas cortos para las etiquetas y el perfil vivo mas limpio";
 
 /* ═══════════ almacenamiento ═══════════ */
 var KEY='efa_tutor_v2',mem={};
@@ -8733,8 +8733,23 @@ function _unir(viejo,nuevo,tope){
   // lo nuevo pesa más: si se llena, se van los más viejos
   return out.length>tope ? out.slice(out.length-tope) : out;
 }
+/* Los temas se pintan como etiquetas en la pantalla del alumno, así que
+   tienen que ser cortos. El cerebro a veces los devuelve con formato de
+   ficha ("Trabajo técnico: revisar compresores"); aquí se le quita la
+   categoría de adelante y se recorta. Se lo pedimos también en el prompt,
+   pero esto es lo que de verdad lo garantiza. */
+function _temaCorto(t){
+  t=_txt(t);
+  if(!t)return '';
+  var dp=t.indexOf(': ');
+  if(dp>0 && dp<=22) t=t.slice(dp+2).trim();   // fuera la categoría
+  t=t.replace(/[.;]+$/,'');
+  if(t.length>42) t=t.slice(0,42).replace(/\s+\S*$/,'')+'…';
+  return t.charAt(0).toLowerCase()+t.slice(1);
+}
 function guardarPerfilVivo(res){
   if(!res)return;
+  if(res.temas) res.temas=res.temas.map(_temaCorto).filter(Boolean);
   var v=perfilVivo();
   v.temas   =_unir(v.temas,   res.temas,   12);
   v.palabras=_unir(v.palabras,res.palabras,40);
