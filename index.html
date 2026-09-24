@@ -13550,12 +13550,15 @@ function hcmTutorial(){
 
   function tieneJuegos(n){ return !!(JUEGOS[n] && JUEGOS[n].v); }
   function abrir(id){ try{ window.open(BASE+id,'_blank','noopener'); }catch(e){ location.href = BASE+id; } }
+  function abrirPres(n){ var u = 'presentaciones/l'+n+'.pdf';
+    try{ window.open(u,'_blank','noopener'); }catch(e){ location.href = u; } }
 
   function botonesDe(n, chico){
     var j = JUEGOS[n]; if(!j) return '';
     var cls = chico ? 'btn ghost' : 'btn ghost';
-    return '<button class="'+cls+'" data-baam="'+j.v+'" style="margin-top:6px">Vocabulario</button>'+
-           '<button class="'+cls+'" data-baam="'+j.g+'" style="margin-top:6px">Gramática</button>';
+    return '<button class="'+cls+'" data-pres="'+n+'" style="margin-top:6px">📊 Presentación de la clase</button>'+
+           '<button class="'+cls+'" data-baam="'+j.v+'" style="margin-top:6px">🎮 Juego · Vocabulario</button>'+
+           '<button class="'+cls+'" data-baam="'+j.g+'" style="margin-top:6px">🎮 Juego · Gramática</button>';
   }
   function ligar(raiz){
     if(!raiz) return;
@@ -13563,15 +13566,19 @@ function hcmTutorial(){
     for(var i=0;i<bs.length;i++){
       (function(b){ b.onclick = function(){ abrir(b.getAttribute('data-baam')); }; })(bs[i]);
     }
+    var ps = raiz.querySelectorAll('[data-pres]');
+    for(var k=0;k<ps.length;k++){
+      (function(b){ b.onclick = function(){ abrirPres(b.getAttribute('data-pres')); }; })(ps[k]);
+    }
   }
 
   /* Pantalla con las 16 lecciones */
   function pantallaJuegos(){
     var h = (typeof atras==='function'?atras():'') +
       '<div class="qcard"><div class="qlbl">Extra</div>'+
-      '<div class="qtxt">Juegos de repaso</div>'+
-      '<div class="qsub">Dos juegos por lección, 50 preguntas cada uno, de opción múltiple, como el examen ALC. '+
-      'Se abren fuera de la app y no cuentan para tu avance.</div></div>';
+      '<div class="qtxt">Material de cada lección</div>'+
+      '<div class="qsub">La presentación que vimos en clase y dos juegos de repaso de 50 preguntas, '+
+      'de opción múltiple como el examen. Se abren fuera de la app y no cuentan para tu avance.</div></div>';
     var ns = Object.keys(JUEGOS).map(Number).sort(function(a,b){return a-b;});
     for(var i=0;i<ns.length;i++){
       var n = ns[i];
@@ -13598,7 +13605,7 @@ function hcmTutorial(){
           var b = document.createElement('button');
           b.className = 'btn ghost'; b.id = 'hcm-juegos';
           b.style.marginTop = '6px';
-          b.textContent = 'Juegos de repaso';
+          b.textContent = 'Material de cada lección';
           ref.parentNode.insertBefore(b, ref.nextSibling);
           b.onclick = function(){ pantallaJuegos(); };
         }
@@ -13620,9 +13627,9 @@ function hcmTutorial(){
         if(!caja || document.getElementById('hcm-baam-fin')) return r;
         var d = document.createElement('div');
         d.className = 'card'; d.id = 'hcm-baam-fin'; d.style.marginTop = '12px';
-        d.innerHTML = '<h3 style="margin:0 0 2px">Juego de repaso · lección '+n+'</h3>'+
-          '<p class="sub" style="margin:0 0 8px">Opcional. 50 preguntas de opción múltiple, '+
-          'como el examen. Se abre fuera de la app.</p>'+ botonesDe(n);
+        d.innerHTML = '<h3 style="margin:0 0 2px">Material de la lección '+n+'</h3>'+
+          '<p class="sub" style="margin:0 0 8px">Opcional. La presentación de la clase y los dos juegos '+
+          'de repaso. Se abren fuera de la app.</p>'+ botonesDe(n);
         caja.appendChild(d);
         ligar(d);
       }catch(e){}

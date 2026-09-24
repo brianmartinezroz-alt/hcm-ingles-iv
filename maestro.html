@@ -526,7 +526,7 @@ function pintarEntrada(msg){
 
 /* ── armazón ── */
 function pintar(){
-  var tabs = [['lecciones','Lecciones'],['grupos','Grupos'],['juegos','Juegos'],['ayuda','Cómo se usa']];
+  var tabs = [['lecciones','Lecciones'],['grupos','Grupos'],['juegos','Material'],['ayuda','Cómo se usa']];
   var esEFA = escuela === 'efa';
   var selector =
     '<div class="escuelas"><div class="in">' +
@@ -595,15 +595,16 @@ function pintarJuegos(c){
     filas += '<div class="card" style="margin-bottom:10px">' +
       '<div style="font-weight:700">Lección ' + n + ' · ' + esc(TITULOS_BAAM[n] || '') + '</div>' +
       '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">' +
-        '<a class="lchip" target="_blank" rel="noopener" href="https://www.baamboozle.com/game/' + j.v + '">Vocabulario</a>' +
-        '<a class="lchip" target="_blank" rel="noopener" href="https://www.baamboozle.com/game/' + j.g + '">Gramática</a>' +
+        '<a class="lchip" target="_blank" rel="noopener" href="presentaciones/l' + n + '.pdf">Presentación</a>' +
+        '<a class="lchip" target="_blank" rel="noopener" href="https://www.baamboozle.com/game/' + j.v + '">Juego · Vocabulario</a>' +
+        '<a class="lchip" target="_blank" rel="noopener" href="https://www.baamboozle.com/game/' + j.g + '">Juego · Gramática</a>' +
       '</div></div>';
   });
   c.innerHTML =
-    '<p class="nota">Dos juegos por lección: vocabulario y gramática. ' +
+    '<p class="nota">Por lección: la presentación de la clase en PDF y dos juegos de repaso, vocabulario y gramática. ' +
     '50 preguntas cada uno, de opción múltiple, con el formato del examen ALC. ' +
     'Se juegan en equipos desde el proyector; no cuentan para el avance ni para las constancias del cadete. ' +
-    'Los cadetes también los ven en su app, en “Todo lo demás → Juegos de repaso” y al terminar cada lección.<br>' +
+    'Los cadetes ven lo mismo en su app, en “Todo lo demás → Material de cada lección” y al terminar cada lección.<br>' +
     '<a href="' + CARPETA_BAAM + '" target="_blank" rel="noopener">Abrir la carpeta completa en Baamboozle ↗</a></p>' + filas;
 }
 
