@@ -13535,7 +13535,7 @@ function hcmTutorial(){
       return r;
     };
   }
-  try{ window.__hcmConstancias = {folioDe:folioDe}; }catch(e){}
+  try{ window.__hcmConstancias = {folioDe:folioDe}; window.__hcmConstanciasPantalla = pantallaConstancias; }catch(e){}
 })();
 
 /* JUEGOS_BAAMBOOZLE_HCM ══════════════════════════════════════════════
@@ -13673,10 +13673,10 @@ function hcmTutorial(){
       b3.innerHTML = (ico ? ico.outerHTML : '<span class="ic">👤</span>') + txt;
     }
     if(b4){
-      b4.dataset.t = 'material';
+      b4.dataset.t = 'mas';                       // el botón de siempre, tal cual
       var ico2 = b4.querySelector('span');
-      if(ico2) ico2.textContent = '📚';
-      b4.innerHTML = (ico2 ? ico2.outerHTML : '<span class="ic">📚</span>') + 'Material';
+      if(ico2){ ico2.className = 'ic'; ico2.textContent = '☰'; }
+      b4.innerHTML = (ico2 ? ico2.outerHTML : '<span class="ic">☰</span>') + 'Más';
     }
   }
 
@@ -13686,8 +13686,11 @@ function hcmTutorial(){
     bb.addEventListener('click', function(e){
       var b = e.target.closest('[data-t]'); if(!b) return;
       var t = b.dataset.t;
-      if(t === 'yo'){ e.stopPropagation(); try{ menu(); }catch(err){} }
-      else if(t === 'material'){ e.stopPropagation(); try{ (window.__hcmJuegos || function(){})(); }catch(err){} }
+      if(t === 'yo'){
+        e.stopPropagation();
+        var f = window.__hcmConstanciasPantalla;
+        try{ if(typeof f === 'function') f(); else menu(); }catch(err){ try{ menu(); }catch(e2){} }
+      }
       else return;
       var todos = document.querySelectorAll('.tabb');
       for(var i=0;i<todos.length;i++) todos[i].classList.toggle('on', todos[i] === b);
