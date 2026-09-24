@@ -502,7 +502,10 @@
   .picknv button span{display:block;font-size:13.5px;color:var(--tenue);line-height:1.45}
   .picknv button i{display:inline-block;margin-top:8px;font-style:normal;font-size:12px;
     font-weight:600;color:var(--verde)}
-  .picknv button.sel{border-color:var(--verde);background:rgba(201,168,76,.07)}
+  /* Hay otra .sel en la app (la del sello) con min-height:70vh y texto
+     centrado. Le pegaba a la opción escogida y la estiraba media pantalla. */
+  .picknv button.sel{border-color:var(--verde);background:rgba(201,168,76,.07);
+    min-height:0;padding:14px 15px;text-align:left;position:relative}
   .picknv button:active{transform:scale(.99)}
   /* el video se ve dentro de la app, en su recuadro */
   .vidplayer{position:relative;width:100%;padding-bottom:56.25%;height:0;
@@ -1591,7 +1594,7 @@ if('serviceWorker' in navigator){
 <script>
 (function(){
 "use strict";
-var VERSION="v144 · 24 sep · temas cortos para las etiquetas y el perfil vivo mas limpio";
+var VERSION="v145 · 24 sep · los siete niveles abiertos, con su texto y el picker arreglado";
 
 /* ═══════════ almacenamiento ═══════════ */
 var KEY='efa_tutor_v2',mem={};
@@ -8275,16 +8278,26 @@ var NIVEL_Q=[
 /* Niveles que hoy tienen las 24 lecciones completas. Cuando A1, A2, B1, B2
    o C1 esten escritos, se agrega su numero aqui y la app los abre sola.
    0=Pre-A1  1=A1  2=A2  3=B1  4=B2  5=C1  6=C2 */
-var NIVELES_ABIERTOS=[0,6];
+var NIVELES_ABIERTOS=[0,1,2,3,4,5,6];
 
 var NOMBRE_NIVEL={0:'Desde cero',1:'A1',2:'A2',3:'B1',4:'B2',5:'C1',6:'Avanzado'};
 var CODIGO_NIVEL={0:'Pre-A1',1:'A1',2:'A2',3:'B1',4:'B2',5:'C1',6:'C2'};
 
 var OPCIONES_NIVEL=[
   {n:0,tit:'Desde cero',
-   sub:'Nunca lo he llevado, o lo llevé hace años y no lo uso. Empezamos por presentarte, tu día y tu trabajo.'},
+   sub:'Nunca lo he llevado, o lo llevé hace años y no lo uso. Empezamos por presentarte, tu día y tu trabajo. México.'},
+  {n:1,tit:'Sé algo, pero me trabo',
+   sub:'Digo mi nombre y a qué me dedico, y ahí me atoro. Quiero poder pedir, contestar y presentarme sin sudar. Estados Unidos.'},
+  {n:2,tit:'Me defiendo con lo del día',
+   sub:'Aguanto lo básico con un cliente o en la calle. Quiero el teléfono, los cambios de planes y salir del apuro. Canadá.'},
+  {n:3,tit:'Ya sostengo una plática',
+   sub:'Me entienden y entiendo, aunque despacio. Quiero explicar lo que hago, dar mi opinión y contar lo que pasó. Reino Unido.'},
+  {n:4,tit:'Hablo, pero no me sale fino',
+   sub:'Me suelto en una junta y me la juego. Quiero convencer, discrepar sin romper nada y presentar números. Irlanda.'},
+  {n:5,tit:'Inglés de trabajo en serio',
+   sub:'Trabajo en inglés y a veces dirijo. Quiero el tono, la negociación delicada y hablar en público. Asia de negocios.'},
   {n:6,tit:'Avanzado',
-   sub:'Ya me defiendo hablando. Quiero pulir: tono, formalidad, juntas, y sonar natural.'}
+   sub:'Ya me defiendo hablando. Quiero pulir: tono, formalidad, juntas, y sonar natural. El mundo.'}
 ];
 
 // Si el cuestionario cae en un nivel que todavia no esta escrito, se usa el
@@ -8411,7 +8424,7 @@ function cerrar(){
         var s=edatos.ia&&edatos.ia.nivel_sugerido;
         if(s){
           var i=['Pre-A1','A1','A2','B1','B2','C1','C2'].indexOf(String(s).trim());
-          if(i>=0) nv2={cod:(i>=4?'B2 o más':s),n:i,alto:i>=4,txt:nv.txt};
+          if(i>=0) nv2={cod:s,n:i,alto:i>=4,txt:nv.txt};
         }
       }catch(e){}
       escogerNivel(nv2);
