@@ -13582,7 +13582,7 @@ function hcmTutorial(){
     var ns = Object.keys(JUEGOS).map(Number).sort(function(a,b){return a-b;});
     for(var i=0;i<ns.length;i++){
       var n = ns[i];
-      h += '<div class="card" style="margin-top:10px">'+
+      h += '<div class="sumcard" style="margin-top:10px">'+
            '<h3 style="margin:0 0 2px">Lección '+n+'</h3>'+
            '<p class="sub" style="margin:0 0 8px">'+esc(TITULOS[n]||'')+'</p>'+
            botonesDe(n)+'</div>';
@@ -13626,7 +13626,7 @@ function hcmTutorial(){
         var caja = document.getElementById('extra') || APP;
         if(!caja || document.getElementById('hcm-baam-fin')) return r;
         var d = document.createElement('div');
-        d.className = 'card'; d.id = 'hcm-baam-fin'; d.style.marginTop = '12px';
+        d.className = 'sumcard'; d.id = 'hcm-baam-fin'; d.style.marginTop = '12px';
         d.innerHTML = '<h3 style="margin:0 0 2px">Material de la lección '+n+'</h3>'+
           '<p class="sub" style="margin:0 0 8px">Opcional. La presentación de la clase y los dos juegos '+
           'de repaso. Se abren fuera de la app.</p>'+ botonesDe(n);
