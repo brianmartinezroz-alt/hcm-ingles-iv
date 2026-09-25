@@ -345,6 +345,39 @@ kbd{background:rgba(255,255,255,.3);border:1.5px solid currentColor;border-radiu
 .powbar .knob{position:absolute;top:50%;left:60%;width:30px;height:30px;transform:translate(-50%,-50%);background:#fff;border:3px solid var(--ink);border-radius:50%;box-shadow:0 2px 0 var(--ink);pointer-events:none}
 @media (max-width:760px){.firebtn{width:60px;height:60px;font-size:16px}}
 
+/* tank HUD v2: clean map */
+.tkscreen .tktop{justify-content:space-between;align-items:flex-start}
+.tkscreen[data-phase] .tkteams{display:flex!important}
+body.qopen .tkscreen .tktop{display:none!important}
+.tkchip{flex:0 1 auto;min-width:110px;max-width:260px;padding:3px 10px;font-size:13px;background:rgba(255,255,255,.9)}
+.tkchip .hp{height:11px}
+.tkchip b{font-size:18px}
+.tkmenuwrap{position:relative;flex:none}
+.tkmenu{position:absolute;right:0;top:44px;display:flex;flex-direction:column;gap:6px;background:var(--paper);border:var(--stroke);border-radius:14px;padding:8px;box-shadow:0 4px 0 var(--ink);min-width:160px;z-index:6}
+.tkmenu .btn{justify-content:flex-start;width:100%}
+.wsel{display:inline-flex;align-items:center;gap:6px;font-weight:900;background:var(--cream);border:2.5px solid var(--ink);border-radius:999px;padding:4px 10px;white-space:nowrap}
+.wsel .x{border:0;background:var(--ink);color:#fff;border-radius:999px;width:22px;height:22px;font-size:12px}
+.wsel .shots{color:var(--bad)}
+.pubtn{background:var(--cream);font-weight:900}
+.pubtn.has{background:var(--sun);animation:wiggle 1.4s ease-in-out infinite}
+.pubtn b{background:var(--ink);color:#fff;border-radius:999px;padding:0 7px;font-size:13px}
+@keyframes wiggle{0%,80%,100%{transform:rotate(0)}85%{transform:rotate(-4deg)}90%{transform:rotate(4deg)}95%{transform:rotate(-2deg)}}
+.pugrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.pucard{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;background:var(--paper);border:var(--stroke);border-radius:18px;padding:12px 10px;box-shadow:0 5px 0 var(--ink);position:relative;cursor:pointer}
+.pucard:hover{transform:translateY(-3px) rotate(-1deg)}
+.puicon{font-size:48px;line-height:1.1}
+.pucard b{font-family:var(--display);font-weight:400;font-size:20px}
+.pudesc{font-size:13px;font-weight:700;color:var(--muted);line-height:1.3}
+.pun{position:absolute;top:8px;right:8px;background:var(--bad);color:#fff;border:2px solid var(--ink);border-radius:999px;padding:0 8px;font-weight:900}
+.tggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.tgcard{display:flex;flex-direction:column;gap:6px;align-items:center;background:var(--paper);border:var(--stroke);border-radius:18px;padding:10px;box-shadow:0 5px 0 var(--ink);border-top:10px solid var(--tc);cursor:pointer}
+.tgcard canvas{width:100%;height:auto;aspect-ratio:200/120;border-radius:10px;border:2px solid var(--ink)}
+.tgcard b{font-weight:900}
+.tgcard .hp{width:100%;height:10px;background:var(--cream);border:2px solid var(--ink);border-radius:999px;overflow:hidden}
+.tgcard .hp i{display:block;height:100%;background:var(--good)}
+.tgcard[aria-pressed="true"]{background:#FFE3E8;outline:5px solid var(--bad);outline-offset:2px}
+.tgcard[aria-pressed="true"]::after{content:"🎯";font-size:28px;position:absolute}
+
 /* setup sheet */
 .sheet{background:var(--sun);border:var(--stroke);border-radius:28px;box-shadow:0 10px 0 var(--ink);width:min(1100px,100%);max-height:calc(100% - 32px);overflow:auto;padding:clamp(14px,2.4vw,24px);display:flex;flex-direction:column;gap:16px;animation:pop .25s cubic-bezier(.3,1.5,.6,1)}
 .sheethead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
@@ -497,19 +530,27 @@ kbd{background:rgba(255,255,255,.3);border:1.5px solid currentColor;border-radiu
   <section id="vTank" class="tkscreen" hidden>
     <canvas id="tkCanvas" aria-label="Tank battlefield"></canvas>
     <div class="tkhud tktop">
-      <button class="btn small" id="tkHome" aria-label="Back to games">🏠</button>
-      <div class="hudpill tkpill" id="tkPill"></div>
       <div class="tkteams" id="tkTeams"></div>
-      <div class="tkmeta"><span class="hudpill" id="tkQ"></span><span class="hudpill" id="tkWind"></span><button class="btn small musicbtn" id="tkMusic">🔊</button><button class="btn small" id="tkFull" aria-label="Fullscreen">⛶</button><span id="tkEndConfirm"></span><button class="btn small" id="tkEndBtn">End</button></div>
+      <div class="tkmenuwrap"><button class="btn small" id="tkMenuBtn" aria-label="Menu" aria-expanded="false">⚙️</button>
+        <div class="tkmenu" id="tkMenu" hidden>
+          <button class="btn small" id="tkHome">🏠 Games</button>
+          <button class="btn small musicbtn" id="tkMusic">🔊</button>
+          <button class="btn small" id="tkFull">⛶ Fullscreen</button>
+          <span id="tkEndConfirm"></span><button class="btn small" id="tkEndBtn">End game</button>
+        </div>
+      </div>
+      <div class="hudpill tkpill" id="tkPill" hidden></div><span id="tkQ" hidden></span><span id="tkWind" hidden></span>
     </div>
-    <div class="tkminiwrap"><button class="btn small" id="tkCenterTop" hidden></button><canvas id="tkMini" width="300" height="112" aria-label="Map overview. Tap to look around."></canvas><button class="btn small" id="tkCenter">◎ Turn tank</button></div>
+    <div class="tkminiwrap" hidden><canvas id="tkMini" width="300" height="112"></canvas><button class="btn small" id="tkCenter">◎</button></div>
     <div class="tkhud tkbottom">
       <div class="turnbox" id="tkTurn"></div>
       <div class="tkctrl" id="tkCtrl" hidden>
         <div class="tkgroup"><span class="label">Move</span><div class="row" style="flex-wrap:nowrap"><button class="btn" id="tkLeft" aria-label="Move left one step">◀</button><button class="btn" id="tkRight" aria-label="Move right one step">▶</button></div><span class="hint" id="tkMoveNote"></span></div>
         <div class="tkgroup"><span class="label">Aim</span><b class="big" id="tkAngle">45°</b><span class="hint">Touch the map</span></div>
         <div class="tkgroup"><span class="label">Power · slide your finger</span><div class="powbar" id="tkPowTrack" role="slider" aria-label="Power" aria-valuemin="10" aria-valuemax="100" tabindex="0"><i id="tkPowerBar"></i><b id="tkPower">60%</b><span class="knob" id="tkKnob"></span></div></div>
-        <div class="tkgroup wgroup" id="tkWgroup"><span class="label">Weapon</span><div class="row" id="tkWeapons"></div></div>
+        <div class="tkgroup"><span class="label">Wind</span><b class="big" id="tkWindDock">calm</b></div>
+        <div class="tkgroup"><span class="label">Weapon</span><div class="row" style="flex-wrap:nowrap"><span class="wsel" id="tkWsel">💣 Shell</span><button class="btn pubtn" id="tkPU">🎁 Power-ups <b id="tkPUn">0</b></button></div></div>
+        <div hidden id="tkWgroup"><div id="tkWeapons"></div></div>
       </div>
       <button class="firebtn" id="tkFire" hidden>FIRE!</button>
     </div>
@@ -660,6 +701,18 @@ kbd{background:rgba(255,255,255,.3);border:1.5px solid currentColor;border-radiu
     <div class="ballgrid" id="ballGrid"></div>
   </div>
 </div>
+<div class="overlay" id="puSheet" hidden style="z-index:12">
+  <div class="sheet pickSheet" role="dialog" aria-label="Power-ups">
+    <div class="sheethead"><h2>🎁 Power-ups</h2><button class="btn" id="puClose">Close</button></div>
+    <div class="pugrid" id="puGrid"></div>
+  </div>
+</div>
+<div class="overlay" id="tgSheet" hidden style="z-index:13">
+  <div class="sheet pickSheet" role="dialog" aria-label="Choose your target">
+    <div class="sheethead"><h2 id="tgTitle">Choose your target</h2><div class="row"><button class="btn" id="tgCancel">Cancel</button><button class="btn primary" id="tgGo" disabled>🚀 Launch!</button></div></div>
+    <div class="tggrid" id="tgGrid"></div>
+  </div>
+</div>
 <div class="overlay" id="overlay" hidden><div class="modal" id="modal" role="dialog" aria-label="Question"></div></div>
 <canvas id="confetti" hidden></canvas>
 
@@ -740,8 +793,8 @@ async function uploadAudio(file){
   return id;
 }
 async function audioUrl(id){
-  if (window.EMBED_AUDIO && window.EMBED_AUDIO[id]) return "data:audio/mpeg;base64," + window.EMBED_AUDIO[id];
   if (audioCache[id]) return audioCache[id];
+  if (window.EMBED_AUDIO && window.EMBED_AUDIO[id]) return "data:audio/mpeg;base64," + window.EMBED_AUDIO[id];
   if (!db) throw {code:"no_db"};
   const meta = await db.collection("audio").doc(id).get();
   if (!meta.exists) throw {code:"missing"};
@@ -894,12 +947,12 @@ function beep(freq=660, dur=.15){ try{ audioCtx = audioCtx || new (window.AudioC
 // ---------- question popup ----------
 let timerId = null, modalKeys = null;
 function stopTimer(){ clearInterval(timerId); timerId=null; }
-function closeModal(){ stopTimer(); stopMedia(); modalKeys=null; if (typeof Music!=="undefined") Music.duck(1); $("#overlay").hidden = true; $("#modal").innerHTML=""; }
+function closeModal(){ stopTimer(); stopMedia(); modalKeys=null; document.body.classList.remove("qopen"); if (typeof Music!=="undefined") Music.duck(1); $("#overlay").hidden = true; $("#modal").innerHTML=""; }
 
 function askQuestion({team, q:rawQ, head, pts, cancelLabel, rightLabel, onRight, onWrong}){
   const q = normQ(rawQ);
   const m = $("#modal"); m.style.setProperty("--tc", team.color);
-  $("#overlay").hidden = false;
+  $("#overlay").hidden = false; document.body.classList.add("qopen");
   Music.duck(q.audio || q.tts ? 0.1 : 0.4);
   const secs = q.time!=null ? q.time : game.timer;
   const media = [];
@@ -991,7 +1044,6 @@ function askQuestion({team, q:rawQ, head, pts, cancelLabel, rightLabel, onRight,
 document.addEventListener("keydown", e=>{
   if ($("#overlay").hidden || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) return;
   const k = e.key.toLowerCase();
-  if (k==="escape") { closeModal(); return; }
   if (modalKeys) { if (k==="enter" && document.activeElement?.id==="contQ") return; modalKeys(k); }
 });
 
@@ -1260,15 +1312,20 @@ const SEASONS = {
 };
 const TERRAINS = {hills:"Rolling hills", mountains:"Big mountains", canyon:"Canyon lake", islands:"Islands", plateaus:"Plateaus", caves:"Caves"};
 const WEAPONS = {
-  shell:{name:"Shell", r:38, dmg:38},
-  bigbomb:{name:"Big Bomb", r:68, dmg:58},
-  triple:{name:"Triple Shot", r:28, dmg:26},
-  airstrike:{name:"Air Strike", r:32, dmg:30},
-  repair:{name:"Repair Kit"},
-  teleport:{name:"Teleport"},
-  double:{name:"Double Shot"},
+  shell:{name:"Shell", icon:"💣", r:38, dmg:38, desc:"Normal shot."},
+  bigbomb:{name:"Big Bomb", icon:"💥", r:70, dmg:58, desc:"Huge explosion. Aim and fire."},
+  triple:{name:"Cluster Shot", icon:"🎆", r:28, dmg:26, desc:"Three shells at once. Aim and fire."},
+  airstrike:{name:"Air Strike", icon:"✈️", r:32, dmg:30, desc:"Five bombs from the sky. Tap the spot."},
+  sniper:{name:"Sniper Missile", icon:"🎯", r:34, dmg:45, desc:"Pick 1 tank. The missile hunts it down."},
+  twin:{name:"Twin Strike", icon:"⚔️", r:30, dmg:35, desc:"Pick 2 tanks. Hit both at once."},
+  barrage:{name:"Mega Barrage", icon:"☢️", r:30, dmg:28, desc:"Missiles hit every tank except yours."},
+  double:{name:"Double Shot", icon:"🔁", desc:"Fire two times this turn."},
+  repair:{name:"Repair Kit", icon:"🔧", desc:"+40 life right now."},
+  medic:{name:"Medic Drop", icon:"🚑", desc:"+70 life right now."},
+  shield:{name:"Shield", icon:"🛡️", desc:"Blocks the next hit on your tank."},
+  teleport:{name:"Teleport", icon:"🌀", desc:"Jump to any spot on the map. Tap it."},
 };
-const ITEM_KEYS = ["bigbomb","triple","airstrike","repair","teleport","double"];
+const ITEM_KEYS = ["bigbomb","triple","airstrike","sniper","twin","barrage","double","repair","medic","shield","teleport"];
 const MOVE_STEP = 80;
 
 let tk = null, tkRaf = null, tkLive = {}, tkPtr = null;
@@ -1718,7 +1775,7 @@ function startTanks(base, order){
   const season = cfg.season==="random" ? Object.keys(SEASONS)[Math.floor(Math.random()*4)] : cfg.season;
   const type = cfg.terrain==="random" ? Object.keys(TERRAINS)[Math.floor(Math.random()*6)] : cfg.terrain;
   game = {...base, mode:"tanks", order, qPtr:0, asked:0, total:order.length, phase:"question", wind:0, weapon:"shell", target:null, over:false, moved:false,
-    inv: base.teams.map(()=>({[ITEM_KEYS[Math.floor(Math.random()*4)]]:1})), tanks:[], season, terrain:type, backdrop:cfg.backdrop};
+    inv: base.teams.map(()=>({[ITEM_KEYS[Math.floor(Math.random()*ITEM_KEYS.length)]]:1})), tanks:[], season, terrain:type, backdrop:cfg.backdrop};
   const size = cfg.mapSize==="auto" ? autoMap(base.teams.length) : cfg.mapSize;
   TK.W = MAP_W[size]; game.mapSize = size;
   const mw = Math.round(112*TK.W/TK.H); tkMini.width = mw; tkMini.style.aspectRatio = `${mw}/112`; tkMini.style.width = `min(${Math.min(mw,300)}px, 36vw)`;
@@ -1733,12 +1790,14 @@ function startTanks(base, order){
   game.tanks = base.teams.map((_,i)=>makeTank(i));
   game.tanks.forEach(t=>dropTank(t));
   newWind();
-  for (let i=0;i<Math.round(TK.W/800);i++) dropCrate();
+  for (let i=0;i<Math.round(TK.W/800);i++) dropCrate(true);
 }
 const MAP_W = {small:1700, medium:2400, large:3300};
 function autoMap(n){ return n<=2 ? "small" : n<=4 ? "medium" : "large"; }
 function newWind(){ game.wind = Math.round(rnd(-10,10)); }
-function dropCrate(){ tk.crates.push({x:rnd(100,TK.W-100), y:rnd(-200,-40), vy:0, chute:true, item:ITEM_KEYS[Math.floor(Math.random()*ITEM_KEYS.length)], landed:false}); }
+function jingle(notes, gap, dur){ notes.forEach((f,i)=>setTimeout(()=>beep(f, dur||.12), i*(gap||90))); }
+function dropCrate(silent){ const c={x:rnd(100,TK.W-100), y:rnd(-200,-40), vy:0, chute:true, item:ITEM_KEYS[Math.floor(Math.random()*ITEM_KEYS.length)], landed:false}; tk.crates.push(c);
+  if (!silent){ jingle([523,659,784,1047,784,1047], 85, .1); float(c.x, 90, "SUPPLY DROP!", "#FFD21A"); } }
 function curTank(){ return game.tanks[game.turn]; }
 
 // ---- physics
@@ -1761,7 +1820,7 @@ function stepTank(t){
   if (t.y > tk.water+6 && t.alive){ splash(t.x, tk.water); kill(t, "Splash!"); }
   if (t.y > TK.H+100 && t.alive) kill(t, "Lost!");
   tk.crates.forEach(c=>{ if (c.landed && !c.taken && Math.abs(c.x-t.x)<30 && Math.abs(c.y-t.y)<36){ c.taken=true;
-    const inv = game.inv[t.team]; inv[c.item] = (inv[c.item]||0)+1; float(c.x, c.y-40, `+ ${WEAPONS[c.item].name}`, game.teams[t.team].color); beep(990,.15); renderTkUI(); } });
+    const inv = game.inv[t.team]; inv[c.item] = (inv[c.item]||0)+1; float(c.x, c.y-40, `${WEAPONS[c.item].icon} ${WEAPONS[c.item].name}!`, game.teams[t.team].color); jingle([784,988,1175,1568,1175,1568], 75, .12); renderTkUI(); } });
 }
 function stepCrates(){
   tk.crates = tk.crates.filter(c=>!c.taken && c.y<TK.H+60);
@@ -1773,6 +1832,7 @@ function stepCrates(){
 }
 function hurt(t, amt, by){
   if (!t.alive || amt<=0) return;
+  if (t.shield){ t.shield=false; float(t.x, t.y-90, "🛡️ BLOCKED!", "#4DA8FF"); beep(1300,.15); return; }
   t.hp -= amt; t.lastHit = by;
   float(t.x + rnd(-10,10), t.y-70, `-${amt}`, "#FF4F6D");
   if (by!=null && by!==t.team) game.teams[by].score += amt;
@@ -1794,7 +1854,7 @@ function explode(x,y,r,dmg,owner){
   tk.shake = Math.min(20, r/3.2); tk.flash = Math.max(tk.flash, r/220);
   game.tanks.forEach(t=>{
     if (!t.alive) return;
-    const dx=t.x-x, dy=(t.y-14)-y, d=Math.hypot(dx,dy), R=r*1.5;
+    const dx=t.x-x, dy=(t.y-20)-y, d=Math.hypot(dx,dy), R=r*1.5;
     if (d<R){ const f=1-d/R; hurt(t, Math.round(dmg*f), owner); t.vx += (dx/(d||1))*r/11*f; t.vy -= r/9*f + 1; t.chute=false; }
   });
   tk.crates.forEach(c=>{ if (Math.hypot(c.x-x,c.y-y)<r) c.chute=false; });
@@ -1818,11 +1878,14 @@ function fire(){
   const t = curTank(); if (!t || !t.alive || game.phase!=="act") return;
   const w = game.weapon;
   if (w==="airstrike" || w==="teleport"){ game.phase="target"; game.target=w; renderTkUI(); return; }
-  if (w==="repair"){ useItem("repair"); t.hp=Math.min(100,t.hp+40); float(t.x,t.y-70,"+40 HP","#3FBF4F"); beep(880,.2); game.weapon="shell"; renderTkUI(); return; }
+  if (w==="repair" || w==="medic"){ useItem(w); const add = w==="medic"?70:40; t.hp=Math.min(100,t.hp+add); float(t.x,t.y-90,`+${add} ❤️`,"#3FBF4F"); jingle([660,880,1100],80,.12); game.weapon="shell"; renderTkUI(); return; }
+  if (w==="shield"){ useItem(w); t.shield=true; float(t.x,t.y-90,"🛡️ SHIELD ON","#4DA8FF"); jingle([880,1100,1320],80,.12); game.weapon="shell"; renderTkUI(); return; }
+  if (w==="barrage"){ const tg = game.tanks.filter(x=>x.alive && x.team!==t.team).map(x=>x.team); if (!tg.length){ float(t.x,t.y-90,"No targets!","#fff"); return; } useItem(w); launchHoming(tg, "barrage"); return; }
+  if (w==="sniper" || w==="twin"){ openTargetPick(w); return; }
   if (w==="double"){ useItem("double"); game.shotsLeft += 1; float(t.x,t.y-70,"2 SHOTS!","#FFD21A"); beep(990,.2); game.weapon="shell"; renderTkUI(); return; }
   game.shotsLeft = Math.max(0, game.shotsLeft-1);
   const spec = WEAPONS[w], a = t.angle*Math.PI/180, sp = t.power*0.19;
-  const bx = t.x + Math.cos(a)*38, by = t.y-27 - Math.sin(a)*38;
+  const bx = t.x + Math.cos(a)*56, by = t.y-38 - Math.sin(a)*56;
   const angles = w==="triple" ? [-7,0,7] : [0];
   angles.forEach(da=>{ const aa=a+da*Math.PI/180; tk.shots.push({x:bx,y:by,vx:Math.cos(aa)*sp,vy:-Math.sin(aa)*sp,r:spec.r,dmg:spec.dmg,owner:t.team,age:0,trail:[],big:w==="bigbomb"}); });
   for (let i=0;i<12;i++) tk.parts.push({x:bx,y:by,vx:Math.cos(a)*rnd(1,4)+rnd(-1,1),vy:-Math.sin(a)*rnd(1,4)+rnd(-1,1),life:rnd(10,20),max:20,size:rnd(4,9),col:i%2?"#FFD21A":"#FF8A3D",g:0,fire:true});
@@ -1832,6 +1895,15 @@ function fire(){
   game.weapon="shell"; game.phase="busy"; tk.busyFrames=0; tk.cam.follow="shot"; renderTkUI();
 }
 function useItem(w){ const inv=game.inv[game.turn]; if (inv[w]) inv[w]--; }
+function launchHoming(targets, kind){
+  const t = curTank(), spec = WEAPONS[kind];
+  game.shotsLeft = Math.max(0, game.shotsLeft-1);
+  targets.forEach((ti,k)=>{ const spread = (k-(targets.length-1)/2)*0.5;
+    tk.shots.push({x:t.x, y:t.y-40, vx:spread*3, vy:-9-k*0.6, r:spec.r, dmg:spec.dmg, owner:t.team, age:0, trail:[], homing:true, target:ti}); });
+  t.recoil = 7; boom(18); jingle([300,450,600],60,.1);
+  tk.missileFollow = targets[0];
+  game.weapon="shell"; game.phase="busy"; tk.busyFrames=0; tk.cam.follow="shot"; renderTkUI();
+}
 function targetClick(x,y){
   const t = curTank();
   if (game.target==="airstrike"){
@@ -1850,6 +1922,18 @@ function stepShots(){
     tk.shots.push({x:s.x,y:-20,vx:game.wind*0.08,vy:3,r:WEAPONS.airstrike.r,dmg:WEAPONS.airstrike.dmg,owner:game.turn,age:30,trail:[],bomb:true}); return false; });
   tk.shots = tk.shots.filter(s=>{
     s.age++; s.trail.push({x:s.x,y:s.y}); if (s.trail.length>16) s.trail.shift();
+    if (s.homing){
+      const tt = game.tanks[s.target];
+      if (s.age>28 && tt && tt.alive){ const dx=tt.x-s.x, dy=(tt.y-22)-s.y, d=Math.hypot(dx,dy)||1, sp=10;
+        s.vx += (dx/d*sp - s.vx)*0.09; s.vy += (dy/d*sp - s.vy)*0.09;
+        if (d<30){ explode(tt.x,tt.y-20,s.r,s.dmg,s.owner); return false; } }
+      else { s.vy += 0.12; }
+      s.x += s.vx; s.y += s.vy;
+      if (s.age%2===0) tk.parts.push({x:s.x,y:s.y,vx:-s.vx*0.2,vy:-s.vy*0.2,life:16,max:16,size:rnd(4,8),col:s.age%4?"#FFB400":"#FF5A1F",g:0,fire:true});
+      if (s.age>420 || s.y>TK.H+40){ if (s.y<tk.water) explode(s.x,s.y,s.r,s.dmg,s.owner); return false; }
+      if (s.age>28 && (!tt || !tt.alive) && tkSolid(s.x,s.y)){ explode(s.x,s.y,s.r,s.dmg,s.owner); return false; }
+      return true;
+    }
     if (s.age%3===0) tk.parts.push({x:s.x,y:s.y,vx:0,vy:-.2,life:24,max:24,size:rnd(4,7),col:"rgba(255,255,255,.55)",smoke:true,g:0});
     const sub=4;
     for (let i=0;i<sub;i++){
@@ -1859,7 +1943,7 @@ function stepShots(){
       if (s.y > tk.water){ splash(s.x, tk.water); return false; }
       if (tkSolid(s.x,s.y)){ explode(s.x,s.y,s.r,s.dmg,s.owner); return false; }
       for (const t of game.tanks){ if (!t.alive) continue; if (t.team===s.owner && s.age<25) continue;
-        if (Math.hypot(t.x-s.x,(t.y-16)-s.y)<26){ explode(s.x,s.y,s.r,s.dmg,s.owner); return false; } }
+        if (Math.hypot(t.x-s.x,(t.y-22)-s.y)<34){ explode(s.x,s.y,s.r,s.dmg,s.owner); return false; } }
     }
     return true;
   });
@@ -1951,7 +2035,7 @@ function drawFlag(c, fx, fy, now){
 function drawTank(c,t,isTurn,now){
   if (!t.alive) return;
   const team = game.teams[t.team], col = team.color;
-  c.save(); c.translate(t.x, t.y); c.scale(1.35,1.35);
+  c.save(); c.translate(t.x, t.y); c.scale(1.75,1.75);
   c.fillStyle="rgba(43,35,102,.18)"; c.beginPath(); c.ellipse(0,1,24,4,0,0,7); c.fill();
   if (t.chute){
     c.strokeStyle=INK; c.lineWidth=1.5; c.beginPath(); c.moveTo(-28,-86); c.lineTo(-14,-24); c.moveTo(28,-86); c.lineTo(14,-24); c.moveTo(0,-112); c.lineTo(0,-30); c.stroke();
@@ -1959,6 +2043,7 @@ function drawTank(c,t,isTurn,now){
     c.fillStyle="rgba(255,255,255,.75)"; [-18,0,18].forEach(dx=>{ c.beginPath(); c.moveTo(dx-5,-86); c.lineTo(dx*0.5,-114+Math.abs(dx)*0.5); c.lineTo(dx+5,-86); c.fill(); });
   }
   paintTank(c, tk.sprites[t.team], col, team.skin, t.angle, t.recoil, t.tread, now);
+  if (t.shield){ c.globalAlpha = .45 + .2*Math.sin(now/180); c.beginPath(); c.arc(0,-18,30,0,Math.PI*2); c.fillStyle="rgba(77,168,255,.25)"; c.fill(); c.lineWidth=2.5; c.strokeStyle="#4DA8FF"; c.stroke(); c.globalAlpha=1; }
   const ty = t.chute ? -128 : -62;
   roundRect(c,-28,ty-9,56,10,5); c.fillStyle="#fff"; c.fill(); c.lineWidth=2; c.strokeStyle=INK; c.stroke();
   const hw = Math.max(0,52*t.hp/100); roundRect(c,-26,ty-7,hw,6,3); c.fillStyle = t.hp>60?"#3FBF4F":t.hp>30?"#FFB400":"#FF4F6D"; c.fill();
@@ -1999,9 +2084,9 @@ function drawTk(){
   game.tanks.forEach((t,i)=>drawTank(c,t,i===game.turn,now));
   const t = curTank();
   if (game.phase==="act" && t && t.alive){
-    const a=t.angle*Math.PI/180, L2=40+t.power*1.5, ox=t.x+Math.cos(a)*40, oy=t.y-27-Math.sin(a)*40;
+    const a=t.angle*Math.PI/180, L2=40+t.power*1.5, ox=t.x+Math.cos(a)*40, oy=t.y-38-Math.sin(a)*40;
     // dotted trajectory guide (same physics as the real shot, wind included)
-    { let x=t.x+Math.cos(a)*38, y=t.y-27-Math.sin(a)*38, sp=t.power*0.19, vx=Math.cos(a)*sp, vy=-Math.sin(a)*sp; const MAX=95, col=game.teams[t.team].color; let last=null;
+    { let x=t.x+Math.cos(a)*56, y=t.y-38-Math.sin(a)*56, sp=t.power*0.19, vx=Math.cos(a)*sp, vy=-Math.sin(a)*sp; const MAX=95, col=game.teams[t.team].color; let last=null;
       for (let f=1; f<=MAX; f++){
         let hit=false;
         for (let k=0;k<4;k++){ vy+=0.24/4; vx+=game.wind*0.005/4; x+=vx/4; y+=vy/4; if (tkSolid(x,y) || y>tk.water || x<0 || x>TK.W){ hit=true; break; } }
@@ -2086,7 +2171,8 @@ function renderTkUI(){
   const pill = $("#tkPill"); pill.style.setProperty("--tc", team.color);
   pill.innerHTML = `<span class="dot" style="background:${team.color}"></span>${esc(team.name)}${game.phase==="act" && game.shotsLeft>1 ? ` · <b>${game.shotsLeft} shots</b>`:""}${game.phase==="target" ? ` · ${game.target==="airstrike"?"tap the target":"tap a spot"} <button class="btn small" id="tkCancelT2">Cancel</button>`:""}`;
   if ($("#tkCancelT2")) $("#tkCancelT2").onclick = ()=>{ game.phase="act"; game.target=null; game.weapon="shell"; renderTkUI(); };
-  let html = `<div class="label">${game.phase==="over"?"Game over":"Turn"}</div><div class="tname">${esc(team.name)}</div>`;
+  const wq = game.wind; const windTxt = wq===0 ? "calm" : `${wq<0?"◀ ":""}${Math.abs(wq)}${wq>0?" ▶":""}`;
+  let html = `<div class="label">${game.phase==="over"?"Game over":`Turn · Question ${Math.min(game.asked+(game.phase==="question"?1:0),game.total)} of ${game.total} · Wind ${windTxt}`}</div><div class="tname">${esc(team.name)}</div>`;
   if (game.phase==="question") html += `<button class="btn primary" id="tkAsk">Ask a question</button>`;
   if (game.phase==="act") html += `<span class="tip">Touch the screen to aim. Set the power, then FIRE!</span>`;
   if (game.phase==="target") html += `<span class="tip">${game.target==="airstrike"?"Tap where the air strike goes.":"Tap where your tank appears."}</span><button class="btn small" id="tkCancelT">Cancel</button>`;
@@ -2098,7 +2184,11 @@ function renderTkUI(){
   $("#tkCtrl").hidden = game.phase!=="act"; $("#tkFire").hidden = game.phase!=="act";
   if (game.phase==="act"){
     const inv = game.inv[game.turn];
-    $("#tkWgroup").hidden = !ITEM_KEYS.some(k=>inv[k]>0);
+    const nItems = ITEM_KEYS.reduce((n,k)=>n+(inv[k]||0),0);
+    $("#tkPUn").textContent = nItems; $("#tkPU").classList.toggle("has", nItems>0);
+    $("#tkWsel").innerHTML = `${WEAPONS[game.weapon].icon} ${WEAPONS[game.weapon].name}${game.weapon!=="shell"?' <button class="x" id="tkWx" aria-label="Back to normal shell">✕</button>':""}${game.shotsLeft>1?` <b class="shots">×${game.shotsLeft} shots</b>`:""}`;
+    if ($("#tkWx")) $("#tkWx").onclick = ()=>{ game.weapon="shell"; renderTkUI(); };
+    const wd = game.wind; $("#tkWindDock").textContent = wd===0 ? "calm" : `${wd<0?"◀ ":""}${Math.abs(wd)}${wd>0?" ▶":""}`;
     $("#tkWeapons").innerHTML = ["shell",...ITEM_KEYS].filter(k=>k==="shell"||inv[k]>0).map(k=>`<button class="wchip" data-w="${k}" aria-pressed="${game.weapon===k}">${WEAPONS[k].name}${k==="shell"?"":` ×${inv[k]}`}</button>`).join("");
     $("#tkWeapons").querySelectorAll(".wchip").forEach(b=>b.onclick=()=>{ game.weapon=b.dataset.w; renderTkUI(); });
     $("#tkFire").textContent = game.weapon==="repair" ? "REPAIR" : game.weapon==="double" ? "USE" : game.weapon==="airstrike" ? "TARGET" : game.weapon==="teleport" ? "TARGET" : "FIRE!";
@@ -2116,6 +2206,41 @@ function updateTkLive(){
   if (tkLive.a!==a){ tkLive.a=a; $("#tkAngle").textContent = a+"°"; }
   if (tkLive.p!==p){ tkLive.p=p; $("#tkPower").textContent = p+"%"; $("#tkPowerBar").style.width = p+"%"; $("#tkKnob").style.left = p+"%"; $("#tkPowTrack").setAttribute("aria-valuenow", p); }
 }
+function openPU(){
+  if (game.phase!=="act") return;
+  const inv = game.inv[game.turn];
+  const owned = ITEM_KEYS.filter(k=>inv[k]>0);
+  $("#puGrid").innerHTML = owned.length ? owned.map(k=>`<button class="pucard" data-k="${k}"><span class="puicon">${WEAPONS[k].icon}</span><b>${WEAPONS[k].name}</b><span class="pudesc">${WEAPONS[k].desc}</span><span class="pun">×${inv[k]}</span></button>`).join("")
+    : `<p class="note" style="grid-column:1/-1;color:var(--ink);font-weight:800">No power-ups yet. Drive over a falling crate 🎁 to get one!</p>`;
+  $("#puGrid").querySelectorAll(".pucard").forEach(b=>b.onclick=()=>{ $("#puSheet").hidden = true; const k=b.dataset.k; game.weapon=k; beep(880,.08);
+    if (["repair","medic","shield","double","barrage","sniper","twin","airstrike","teleport"].includes(k)) fire(); else renderTkUI(); });
+  $("#puSheet").hidden = false;
+}
+$("#tkPU").onclick = openPU;
+$("#puClose").onclick = ()=>{ $("#puSheet").hidden = true; };
+let tgPick = [], tgNeed = 1, tgKind = "sniper";
+function openTargetPick(kind){
+  tgKind = kind; tgNeed = kind==="twin" ? 2 : 1; tgPick = [];
+  const me = game.turn, foes = game.tanks.filter(x=>x.alive && x.team!==me);
+  if (!foes.length){ float(curTank().x, curTank().y-90, "No targets!", "#fff"); game.weapon="shell"; renderTkUI(); return; }
+  tgNeed = Math.min(tgNeed, foes.length);
+  $("#tgTitle").textContent = kind==="twin" ? `${WEAPONS.twin.icon} Pick ${tgNeed} tank${tgNeed>1?"s":""}` : `${WEAPONS.sniper.icon} Pick your target`;
+  $("#tgGrid").innerHTML = foes.map(f=>{ const tm=game.teams[f.team]; return `<button class="tgcard" data-t="${f.team}" style="--tc:${tm.color}"><canvas width="200" height="120"></canvas><b>${esc(tm.name)}</b><span class="hp"><i style="width:${f.hp}%"></i></span></button>`; }).join("");
+  $("#tgGrid").querySelectorAll(".tgcard").forEach(b=>{
+    const ti=+b.dataset.t, tm=game.teams[ti], cv=b.querySelector("canvas"), c=cv.getContext("2d");
+    c.fillStyle="#DFF2FF"; c.fillRect(0,0,200,120); c.fillStyle="#5CC94A"; c.fillRect(0,104,200,16);
+    c.translate(100,102); c.scale(1.55,1.55); paintTank(c, tk.sprites[ti], tm.color, tm.skin, 45, 0, 0, 0);
+    b.onclick = ()=>{ const i=tgPick.indexOf(ti); if (i>=0) tgPick.splice(i,1); else { if (tgPick.length>=tgNeed) tgPick.shift(); tgPick.push(ti); }
+      $("#tgGrid").querySelectorAll(".tgcard").forEach(x=>x.setAttribute("aria-pressed", tgPick.includes(+x.dataset.t)));
+      $("#tgGo").disabled = tgPick.length!==tgNeed; beep(700,.05); };
+  });
+  $("#tgGo").disabled = true;
+  $("#tgSheet").hidden = false;
+}
+$("#tgCancel").onclick = ()=>{ $("#tgSheet").hidden = true; game.weapon="shell"; renderTkUI(); };
+$("#tgGo").onclick = ()=>{ if (tgPick.length!==tgNeed) return; $("#tgSheet").hidden = true; useItem(tgKind); launchHoming(tgPick.slice(), tgKind); };
+$("#tkMenuBtn").onclick = e=>{ e.stopPropagation(); const m=$("#tkMenu"); m.hidden=!m.hidden; $("#tkMenuBtn").setAttribute("aria-expanded", !m.hidden); };
+document.addEventListener("pointerdown", e=>{ const m=$("#tkMenu"); if (m && !m.hidden && !e.target.closest(".tkmenuwrap")) m.hidden = true; });
 function askTank(){
   const team = game.teams[game.turn], q = nextQuestion(); game.asked++;
   askQuestion({team, q, head:`Question ${game.asked} of ${game.total}`, pts:null, cancelLabel:"Skip question", rightLabel:"Your turn!",
@@ -2127,7 +2252,7 @@ function tkWorld(e){
   return [ (e.clientX-r.left)*dpr/zoom + tk.cam.x, (e.clientY-r.top)*dpr/zoom + camY ];
 }
 function aimTo(wx, wy){
-  const t = curTank(); const dx = wx - t.x, dy = (t.y-27) - wy;
+  const t = curTank(); const dx = wx - t.x, dy = (t.y-38) - wy;
   let ang = Math.atan2(dy,dx)*180/Math.PI; if (ang<0) ang = dx>=0 ? 0 : 180;
   t.angle = Math.max(0, Math.min(180, ang)); tk.aimPt = {x:wx, y:wy};
   if (dx<0 && tk.aimPt) {} return Math.hypot(dx,dy);
