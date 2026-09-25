@@ -1594,7 +1594,7 @@ if('serviceWorker' in navigator){
 <script>
 (function(){
 "use strict";
-var VERSION="v145 · 24 sep · los siete niveles abiertos, con su texto y el picker arreglado";
+var VERSION="v146 · 25 sep · la sesión ya no truena si el micrófono contesta tarde";
 
 /* ═══════════ almacenamiento ═══════════ */
 var KEY='efa_tutor_v2',mem={};
@@ -11328,6 +11328,9 @@ function registrar(x,t,extra){
   if(x.k==='free')pedirSeguimiento(t);
   if(x.k==='roleplay'&&hayIA())seguirRoleplay(x,t);
   var r=document.getElementById('res');
+  // el micrófono tarda en cerrar: si para cuando contesta ya se fue de
+  // este ejercicio, el intento queda anotado y ya. Antes tronaba.
+  if(!r)return;
   var h='<div class="heard"><div class="hl">te entendí</div><div class="ht">'+esc(t)+'</div>';
   // Trabarse no es equivocarse. Si se atoró y ademas le salio bajo, se le
   // dice eso y no "mal": lo que necesita es volver a intentarlo, no una
@@ -11366,7 +11369,8 @@ function registrar(x,t,extra){
   if(meta)setTimeout(function(){ligarComparar(meta);ligarShadow(meta);},60);
   var o=document.getElementById('otra');
   if(o)o.onclick=function(){say(meta,'en-US');r.innerHTML='';};
-  document.getElementById('sig').onclick=function(){it++;paso();};
+  var _sig=document.getElementById('sig');
+  if(_sig)_sig.onclick=function(){it++;paso();};
 }
 
 /* ═══════════ cierre y envío ═══════════ */
@@ -11793,7 +11797,11 @@ function cierre(){
     '<div class="ganados"><span>+'+gan.ganados+' puntos</span>'+
     gan.producidas+' frases tuyas · '+gan.escuchas+' escuchas · '+gan.sombra+' veces al mismo tiempo</div>');
   var codigo=pack(rec);
-  document.getElementById('cd').value=codigo;
+  /* La respuesta del servidor puede llegar cuando el cadete ya se fue de
+     esta pantalla. Escribir en algo que ya no existe tronaba la sesión. */
+  function _est(t){ var e=document.getElementById('stat'); if(e)e.textContent=t; }
+  function _ver(id){ var e=document.getElementById(id); if(e)e.hidden=false; }
+  var _cd=document.getElementById('cd'); if(_cd)_cd.value=codigo;
   document.getElementById('menu').onclick=function(){sIdx=null;mostrarMapa();};
 
   // v136: el avance ya salio al servidor del Colegio en hcmCerrarLeccion.
@@ -11809,7 +11817,7 @@ function cierre(){
   }
   // se manda sola al servidor de datos
   if(DATOS_ENDPOINT){
-    document.getElementById('stat').textContent='Enviando a Brian…';
+    _est('Enviando a Brian…');
     var enviar=function(){
       var o=document.getElementById('obs');
       rec.observacion=o?o.value.trim():'';
@@ -11818,18 +11826,14 @@ function cierre(){
         body:JSON.stringify(rec)})
         .then(function(r){return r.ok?r.json():null;})
         .then(function(d){
-          document.getElementById('stat').textContent=(d&&d.ok)
+          _est((d&&d.ok)
             ? '✓ Enviada. Brian ya la tiene.'
-            : 'No se pudo enviar. Usa el botón de correo.';
-          if(!d||!d.ok){
-            document.getElementById('manual').hidden=false;
-            document.getElementById('cd').hidden=false;
-          }
+            : 'No se pudo enviar. Usa el botón de correo.');
+          if(!d||!d.ok){ _ver('manual'); _ver('cd'); }
         })
         .catch(function(){
-          document.getElementById('stat').textContent='Sin conexión. Usa el botón de correo.';
-          document.getElementById('manual').hidden=false;
-          document.getElementById('cd').hidden=false;
+          _est('Sin conexión. Usa el botón de correo.');
+          _ver('manual'); _ver('cd');
         });
     };
     // se espera un poco por si escribe una observación
@@ -11838,12 +11842,12 @@ function cierre(){
     if(ob)ob.onblur=enviar;
   }
   if(ONLINE&&!DATOS_ENDPOINT){
-    document.getElementById('stat').textContent='Enviando…';
+    _est('Enviando…');
     google.script.run
-      .withSuccessHandler(function(r){document.getElementById('stat').textContent=(r&&r.ok)?'✓ Enviada. Brian ya la tiene.':'No la aceptó el servidor.';})
+      .withSuccessHandler(function(r){_est((r&&r.ok)?'✓ Enviada. Brian ya la tiene.':'No la aceptó el servidor.');})
       .withFailureHandler(function(){
-        document.getElementById('stat').textContent='No se pudo conectar. Mándala por correo.';
-        document.getElementById('manual').hidden=false;document.getElementById('cd').hidden=false;
+        _est('No se pudo conectar. Mándala por correo.');
+        _ver('manual'); _ver('cd');
       })
       .guardarSesion(rec);
     var envio=document.getElementById('obs');
@@ -11871,7 +11875,7 @@ function cierre(){
     var t=document.getElementById('cd');
     t.value=recogido();
     t.select();
-    try{document.execCommand('copy');document.getElementById('stat').textContent='Código copiado.';}catch(x){}
+    try{document.execCommand('copy');_est('Código copiado.');}catch(x){}
   };
 }
 
