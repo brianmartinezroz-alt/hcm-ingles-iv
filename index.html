@@ -1994,6 +1994,26 @@ function marcarCargando(si){
 var SOLO_GOOGLE=true;
 
 var SIN_PAQUETE_LOCAL=false;   // se aprende a la primera y ya no se insiste
+/* Antes esto se adivinaba: si el primer intento de sonar un archivo local
+   fallaba, se daba por hecho que no había paquete de grabaciones. Pero un
+   tropiezo de red se ve igual que un archivo que no existe, así que un mal
+   momento de señal apagaba las grabaciones locales por el resto de la sesión.
+   Ahora se pregunta una sola vez y la respuesta es clara: 404 = no hay
+   paquete; error de red = no se concluye nada y se vuelve a preguntar. */
+var PACK_PREGUNTADO=false;
+function revisarPaquete(){
+  if(PACK_PREGUNTADO||SIN_PAQUETE_LOCAL)return;
+  PACK_PREGUNTADO=true;
+  try{
+    fetch((PAQUETE_ACTIVO||'audio-us')+'/lista.json',{cache:'no-store'})
+      .then(function(r){ if(r.status===404)SIN_PAQUETE_LOCAL=true; })
+      .catch(function(){ PACK_PREGUNTADO=false; });
+  }catch(e){ PACK_PREGUNTADO=false; }
+}
+try{
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',revisarPaquete);
+  else revisarPaquete();
+}catch(e){}
 function decirConTuVoz(texto,lang,cb,archivo){
   if(SOLO_GOOGLE){
     vozDelServidor(texto,lang,cb,function(){avisoDeAudio();cb&&cb();});
@@ -13244,16 +13264,65 @@ function hcmTutorial(){
   }
 
   // lo que ya se oyó se queda guardado en el teléfono
-  var CAJA_VOZ = 'hcm-voz-v1';
-  function llaveVoz(k){ return location.pathname.replace(/[^\/]*$/, '') + '__voz__/' + encodeURIComponent(k); }
+  /* ── la bóveda de voces ──
+     Antes vivía en Cache Storage, en una caja llamada 'hcm-voz-v1'. El
+     problema: Cache Storage es del dominio entero, y el service worker de
+     CUALQUIERA de las apps que viven en brianmartinezroz-alt.github.io
+     borraba al activarse "todo caché que no sea el mío". Así que cada vez que
+     un cadete abría otra de las apps —o que el service worker se actualizaba—
+     las voces guardadas desaparecían y cada frase volvía a pedirse a Apps
+     Script: tres segundos por frase, y con el grupo entero picándole al mismo
+     tiempo el servidor se satura y rebota. Eso era el "muchas veces no cargan
+     los audios". IndexedDB no lo barre ningún service worker: lo que se
+     guarda, se queda. */
+  var VOZ_DB_LISTA = null;
+  function vozDB(){
+    if(VOZ_DB_LISTA) return VOZ_DB_LISTA;
+    VOZ_DB_LISTA = new Promise(function(ok){
+      try{
+        var p = indexedDB.open('hcm-voz', 1);
+        p.onupgradeneeded = function(){
+          var d = p.result;
+          if(!d.objectStoreNames.contains('voces')) d.createObjectStore('voces');
+        };
+        p.onsuccess = function(){
+          var d = p.result;
+          // Si la base existiera sin el almacén (la creó otra cosa antes),
+          // se sube de versión para crearlo, en vez de fallar en silencio.
+          if(d.objectStoreNames.contains('voces')){ ok(d); return; }
+          var v = d.version + 1; d.close();
+          var q = indexedDB.open('hcm-voz', v);
+          q.onupgradeneeded = function(){
+            var d2 = q.result;
+            if(!d2.objectStoreNames.contains('voces')) d2.createObjectStore('voces');
+          };
+          q.onsuccess = function(){ ok(q.result); };
+          q.onerror   = function(){ ok(null); };
+        };
+        p.onerror   = function(){ ok(null); };
+        p.onblocked = function(){ ok(null); };
+      }catch(e){ ok(null); }
+    });
+    return VOZ_DB_LISTA;
+  }
   function vozGuardada(k){
-    if(!window.caches) return Promise.resolve(null);
-    return caches.open(CAJA_VOZ).then(function(c){ return c.match(llaveVoz(k)); })
-      .then(function(r){ return r ? r.text() : null; }).catch(function(){ return null; });
+    return vozDB().then(function(d){
+      if(!d) return null;
+      return new Promise(function(ok){
+        try{
+          var r = d.transaction('voces','readonly').objectStore('voces').get(k);
+          r.onsuccess = function(){ ok(r.result || null); };
+          r.onerror   = function(){ ok(null); };
+        }catch(e){ ok(null); }
+      });
+    }).catch(function(){ return null; });
   }
   function guardarVoz(k, b64){
-    if(!window.caches || !b64) return;
-    caches.open(CAJA_VOZ).then(function(c){ return c.put(llaveVoz(k), new Response(b64)); }).catch(function(){});
+    if(!b64) return;
+    vozDB().then(function(d){
+      if(!d) return;
+      try{ d.transaction('voces','readwrite').objectStore('voces').put(b64, k); }catch(e){}
+    }).catch(function(){});
   }
   function llaveFrase(texto){ return clave(texto) + '|' + (PAQUETE_ACTIVO || 'audio-us') + '|' + sexoDeLaFrase(texto); }
   function pedirVoz(texto, lang){
@@ -13860,5 +13929,120 @@ function hcmTutorial(){
 })();
 
 </script>
+<script>
+/* ═══════════ ayudante de instalación ═══════════
+   Antes no había ninguno: el cadete abría el link y tenía que adivinar el
+   "Agregar a pantalla de inicio" de su navegador. Y si abría el link desde
+   WhatsApp, ese menú no existe — el navegador interno de WhatsApp no instala
+   apps —, así que parecía que la app estaba fallando.
+   Ahora: si se puede instalar, hay botón. Si está en un navegador que no
+   instala, se dice con todas sus letras y se le da el link para copiarlo.  */
+(function(){
+  var YA = false;
+  try{
+    YA = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) ||
+         navigator.standalone === true;
+  }catch(e){}
+  if(YA) return;                 // ya está instalada: no se estorba
+
+  var UA = navigator.userAgent || '';
+  var DENTRO_DE_APP = /WhatsApp|Instagram|FBAN|FBAV|FB_IAB|Messenger|Line\/|TikTok|MicroMessenger/i.test(UA);
+  var ES_IOS  = /iPad|iPhone|iPod/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var CLAVE   = 'hcm-instalar-visto';
+
+  function visto(){ try{ return localStorage.getItem(CLAVE) === '1'; }catch(e){ return false; } }
+  function marcar(){ try{ localStorage.setItem(CLAVE,'1'); }catch(e){} }
+
+  var caja = null;
+  function cerrar(){ marcar(); if(caja && caja.parentNode) caja.parentNode.removeChild(caja); caja = null; }
+
+  function pintar(titulo, cuerpo, botones){
+    if(caja) cerrar();
+    caja = document.createElement('div');
+    caja.setAttribute('role','dialog');
+    caja.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:99999;'+
+      'background:#1E3A63;color:#fff;border-radius:14px;padding:14px 16px;'+
+      'box-shadow:0 10px 30px rgba(0,0,0,.35);font:15px/1.45 system-ui,-apple-system,sans-serif;'+
+      'max-width:520px;margin:0 auto';
+    var h = '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">'+
+            '<strong style="font-size:16px">'+titulo+'</strong>'+
+            '<button type="button" data-x="1" aria-label="Cerrar" style="background:none;border:0;color:#fff;'+
+            'font-size:22px;line-height:1;cursor:pointer;padding:0 2px">&times;</button></div>'+
+            '<div style="margin-top:6px;opacity:.95">'+cuerpo+'</div>';
+    if(botones) h += '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">'+botones+'</div>';
+    caja.innerHTML = h;
+    caja.addEventListener('click', function(ev){
+      var b = ev.target.closest ? ev.target.closest('button') : null;
+      if(!b) return;
+      if(b.dataset.x) return cerrar();
+      if(b.dataset.instalar) return instalar();
+      if(b.dataset.copiar) return copiar(b);
+    });
+    document.body.appendChild(caja);
+  }
+
+  function boton(attr, texto, principal){
+    return '<button type="button" '+attr+'="1" style="border:0;border-radius:10px;padding:10px 14px;'+
+      'font:600 15px system-ui,sans-serif;cursor:pointer;'+
+      (principal ? 'background:#fff;color:#1E3A63' : 'background:rgba(255,255,255,.18);color:#fff')+
+      '">'+texto+'</button>';
+  }
+
+  function copiar(b){
+    var url = location.href.split('#')[0];
+    var fin = function(){ b.textContent = 'Link copiado ✓'; };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(fin, function(){ manual(url); });
+    } else manual(url);
+    function manual(u){
+      var t = document.createElement('textarea');
+      t.value = u; t.style.cssText='position:fixed;opacity:0';
+      document.body.appendChild(t); t.select();
+      try{ document.execCommand('copy'); fin(); }catch(e){}
+      document.body.removeChild(t);
+    }
+  }
+
+  /* ── el navegador nos ofrece instalar (Chrome, Edge, Samsung…) ── */
+  var PROMPT = null;
+  window.addEventListener('beforeinstallprompt', function(ev){
+    ev.preventDefault();
+    PROMPT = ev;
+    if(!visto()) pintar('Instala la app en tu teléfono',
+      'Se abre como cualquier otra app, arranca más rápido y las lecciones que ya viste funcionan sin internet.',
+      boton('data-instalar','Instalar', true));
+  });
+
+  function instalar(){
+    if(!PROMPT) return cerrar();
+    PROMPT.prompt();
+    PROMPT.userChoice.then(function(){ PROMPT = null; cerrar(); }, function(){ cerrar(); });
+  }
+
+  /* ── casos en los que el navegador NUNCA va a ofrecer nada ── */
+  window.addEventListener('load', function(){
+    setTimeout(function(){
+      if(caja || visto() || PROMPT) return;
+
+      if(DENTRO_DE_APP){
+        pintar('Ábrela en tu navegador',
+          'Estás viendo la app dentro de otra aplicación (WhatsApp, Instagram o parecida) y desde ahí '+
+          '<b>no se puede instalar</b>. Toca los tres puntos de arriba y elige <b>Abrir en el navegador</b>, '+
+          'o copia el link y pégalo en Chrome.',
+          boton('data-copiar','Copiar el link', true));
+        return;
+      }
+
+      if(ES_IOS){
+        pintar('Instálala en tu iPhone',
+          'Toca el botón <b>Compartir</b> de Safari (el cuadrito con la flecha hacia arriba), baja hasta '+
+          '<b>Agregar a pantalla de inicio</b> y confirma. Te queda como una app más.', '');
+        return;
+      }
+    }, 2500);
+  });
+})();
+</script>
+
 </body>
 </html>
