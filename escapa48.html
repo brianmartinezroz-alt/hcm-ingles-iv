@@ -96,23 +96,39 @@ button:focus-visible{outline:4px solid var(--ink);outline-offset:3px}
 /* setup */
 .photos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:-6px 0 14px}
 .photos img{width:100%;aspect-ratio:16/8;object-fit:cover;border:3px solid var(--ink);border-radius:14px;display:block}
-#setup{background:#3F86E0;padding:0;overflow:hidden;align-items:end;justify-items:end}
-#facade{position:absolute;inset:0;overflow:hidden;background:linear-gradient(#3F86E0 0 33%,#86BDE6 33% 81%,#6F6A66 81%)}
-@media (min-width:701px){ #facSvg{left:-500px!important;width:calc(100% + 500px)!important} #setup.opening #facSvg{transform:translateX(250px) scale(3.4) translateY(-4%)} .facTitle{right:500px;left:0!important;text-align:center;top:auto!important;bottom:4%} }
-#facSvg{position:absolute;inset:0;width:100%;height:100%;transform-origin:50% 60%;transition:transform 1.3s cubic-bezier(.6,0,.3,1)}
+#setup{background:#2F74D0;padding:0;overflow:hidden;display:block}
+#facade{position:absolute;inset:0;overflow:hidden}
+#facSvg{position:absolute;inset:0;width:100%;height:100%;transition:transform 1.3s cubic-bezier(.6,0,.3,1)}
 #facade .leaf{transform-box:fill-box;transition:transform 1.1s cubic-bezier(.5,0,.3,1), filter 1.1s}
 #leafL{transform-origin:0% 50%} #leafR{transform-origin:100% 50%}
 #setup.opening #leafL{transform:scaleX(.08) skewY(8deg);filter:brightness(.7)} #setup.opening #leafR{transform:scaleX(.08) skewY(-8deg);filter:brightness(.7)}
-#setup.opening #facSvg{transform:scale(3.4) translateY(-4%);transition-delay:.7s}
-#setup.opening .card{transform:translateX(120%);opacity:0}
-#setup.opening .facTitle{opacity:0}
+#setup.opening #facSvg{transform:scale(3.4);transition-delay:.7s}
+#setup.opening .facTitle,#setup.opening .facHint,#setup.opening .tapGate,#setup.opening .goTag{opacity:0;transition:opacity .3s}
 #setup.opening::after{content:"";position:absolute;inset:0;background:#fff;animation:facFade .5s 1.6s forwards;opacity:0;pointer-events:none}
 @keyframes facFade{to{opacity:1}}
-.facTitle{position:absolute;left:3%;top:3%;font-family:var(--display);font-size:clamp(30px,5vw,58px);color:#fff;text-shadow:0 4px 0 var(--ink),0 0 18px rgba(0,0,0,.35);-webkit-text-stroke:2px var(--ink);transition:opacity .4s;line-height:1}
+.facTitle{position:absolute;left:0;right:0;top:12px;text-align:center;font-family:var(--display);font-size:clamp(30px,5vw,58px);color:#fff;text-shadow:0 4px 0 var(--ink),0 0 18px rgba(0,0,0,.35);-webkit-text-stroke:2px var(--ink);line-height:1;pointer-events:none}
 .facTitle span{color:#FFD84A}
-#setup .card.setup{position:relative;margin:16px;width:min(470px,calc(100vw - 32px));max-height:calc(100vh - 32px);transition:transform .6s, opacity .6s;background:rgba(255,253,246,.96)}
-@media (max-width:700px){ #setup{justify-items:center} #setup .card.setup{max-height:52vh;margin:0 12px 12px} .facTitle{left:0;right:0;text-align:center;top:8px;font-size:32px} #facSvg{top:48px!important;height:calc(48vh - 60px)!important} #setup.opening #facSvg{top:0!important;height:100%!important} }
-.setup h1{display:none;font-family:var(--display);font-size:clamp(34px,6vw,54px);line-height:.95;margin:0 0 4px}
+#facVian,.facBubble{display:none}
+@media (max-aspect-ratio:4/5){ #facVian{display:block;position:absolute;left:50%;top:150px;width:min(46vw,210px);transform:translateX(-50%);pointer-events:none;animation:vianBob 2.2s ease-in-out infinite}
+  .facBubble{display:block;position:absolute;left:50%;top:106px;transform:translateX(-50%);background:#fff;border:3px solid var(--ink);border-radius:14px;padding:6px 10px;font-weight:900;font-size:13px;box-shadow:0 3px 0 var(--ink);pointer-events:none;white-space:nowrap} }
+@keyframes vianBob{50%{transform:translateX(-50%) translateY(-8px)}}
+.facHint{position:absolute;left:0;right:0;top:calc(12px + clamp(30px,5vw,58px) + 8px);text-align:center;margin:0;color:#fff;font-weight:900;font-size:clamp(13px,1.6vw,17px);text-shadow:0 2px 0 var(--ink);pointer-events:none}
+#facade .sign{cursor:pointer;outline:none}
+#facade .sign .glow{fill:none;stroke:#FFD84A;stroke-width:8;opacity:0;animation:signGlow 2.4s ease-in-out infinite}
+#facade .sign:nth-of-type(2) .glow{animation-delay:.6s} #facade .sign:nth-of-type(3) .glow{animation-delay:1.2s}
+#facade .sign:hover .glow,#facade .sign:focus .glow{opacity:1;animation:none}
+@keyframes signGlow{0%,60%,100%{opacity:0}30%{opacity:.9}}
+#facade .tapGate{animation:tapBob 1.2s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 50%}
+@keyframes tapBob{50%{transform:translateY(-8px) scale(1.04)}}
+#signBox{position:absolute;inset:0;background:rgba(20,24,60,.45);display:grid;place-items:center;padding:14px;z-index:5}
+.signcard{background:#FFFDF4;border:5px solid var(--ink);border-radius:10px;box-shadow:0 10px 0 var(--ink),0 20px 50px rgba(0,0,0,.35);width:min(620px,100%);max-height:88vh;overflow:auto;padding:20px 20px 16px;position:relative;animation:signGrow .38s cubic-bezier(.3,1.4,.5,1)}
+.signcard::before,.signcard::after{content:"";position:absolute;top:-14px;width:90px;height:28px;background:rgba(255,236,160,.85);border:1px solid rgba(0,0,0,.1)}
+.signcard::before{left:30px;transform:rotate(-6deg)} .signcard::after{right:30px;transform:rotate(5deg)}
+.signcard h2{font-family:var(--display);font-size:clamp(26px,4vw,36px);margin:0 0 12px;color:var(--ink)}
+.signcard section{display:none} .signcard[data-p="teams"] section[data-p="teams"],.signcard[data-p="time"] section[data-p="time"],.signcard[data-p="topic"] section[data-p="topic"],.signcard[data-p="rules"] section[data-p="rules"],.signcard[data-p="resume"] section[data-p="resume"]{display:block}
+@keyframes signGrow{from{transform:translate(var(--fx,0),var(--fy,0)) scale(.15) rotate(-4deg);opacity:.4}}
+.signcard .teams{margin-top:12px}
+.setup h1{font-family:var(--display);font-size:clamp(34px,6vw,54px);line-height:.95;margin:0 0 4px}
 .setup h1 span{color:var(--vian)}
 .setup .sub{color:var(--muted);font-weight:800;margin:0 0 14px}
 .fld{display:grid;gap:6px;margin:14px 0}
@@ -128,6 +144,27 @@ button:focus-visible{outline:4px solid var(--ink);outline-offset:3px}
 .rules b{font-weight:900}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 textarea{width:100%;min-height:220px;border:3px solid var(--ink);border-radius:12px;font:600 14px/1.4 ui-monospace,Menlo,Consolas,monospace;padding:10px;box-sizing:border-box;background:#fff;color:var(--ink)}
+/* full-screen map: the school fills the screen, everything else floats on top and hides while a question is open or a team is moving */
+#game .topbar{position:fixed;top:8px;left:8px;right:8px;padding:0;pointer-events:none;align-items:flex-start;z-index:4}
+#game .topbar > *{pointer-events:auto}
+#game .brand{background:rgba(255,253,246,.92);border:3px solid var(--ink);border-radius:14px;padding:6px 10px;box-shadow:0 3px 0 var(--ink)}
+#game .chips{transition:opacity .35s, transform .35s}
+#board{position:fixed;inset:0;padding:0;display:block}
+#board .stage{position:absolute;inset:0;border:0;border-radius:0;box-shadow:none}
+#board .route{position:fixed;left:50%;transform:translateX(-50%);bottom:112px;width:min(760px,86vw);margin:0;height:44px;background:rgba(255,253,246,.9);border:3px solid var(--ink);border-radius:14px;box-shadow:0 3px 0 var(--ink);padding:0 18px;z-index:4;transition:opacity .35s, transform .35s;box-sizing:border-box}
+#board .route .rline,#board .route .rdot,#board .route .rtok{}
+.route-in{position:absolute;left:18px;right:18px;top:0;bottom:0}
+#game .bottombar{position:fixed;left:0;right:0;bottom:0;padding:0 12px 12px;pointer-events:none;z-index:4;transition:opacity .35s, transform .35s}
+#game .bottombar .turncard{pointer-events:auto;background:rgba(255,253,246,.95)}
+#game .pan{z-index:3}
+body.hudoff #game .chips{opacity:0;transform:translateY(-20px);pointer-events:none}
+body.hudoff #board .route{opacity:0;transform:translate(-50%,20px);pointer-events:none}
+body.hudoff #game .bottombar{opacity:0;transform:translateY(40px)}
+body.hudmin #game .chips,body.hudmin #board .route{opacity:0;pointer-events:none}
+#qBox{background:rgba(42,33,64,.28);align-items:end}
+#qBox #qCard{margin-bottom:8px}
+@media (min-height:700px){ #qBox{align-items:center} }
+@media (max-width:640px){ #board .route{bottom:104px;height:40px} #game .brand{display:none} }
 .results h2{font-family:var(--display);font-size:clamp(30px,5vw,46px);margin:0}
 .mixq{display:flex;gap:8px;align-items:center;font-weight:800;font-size:14px;margin:0 0 6px}.mixq input{width:20px;height:20px}
 .setpick{font:inherit;font-weight:900;font-size:16px;padding:10px 12px;border:3px solid var(--ink);border-radius:14px;background:#fff;color:var(--ink);width:100%;margin-bottom:6px}
@@ -144,9 +181,10 @@ textarea{width:100%;min-height:220px;border:3px solid var(--ink);border-radius:1
 
 <div id="game" hidden>
   <div class="topbar">
-    <div class="brand">¡Escapa de Miss Vian!<small>Sec. 48 · Español 2°</small></div>
+    <div class="brand">¡Escapa de Miss Vian!<small>Sec. 48 · Español</small></div>
     <div class="chips" id="chips"></div>
     <div class="tools">
+      <button class="btn small" id="hudBtn" aria-label="Mostrar u ocultar marcador" title="Mostrar/ocultar marcador">👁</button>
       <button class="btn small" id="soundBtn" aria-label="Sonido">🔊</button>
       <button class="btn small" id="menuBtn">☰ Menú</button>
     </div>
@@ -156,47 +194,87 @@ textarea{width:100%;min-height:220px;border:3px solid var(--ink);border-radius:1
 </div>
 
 <div class="overlay" id="setup" hidden>
-  <div id="facade"><svg id="facSvg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-<defs><linearGradient id="fsky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3F86E0"/><stop offset="1" stop-color="#CFE8FB"/></linearGradient>
-<linearGradient id="fins" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9FD2F7"/><stop offset=".55" stop-color="#E6F4FD"/><stop offset=".56" stop-color="#CFCBC4"/><stop offset="1" stop-color="#B9B4AC"/></linearGradient></defs>
-<rect width="1600" height="1000" fill="url(#fsky)"/>
-<g fill="#fff" opacity=".95"><circle cx="260" cy="110" r="60"/><circle cx="330" cy="120" r="48"/><circle cx="200" cy="130" r="40"/><circle cx="1240" cy="80" r="55"/><circle cx="1300" cy="95" r="44"/><circle cx="1180" cy="100" r="38"/></g>
-<g><rect x="1380" y="120" width="34" height="520" fill="#5B4030"/><circle cx="1400" cy="150" r="130" fill="#2E6B3C"/><circle cx="1300" cy="210" r="90" fill="#3F8A4E"/><circle cx="1500" cy="220" r="100" fill="#3F8A4E"/><circle cx="1420" cy="90" r="80" fill="#4FA85E"/></g>
-<g><path d="M0 40 L40 330 M40 40 L0 330" stroke="#9AA6AE" stroke-width="2"/><path d="M40 40 L80 330 M80 40 L40 330" stroke="#9AA6AE" stroke-width="2"/><path d="M80 40 L120 330 M120 40 L80 330" stroke="#9AA6AE" stroke-width="2"/><path d="M120 40 L160 330 M160 40 L120 330" stroke="#9AA6AE" stroke-width="2"/><path d="M160 40 L200 330 M200 40 L160 330" stroke="#9AA6AE" stroke-width="2"/><path d="M200 40 L240 330 M240 40 L200 330" stroke="#9AA6AE" stroke-width="2"/><path d="M240 40 L280 330 M280 40 L240 330" stroke="#9AA6AE" stroke-width="2"/><path d="M280 40 L320 330 M320 40 L280 330" stroke="#9AA6AE" stroke-width="2"/><path d="M320 40 L360 330 M360 40 L320 330" stroke="#9AA6AE" stroke-width="2"/><path d="M360 40 L400 330 M400 40 L360 330" stroke="#9AA6AE" stroke-width="2"/><path d="M400 40 L440 330 M440 40 L400 330" stroke="#9AA6AE" stroke-width="2"/><path d="M440 40 L480 330 M480 40 L440 330" stroke="#9AA6AE" stroke-width="2"/><path d="M480 40 L520 330 M520 40 L480 330" stroke="#9AA6AE" stroke-width="2"/><path d="M520 40 L560 330 M560 40 L520 330" stroke="#9AA6AE" stroke-width="2"/><path d="M560 40 L600 330 M600 40 L560 330" stroke="#9AA6AE" stroke-width="2"/><path d="M600 40 L640 330 M640 40 L600 330" stroke="#9AA6AE" stroke-width="2"/><path d="M640 40 L680 330 M680 40 L640 330" stroke="#9AA6AE" stroke-width="2"/><path d="M680 40 L720 330 M720 40 L680 330" stroke="#9AA6AE" stroke-width="2"/><path d="M720 40 L760 330 M760 40 L720 330" stroke="#9AA6AE" stroke-width="2"/><path d="M760 40 L800 330 M800 40 L760 330" stroke="#9AA6AE" stroke-width="2"/><path d="M800 40 L840 330 M840 40 L800 330" stroke="#9AA6AE" stroke-width="2"/><path d="M840 40 L880 330 M880 40 L840 330" stroke="#9AA6AE" stroke-width="2"/><path d="M880 40 L920 330 M920 40 L880 330" stroke="#9AA6AE" stroke-width="2"/><path d="M920 40 L960 330 M960 40 L920 330" stroke="#9AA6AE" stroke-width="2"/><path d="M960 40 L1000 330 M1000 40 L960 330" stroke="#9AA6AE" stroke-width="2"/><path d="M1000 40 L1040 330 M1040 40 L1000 330" stroke="#9AA6AE" stroke-width="2"/><path d="M1040 40 L1080 330 M1080 40 L1040 330" stroke="#9AA6AE" stroke-width="2"/><path d="M1080 40 L1120 330 M1120 40 L1080 330" stroke="#9AA6AE" stroke-width="2"/><path d="M1120 40 L1160 330 M1160 40 L1120 330" stroke="#9AA6AE" stroke-width="2"/><path d="M1160 40 L1200 330 M1200 40 L1160 330" stroke="#9AA6AE" stroke-width="2"/><path d="M1200 40 L1240 330 M1240 40 L1200 330" stroke="#9AA6AE" stroke-width="2"/><path d="M1240 40 L1280 330 M1280 40 L1240 330" stroke="#9AA6AE" stroke-width="2"/><path d="M1280 40 L1320 330 M1320 40 L1280 330" stroke="#9AA6AE" stroke-width="2"/><path d="M1320 40 L1360 330 M1360 40 L1320 330" stroke="#9AA6AE" stroke-width="2"/><path d="M1360 40 L1400 330 M1400 40 L1360 330" stroke="#9AA6AE" stroke-width="2"/><path d="M1400 40 L1440 330 M1440 40 L1400 330" stroke="#9AA6AE" stroke-width="2"/><path d="M1440 40 L1480 330 M1480 40 L1440 330" stroke="#9AA6AE" stroke-width="2"/><path d="M1480 40 L1520 330 M1520 40 L1480 330" stroke="#9AA6AE" stroke-width="2"/><path d="M1520 40 L1560 330 M1560 40 L1520 330" stroke="#9AA6AE" stroke-width="2"/><path d="M1560 40 L1600 330 M1600 40 L1560 330" stroke="#9AA6AE" stroke-width="2"/><path d="M0 40 H1600 M0 330 H1600" stroke="#7D8A93" stroke-width="5"/></g>
-<g font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="54" fill="#E9EEF1" stroke="#6B7A85" stroke-width="2" text-anchor="middle"><text x="800" y="200" letter-spacing="6">ESCUELA SECUNDARIA DIURNA No. 48</text></g>
-<text x="800" y="262" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="34" fill="#fff" stroke="#2A3550" stroke-width="1.5">“JUAN RUIZ DE ALARCÓN Y MENDOZA”</text>
-<rect x="0" y="330" width="1600" height="480" fill="#86BDE6"/>
-<rect x="0" y="560" width="1600" height="14" fill="#2A3550"/><rect x="0" y="330" width="1600" height="14" fill="#2A3550"/>
-<g fill="#2A3550"><rect x="150" y="330" width="14" height="480"/><rect x="420" y="330" width="14" height="480"/><rect x="1166" y="330" width="14" height="480"/><rect x="1440" y="330" width="14" height="480"/></g>
-<g fill="rgba(255,255,255,.12)"><rect x="40" y="380" width="80" height="400"/><rect x="1220" y="600" width="180" height="120"/></g>
-<text x="290" y="700" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="46" fill="#2A3550">NO GRAFITEAR</text>
-<rect x="190" y="420" width="200" height="90" fill="#2A2A30" stroke="#1B1B20" stroke-width="4"/>
-<g><rect x="1210" y="400" width="200" height="120" fill="#F7F5EE" stroke="#2A3550" stroke-width="4"/><text x="1310" y="440" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="20" fill="#2A3550">SEP</text><text x="1310" y="470" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="800" font-size="16" fill="#2A3550">Esc. Sec. Diurna No. 48</text><text x="1310" y="495" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="800" font-size="15" fill="#2A3550">Turno matutino</text></g>
-<rect x="540" y="330" width="520" height="60" fill="#9CCBEC" stroke="#2A3550" stroke-width="4"/><rect x="540" y="386" width="520" height="12" fill="rgba(0,0,0,.18)"/>
-<g id="facInside"><rect x="600" y="398" width="400" height="412" fill="url(#fins)"/><rect x="620" y="470" width="360" height="140" fill="#2350C8"/><rect x="620" y="440" width="360" height="34" fill="#EEF3F5"/><rect x="620" y="600" width="360" height="10" fill="#E7B21C"/></g>
-<rect x="592" y="398" width="8" height="412" fill="#2A3550"/><rect x="1000" y="398" width="8" height="412" fill="#2A3550"/>
-<g id="leafL" class="leaf"><rect x="600" y="398" width="200" height="412" fill="#3B8FC4" stroke="#2A3550" stroke-width="4"/><g transform="translate(600,405)"><rect x="10" y="0" width="7" height="400" fill="#2F7DB3"/><rect x="32" y="0" width="7" height="400" fill="#2F7DB3"/><rect x="54" y="0" width="7" height="400" fill="#2F7DB3"/><rect x="76" y="0" width="7" height="400" fill="#2F7DB3"/><rect x="98" y="0" width="7" height="400" fill="#2F7DB3"/><rect x="120" y="0" width="7" height="400" fill="#2F7DB3"/><rect x="142" y="0" width="7" height="400" fill="#2F7DB3"/><rect x="164" y="0" width="7" height="400" fill="#2F7DB3"/></g><rect x="640" y="520" width="110" height="130" fill="#F4F1E6" stroke="#2A3550" stroke-width="3"/><text x="695" y="560" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="15" fill="#2A3550">¡BIENVENIDOS!</text><text x="695" y="590" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="800" font-size="13" fill="#2A3550">Ciclo 2026-2027</text><circle cx="785" cy="610" r="7" fill="#F3B021"/></g>
-<g id="leafR" class="leaf"><rect x="800" y="398" width="200" height="412" fill="#3B8FC4" stroke="#2A3550" stroke-width="4"/><g transform="translate(800,405)"><rect x="10" y="0" width="7" height="400" fill="#2F7DB3"/><rect x="32" y="0" width="7" height="400" fill="#2F7DB3"/><rect x="54" y="0" width="7" height="400" fill="#2F7DB3"/><rect x="76" y="0" width="7" height="400" fill="#2F7DB3"/><rect x="98" y="0" width="7" height="400" fill="#2F7DB3"/><rect x="120" y="0" width="7" height="400" fill="#2F7DB3"/><rect x="142" y="0" width="7" height="400" fill="#2F7DB3"/><rect x="164" y="0" width="7" height="400" fill="#2F7DB3"/></g><rect x="840" y="440" width="120" height="80" fill="#fff" stroke="#D7263D" stroke-width="4"/><text x="900" y="475" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="15" fill="#D7263D">MISS VIAN</text><text x="900" y="500" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="800" font-size="13" fill="#2A3550">te está buscando…</text><circle cx="815" cy="610" r="7" fill="#F3B021"/></g>
-<rect x="0" y="810" width="1600" height="190" fill="#6F6A66"/><rect x="0" y="810" width="1600" height="16" fill="#E9E6E0"/>
-<g><path d="M760 1000 L1020 800" stroke="#F3C623" stroke-width="16"/><path d="M830 1000 L1090 800" stroke="#F3C623" stroke-width="16"/><path d="M900 1000 L1160 800" stroke="#F3C623" stroke-width="16"/><path d="M970 1000 L1230 800" stroke="#F3C623" stroke-width="16"/><path d="M1040 1000 L1300 800" stroke="#F3C623" stroke-width="16"/><path d="M1110 1000 L1370 800" stroke="#F3C623" stroke-width="16"/><path d="M1180 1000 L1440 800" stroke="#F3C623" stroke-width="16"/><path d="M1250 1000 L1510 800" stroke="#F3C623" stroke-width="16"/><path d="M1320 1000 L1580 800" stroke="#F3C623" stroke-width="16"/><path d="M1390 1000 L1650 800" stroke="#F3C623" stroke-width="16"/><path d="M1460 1000 L1720 800" stroke="#F3C623" stroke-width="16"/><path d="M1530 1000 L1790 800" stroke="#F3C623" stroke-width="16"/><path d="M1600 1000 L1860 800" stroke="#F3C623" stroke-width="16"/><path d="M1670 1000 L1930 800" stroke="#F3C623" stroke-width="16"/></g><rect x="600" y="826" width="400" height="40" fill="#F3C623"/>
-</svg><div class="facTitle">¡Escapa de <span>Miss Vian</span>!</div></div>
-  <div class="card setup">
-    <h1>¡Escapa de <span>Miss Vian</span>!</h1>
-    <p class="sub">Esc. Sec. Diurna No. 48 “Juan Ruiz de Alarcón y Mendoza” · Español 2°</p>
-    <div class="rules">
+  <div id="facade"><svg id="facSvg" viewBox="600 0 1150 1000" preserveAspectRatio="xMidYMax slice">
+<defs><linearGradient id="fsky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2F74D0"/><stop offset="1" stop-color="#CFE8FB"/></linearGradient>
+<linearGradient id="fins" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9FD2F7"/><stop offset=".45" stop-color="#E6F4FD"/><stop offset=".46" stop-color="#2350C8"/><stop offset=".7" stop-color="#2350C8"/><stop offset=".71" stop-color="#CFCBC4"/><stop offset="1" stop-color="#B9B4AC"/></linearGradient>
+<filter id="fsh" x="-10%" y="-10%" width="130%" height="130%"><feDropShadow dx="4" dy="6" stdDeviation="3" flood-color="#1B2340" flood-opacity=".35"/></filter></defs>
+<rect x="-400" y="-1400" width="3200" height="2400" fill="url(#fsky)"/>
+<g fill="#fff" opacity=".95"><circle cx="300" cy="80" r="60"/><circle cx="370" cy="95" r="46"/><circle cx="240" cy="100" r="40"/><circle cx="1250" cy="-120" r="70"/><circle cx="1330" cy="-100" r="52"/><circle cx="1180" cy="-95" r="44"/><circle cx="1900" cy="60" r="58"/><circle cx="1960" cy="75" r="42"/><circle cx="900" cy="-420" r="60"/><circle cx="960" cy="-405" r="44"/></g>
+<!-- tree (left, photo 2) -->
+<g><rect x="40" y="200" width="46" height="620" fill="#5B4030"/><circle cx="60" cy="210" r="150" fill="#2E6B3C"/><circle cx="170" cy="150" r="100" fill="#3F8A4E"/><circle cx="-20" cy="120" r="110" fill="#3F8A4E"/></g>
+<!-- tree (right, photo 1) -->
+<g><rect x="2230" y="160" width="40" height="660" fill="#5B4030"/><circle cx="2250" cy="160" r="150" fill="#2E6B3C"/><circle cx="2140" cy="120" r="90" fill="#4FA85E"/><circle cx="2360" cy="110" r="100" fill="#3F8A4E"/></g>
+<!-- fence + metal letters along the wall (photo 1) -->
+<g><path d="M780 120 L816 420 M816 120 L780 420" stroke="#A3AEB6" stroke-width="2"/><path d="M816 120 L852 420 M852 120 L816 420" stroke="#A3AEB6" stroke-width="2"/><path d="M852 120 L888 420 M888 120 L852 420" stroke="#A3AEB6" stroke-width="2"/><path d="M888 120 L924 420 M924 120 L888 420" stroke="#A3AEB6" stroke-width="2"/><path d="M924 120 L960 420 M960 120 L924 420" stroke="#A3AEB6" stroke-width="2"/><path d="M960 120 L996 420 M996 120 L960 420" stroke="#A3AEB6" stroke-width="2"/><path d="M996 120 L1032 420 M1032 120 L996 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1032 120 L1068 420 M1068 120 L1032 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1068 120 L1104 420 M1104 120 L1068 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1104 120 L1140 420 M1140 120 L1104 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1140 120 L1176 420 M1176 120 L1140 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1176 120 L1212 420 M1212 120 L1176 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1212 120 L1248 420 M1248 120 L1212 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1248 120 L1284 420 M1284 120 L1248 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1284 120 L1320 420 M1320 120 L1284 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1320 120 L1356 420 M1356 120 L1320 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1356 120 L1392 420 M1392 120 L1356 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1392 120 L1428 420 M1428 120 L1392 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1428 120 L1464 420 M1464 120 L1428 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1464 120 L1500 420 M1500 120 L1464 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1500 120 L1536 420 M1536 120 L1500 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1536 120 L1572 420 M1572 120 L1536 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1572 120 L1608 420 M1608 120 L1572 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1608 120 L1644 420 M1644 120 L1608 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1644 120 L1680 420 M1680 120 L1644 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1680 120 L1716 420 M1716 120 L1680 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1716 120 L1752 420 M1752 120 L1716 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1752 120 L1788 420 M1788 120 L1752 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1788 120 L1824 420 M1824 120 L1788 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1824 120 L1860 420 M1860 120 L1824 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1860 120 L1896 420 M1896 120 L1860 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1896 120 L1932 420 M1932 120 L1896 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1932 120 L1968 420 M1968 120 L1932 420" stroke="#A3AEB6" stroke-width="2"/><path d="M1968 120 L2004 420 M2004 120 L1968 420" stroke="#A3AEB6" stroke-width="2"/><path d="M2004 120 L2040 420 M2040 120 L2004 420" stroke="#A3AEB6" stroke-width="2"/><path d="M2040 120 L2076 420 M2076 120 L2040 420" stroke="#A3AEB6" stroke-width="2"/><path d="M2076 120 L2112 420 M2112 120 L2076 420" stroke="#A3AEB6" stroke-width="2"/><path d="M2112 120 L2148 420 M2148 120 L2112 420" stroke="#A3AEB6" stroke-width="2"/><path d="M2148 120 L2184 420 M2184 120 L2148 420" stroke="#A3AEB6" stroke-width="2"/><path d="M2184 120 L2220 420 M2220 120 L2184 420" stroke="#A3AEB6" stroke-width="2"/><path d="M2220 120 L2256 420 M2256 120 L2220 420" stroke="#A3AEB6" stroke-width="2"/><path d="M2256 120 L2292 420 M2292 120 L2256 420" stroke="#A3AEB6" stroke-width="2"/><path d="M2292 120 L2328 420 M2328 120 L2292 420" stroke="#A3AEB6" stroke-width="2"/><path d="M2328 120 L2364 420 M2364 120 L2328 420" stroke="#A3AEB6" stroke-width="2"/><path d="M2364 120 L2400 420 M2400 120 L2364 420" stroke="#A3AEB6" stroke-width="2"/><path d="M780 120 H2400 M780 420 H2400" stroke="#7D8A93" stroke-width="6"/></g>
+<g font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="64" fill="#EEF2F4" stroke="#66737D" stroke-width="2" text-anchor="middle" transform="skewY(-3)"><text x="1520" y="300">S</text><text x="1582" y="300">E</text><text x="1644" y="300">C</text><text x="1706" y="300">U</text><text x="1768" y="300">N</text><text x="1830" y="300">D</text><text x="1892" y="300">A</text><text x="1954" y="300">R</text><text x="2016" y="300">I</text><text x="2078" y="300">A</text><text x="2140" y="300"> </text><text x="2202" y="300">4</text><text x="2264" y="300">8</text></g>
+<!-- 2-floor building on the left (photo 2) -->
+<rect x="100" y="60" width="700" height="760" fill="#8EC3EA"/><rect x="100" y="60" width="700" height="16" fill="#7AAED6"/>
+<rect x="150" y="110" width="120" height="130" fill="#C88A3A" stroke="#6B4A22" stroke-width="5"/><rect x="158" y="118" width="104" height="114" fill="#E9C26A"/><rect x="160.0" y="118" width="4" height="114" fill="#6B4A22"/><rect x="180.0" y="118" width="4" height="114" fill="#6B4A22"/><rect x="200.0" y="118" width="4" height="114" fill="#6B4A22"/><rect x="220.0" y="118" width="4" height="114" fill="#6B4A22"/><rect x="240.0" y="118" width="4" height="114" fill="#6B4A22"/><rect x="260.0" y="118" width="4" height="114" fill="#6B4A22"/><rect x="158" y="173.0" width="104" height="4" fill="#6B4A22"/><rect x="610" y="110" width="120" height="130" fill="#C88A3A" stroke="#6B4A22" stroke-width="5"/><rect x="618" y="118" width="104" height="114" fill="#E9C26A"/><rect x="620.0" y="118" width="4" height="114" fill="#6B4A22"/><rect x="640.0" y="118" width="4" height="114" fill="#6B4A22"/><rect x="660.0" y="118" width="4" height="114" fill="#6B4A22"/><rect x="680.0" y="118" width="4" height="114" fill="#6B4A22"/><rect x="700.0" y="118" width="4" height="114" fill="#6B4A22"/><rect x="720.0" y="118" width="4" height="114" fill="#6B4A22"/><rect x="618" y="173.0" width="104" height="4" fill="#6B4A22"/><rect x="170" y="470" width="110" height="100" fill="#C88A3A" stroke="#6B4A22" stroke-width="5"/><rect x="178" y="478" width="94" height="84" fill="#E9C26A"/><rect x="180.0" y="478" width="4" height="84" fill="#6B4A22"/><rect x="198.0" y="478" width="4" height="84" fill="#6B4A22"/><rect x="216.0" y="478" width="4" height="84" fill="#6B4A22"/><rect x="234.0" y="478" width="4" height="84" fill="#6B4A22"/><rect x="252.0" y="478" width="4" height="84" fill="#6B4A22"/><rect x="270.0" y="478" width="4" height="84" fill="#6B4A22"/><rect x="178" y="518.0" width="94" height="4" fill="#6B4A22"/>
+<rect x="100" y="600" width="700" height="12" fill="#2A3550"/><rect x="100" y="600" width="12" height="220" fill="#2A3550"/><rect x="330" y="600" width="12" height="220" fill="#2A3550"/><rect x="560" y="600" width="12" height="220" fill="#2A3550"/>
+<text x="340" y="740" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="58" fill="#1E2540">NO GRAFITEAR</text>
+<rect x="580" y="640" width="180" height="70" fill="#2A2A30" stroke="#15151A" stroke-width="4"/>
+<g id="sgTitle" filter="url(#fsh)"><rect x="300" y="170" width="280" height="96" fill="#F7F5EE" stroke="#2A3550" stroke-width="5"/><text x="330" y="212" font-family="Arial Black, Arial, sans-serif" font-size="30" fill="#2A3550">SEP</text><text x="400" y="206" font-family="Nunito, sans-serif" font-weight="900" font-size="20" fill="#2A3550">ESCUELA SECUNDARIA</text><text x="400" y="232" font-family="Nunito, sans-serif" font-weight="900" font-size="20" fill="#2A3550">DIURNA No. 48</text><text x="440" y="256" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="800" font-size="14" fill="#2A3550">“Juan Ruiz de Alarcón y Mendoza”</text></g>
+<!-- wall between the building and the gate + the long wall to the right -->
+<rect x="800" y="420" width="1600" height="400" fill="#86BDE6"/><rect x="800" y="420" width="1600" height="14" fill="#2A3550"/><rect x="800" y="610" width="1600" height="12" fill="#2A3550"/>
+<g fill="#2A3550"><rect x="800" y="420" width="14" height="400"/><rect x="1470" y="420" width="14" height="400"/><rect x="1780" y="420" width="14" height="400"/><rect x="2090" y="420" width="14" height="400"/></g>
+<!-- canopy over the gate -->
+<rect x="930" y="330" width="540" height="100" fill="#8EC3EA" stroke="#2A3550" stroke-width="5"/><rect x="930" y="424" width="540" height="18" fill="rgba(0,0,0,.2)"/>
+<!-- behind the gate: the patio and the blue building -->
+<g id="facInside"><rect x="1000" y="442" width="400" height="378" fill="url(#fins)"/></g>
+<rect x="990" y="442" width="10" height="378" fill="#2A3550"/><rect x="1400" y="442" width="10" height="378" fill="#2A3550"/>
+<g id="leafL" class="leaf"><rect x="1000" y="442" width="200" height="378" fill="#3B8FC4" stroke="#2A3550" stroke-width="4"/><g transform="translate(1000,440)"><rect x="10" y="0" width="7" height="390" fill="#2F7DB3"/><rect x="32" y="0" width="7" height="390" fill="#2F7DB3"/><rect x="54" y="0" width="7" height="390" fill="#2F7DB3"/><rect x="76" y="0" width="7" height="390" fill="#2F7DB3"/><rect x="98" y="0" width="7" height="390" fill="#2F7DB3"/><rect x="120" y="0" width="7" height="390" fill="#2F7DB3"/><rect x="142" y="0" width="7" height="390" fill="#2F7DB3"/><rect x="164" y="0" width="7" height="390" fill="#2F7DB3"/><rect x="186" y="0" width="7" height="390" fill="#2F7DB3"/></g><circle cx="1188" cy="640" r="7" fill="#F3B021"/></g>
+<g id="leafR" class="leaf"><rect x="1200" y="442" width="200" height="378" fill="#3B8FC4" stroke="#2A3550" stroke-width="4"/><g transform="translate(1200,440)"><rect x="10" y="0" width="7" height="390" fill="#2F7DB3"/><rect x="32" y="0" width="7" height="390" fill="#2F7DB3"/><rect x="54" y="0" width="7" height="390" fill="#2F7DB3"/><rect x="76" y="0" width="7" height="390" fill="#2F7DB3"/><rect x="98" y="0" width="7" height="390" fill="#2F7DB3"/><rect x="120" y="0" width="7" height="390" fill="#2F7DB3"/><rect x="142" y="0" width="7" height="390" fill="#2F7DB3"/><rect x="164" y="0" width="7" height="390" fill="#2F7DB3"/><rect x="186" y="0" width="7" height="390" fill="#2F7DB3"/></g><circle cx="1212" cy="640" r="7" fill="#F3B021"/></g>
+<!-- sidewalk + pavers + yellow lines -->
+<rect x="-400" y="820" width="3200" height="30" fill="#E6E3DD"/><rect x="-400" y="850" width="3200" height="400" fill="#6F6A66"/><path d="M0 870 H2400" stroke="rgba(0,0,0,.18)" stroke-width="2"/><path d="M0 896 H2400" stroke="rgba(0,0,0,.18)" stroke-width="2"/><path d="M0 922 H2400" stroke="rgba(0,0,0,.18)" stroke-width="2"/><path d="M0 948 H2400" stroke="rgba(0,0,0,.18)" stroke-width="2"/><path d="M0 974 H2400" stroke="rgba(0,0,0,.18)" stroke-width="2"/><g><path d="M1000 1000 L1220 850" stroke="#F3C623" stroke-width="15"/><path d="M1062 1000 L1282 850" stroke="#F3C623" stroke-width="15"/><path d="M1124 1000 L1344 850" stroke="#F3C623" stroke-width="15"/><path d="M1186 1000 L1406 850" stroke="#F3C623" stroke-width="15"/><path d="M1248 1000 L1468 850" stroke="#F3C623" stroke-width="15"/><path d="M1310 1000 L1530 850" stroke="#F3C623" stroke-width="15"/><path d="M1372 1000 L1592 850" stroke="#F3C623" stroke-width="15"/><path d="M1434 1000 L1654 850" stroke="#F3C623" stroke-width="15"/><path d="M1496 1000 L1716 850" stroke="#F3C623" stroke-width="15"/><path d="M1558 1000 L1778 850" stroke="#F3C623" stroke-width="15"/><path d="M1620 1000 L1840 850" stroke="#F3C623" stroke-width="15"/><path d="M1682 1000 L1902 850" stroke="#F3C623" stroke-width="15"/><path d="M1744 1000 L1964 850" stroke="#F3C623" stroke-width="15"/><path d="M1806 1000 L2026 850" stroke="#F3C623" stroke-width="15"/><path d="M1868 1000 L2088 850" stroke="#F3C623" stroke-width="15"/><path d="M1930 1000 L2150 850" stroke="#F3C623" stroke-width="15"/><path d="M1992 1000 L2212 850" stroke="#F3C623" stroke-width="15"/><path d="M2054 1000 L2274 850" stroke="#F3C623" stroke-width="15"/><path d="M2116 1000 L2336 850" stroke="#F3C623" stroke-width="15"/><path d="M2178 1000 L2398 850" stroke="#F3C623" stroke-width="15"/><path d="M2240 1000 L2460 850" stroke="#F3C623" stroke-width="15"/><path d="M2302 1000 L2522 850" stroke="#F3C623" stroke-width="15"/><path d="M2364 1000 L2584 850" stroke="#F3C623" stroke-width="15"/><path d="M2426 1000 L2646 850" stroke="#F3C623" stroke-width="15"/><path d="M2488 1000 L2708 850" stroke="#F3C623" stroke-width="15"/></g><rect x="990" y="850" width="420" height="36" fill="#F3C623"/>
+<!-- SIGNS (tap to open) -->
+<g class="sign" data-p="teams" tabindex="0" role="button" aria-label="Equipos" filter="url(#fsh)">
+  <rect class="glow" x="818" y="462" width="168" height="214" rx="10"/>
+  <rect x="828" y="472" width="148" height="194" fill="#FFFDF4" stroke="#2A3550" stroke-width="4"/><rect x="828" y="472" width="148" height="38" fill="#E0413B"/>
+  <text x="902" y="499" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="21" fill="#fff">EQUIPOS</text>
+  <text id="sgTeamsN" x="902" y="570" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="60" fill="#2A3550">4</text>
+  <text id="sgTeamsE" x="902" y="610" text-anchor="middle" font-size="22">🦊🐸🐼🐯</text>
+  <text x="902" y="646" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="14" fill="#E0413B">👆 toca para cambiar</text></g>
+<g class="sign" data-p="rules" tabindex="0" role="button" aria-label="Cómo se juega" filter="url(#fsh)">
+  <rect class="glow" x="1236" y="186" width="208" height="140" rx="10"/>
+  <rect x="1246" y="196" width="188" height="120" fill="#fff" stroke="#D7263D" stroke-width="6"/>
+  <text x="1340" y="232" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="21" fill="#D7263D">¿CÓMO SE</text><text x="1340" y="258" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="21" fill="#D7263D">JUEGA?</text>
+  <text x="1340" y="292" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="800" font-size="14" fill="#2A3550">reglas · casillas · aura</text></g>
+<g class="sign" data-p="topic" tabindex="0" role="button" aria-label="Tema de la sesión" filter="url(#fsh)">
+  <rect class="glow" x="1478" y="444" width="244" height="164" rx="10"/>
+  <rect x="1488" y="454" width="224" height="144" fill="#F4F1E6" stroke="#2A3550" stroke-width="4"/><rect x="1488" y="454" width="224" height="34" fill="#2F8F55"/>
+  <text x="1600" y="478" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="18" fill="#fff">📚 TEMA DE HOY</text>
+  <text id="sgTopicG" x="1600" y="512" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="15" fill="#2F8F55">2° · Semanas 4–6</text>
+  <text id="sgTopic1" x="1600" y="540" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="19" fill="#2A3550">Organizo mis ideas</text>
+  <text id="sgTopic2" x="1600" y="564" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="19" fill="#2A3550"></text>
+  <text id="sgTopicN" x="1600" y="588" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="800" font-size="13" fill="#6B6280">43 preguntas de los anexos</text></g>
+<g class="sign" data-p="time" tabindex="0" role="button" aria-label="Tiempo" filter="url(#fsh)">
+  <rect class="glow" x="1512" y="640" width="176" height="104" rx="10"/>
+  <rect x="1522" y="650" width="156" height="84" fill="#FFF1C9" stroke="#2A3550" stroke-width="4"/>
+  <text x="1600" y="680" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="16" fill="#2A3550">⏱ TIEMPO</text>
+  <text id="sgTime" x="1600" y="720" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="30" fill="#E4672E">30 s</text></g>
+<g class="sign" data-p="resume" id="sgResume" tabindex="0" role="button" aria-label="Continuar partida" filter="url(#fsh)">
+  <rect class="glow" x="1026" y="506" width="148" height="116" rx="8"/>
+  <rect x="1036" y="516" width="128" height="96" fill="#F4F1E6" stroke="#2A3550" stroke-width="3"/>
+  <text x="1100" y="548" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="15" fill="#2A3550">↩ CONTINUAR</text><text x="1100" y="570" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="15" fill="#2A3550">PARTIDA</text><text x="1100" y="596" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="800" font-size="12" fill="#6B6280">guardada</text></g>
+<g class="sign gate" data-p="go" tabindex="0" role="button" aria-label="Entrar a la escuela">
+  <rect x="1000" y="442" width="400" height="378" fill="transparent"/>
+  <g class="goTag" filter="url(#fsh)"><rect x="1250" y="500" width="130" height="100" rx="8" fill="#fff" stroke="#8A3FB5" stroke-width="4"/><text x="1315" y="532" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="15" fill="#8A3FB5">MISS VIAN</text><text x="1315" y="554" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="800" font-size="12" fill="#2A3550">te está</text><text x="1315" y="570" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="800" font-size="12" fill="#2A3550">buscando…</text><text x="1315" y="592" text-anchor="middle" font-size="16">👀</text></g>
+  <g class="tapGate"><rect x="1060" y="700" width="280" height="54" rx="27" fill="#2FAE5A" stroke="#2A3550" stroke-width="4"/><text x="1200" y="735" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="22" fill="#fff">👆 ¡TOCA PARA ENTRAR!</text></g></g>
+</svg><div class="facTitle">¡Escapa de <span>Miss Vian</span>!</div><canvas id="facVian" width="360" height="420" aria-hidden="true"></canvas><div class="facBubble">¡Nadie sale de mi clase! 😤</div><p class="facHint">Toca los carteles para configurar · toca el portón para entrar</p></div>
+  <div id="signBox" hidden><div class="signcard" id="signCard">
+    <section data-p="teams"><h2>🦊 Equipos</h2><div class="seg" id="nTeams"></div><div class="teams" id="teamRows"></div></section>
+    <section data-p="time"><h2>⏱ Tiempo para contestar</h2><div class="seg" id="timeSeg"></div></section>
+    <section data-p="topic"><h2>📚 Tema de la sesión</h2><p class="sub">Esc. Sec. Diurna No. 48 · Español</p><select id="setPick" class="setpick" aria-label="Tema de la sesión"></select><label class="mixq"><input type="checkbox" id="mixQ"> Agregar también preguntas generales del tema (además de los anexos)</label><div class="row"><span id="qInfo" class="qnum"></span><button class="btn small" id="editQ">✏️ Ver / cambiar preguntas</button></div></section>
+    <section data-p="rules"><h2>¿Cómo se juega?</h2><div class="rules">
       <b>Cómo se juega:</b> cada equipo contesta una pregunta. <b>Correcta:</b> avanza 2 casillas hacia la salida.
       <b>Incorrecta:</b> Miss Vian da un paso. Si alcanza a un equipo, <b>¡lo regresa al salón!</b><br>
       Corran por la escuela: salón del 3er piso → escaleras → 2° piso → escaleras → planta baja → patio → cooperativa → portón.<br>🔔 Timbre: los demás avanzan 1 · 📚 Biblioteca y 🍪 Cooperativa: salto extra · 🚪 Dirección: pierden su siguiente turno · 🏁 Gana quien llegue primero al portón. ✨ Cada respuesta correcta da +1000 de aura; si Miss Vian los atrapa, −500.
     </div>
-    <div class="fld"><b>Equipos</b><div class="seg" id="nTeams"></div></div>
-    <div class="teams" id="teamRows"></div>
-    <div class="fld"><b>Tiempo para contestar</b><div class="seg" id="timeSeg"></div></div>
-    <div class="fld"><b>Tema de la sesión (de las planeaciones)</b><select id="setPick" class="setpick" aria-label="Tema de la sesión"></select><label class="mixq"><input type="checkbox" id="mixQ"> Agregar también preguntas generales del tema (además de los anexos)</label><div class="row"><span id="qInfo" class="qnum"></span><button class="btn small" id="editQ">✏️ Ver / cambiar preguntas</button></div></div>
-    <div class="row" style="justify-content:flex-end;margin-top:8px">
-      <button class="btn" id="resumeBtn" hidden>↩ Continuar partida guardada</button>
-      <button class="btn go" id="startBtn">¡A jugar! ▶</button>
-    </div>
-  </div>
+    </section>
+    <section data-p="resume"><h2>↩ Partida guardada</h2><p id="resumeInfo" style="font-weight:800"></p><button class="btn go" id="resumeBtn">↩ Continuar donde se quedaron</button></section>
+    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn" id="signOk">Listo ✓</button></div>
+  </div></div>
+  <button class="btn go" id="startBtn" hidden>¡A jugar! ▶</button>
 </div>
 
 <div class="overlay" id="qBox" hidden><div class="card" id="qCard"></div></div>
@@ -599,6 +677,8 @@ function frame(now){
   let fy = vianVis.moving ? vianVis.y : mv>=0 ? vis[mv].y : (vis[S.turn] ? vis[S.turn].y : UP);
   camY.y += ((Math.max(0, Math.min(WH - VH, fy - 470))) - camY.y) * .06;
   const sx = shake ? (Math.random()-.5)*shake : 0, sy = shake ? (Math.random()-.5)*shake : 0; shake *= .9; if (shake < .5) shake = 0;
+  { const moving = vianVis.moving || vis.some(v=>v && v.moving); const off = !$("#qBox").hidden || busy || moving;
+    if (off !== frame._off){ frame._off = off; document.body.classList.toggle("hudoff", off); } }
   const c = cx; c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,cv.width,cv.height);
   c.setTransform(zoom,0,0,zoom, (-cam.x+sx)*zoom, (-camY.y+sy)*zoom);
   c.setTransform(zoom,0,0,zoom, (-cam.x*PAR+sx)*zoom, (-camY.y*0.85+sy)*zoom); c.drawImage(bgCv, 0, 0);
@@ -651,9 +731,9 @@ let tipT = 0;
 function showTip(x, y, text){ const t = $("#tip"); t.textContent = text; t.hidden = false; t.style.left = x + "px"; t.style.top = y + "px"; clearTimeout(tipT); tipT = setTimeout(()=>t.hidden = true, 2400); }
 function render(){
   initBoard();
-  $("#route").innerHTML = `<div class="rline"></div>` + SQ.map((p,i)=>`<i class="rdot${SPECIAL[i]?" sp":""}${i===GOAL?" goal":""}" style="left:${i/GOAL*100}%">${SPECIAL[i]?SPECIAL[i].ico:""}</i>`).join("")
+  $("#route").innerHTML = `<div class="route-in"><div class="rline"></div>` + SQ.map((p,i)=>`<i class="rdot${SPECIAL[i]?" sp":""}${i===GOAL?" goal":""}" style="left:${i/GOAL*100}%">${SPECIAL[i]?SPECIAL[i].ico:""}</i>`).join("")
     + S.teams.map((t,i)=>`<b class="rtok${i===S.turn&&!S.over?" on":""}" style="left:${Math.min(t.pos,GOAL)/GOAL*100}%;--tc:${t.color};--k:${S.teams.filter((x,j)=>j<i && x.pos===t.pos).length}">${t.emoji}</b>`).join("")
-    + `<b class="rtok vian" style="left:${Math.max(0,S.vian)/GOAL*100}%;opacity:${S.vian<0?.5:1}">👩🏻‍🏫</b>`;
+    + `<b class="rtok vian" style="left:${Math.max(0,S.vian)/GOAL*100}%;opacity:${S.vian<0?.5:1}">👩🏻‍🏫</b></div>`;
   $("#chips").innerHTML = S.teams.map((t,i)=>`<div class="chip${i===S.turn&&!S.over?" on":""}" style="--tc:${t.color}"><span class="av">${t.emoji}</span>${esc(t.name)}<span class="pos">${t.pos>=GOAL?"🏁":"casilla "+t.pos} · ✨${t.aura||0}</span></div>`).join("");
   const t = curTeam(), left = S.order.length - S.qi;
   $("#turn").style.setProperty("--tc", t.color);
@@ -769,17 +849,41 @@ function renderSetup(){
     + (customQ ? `<option value="custom"${setId==="custom"?" selected":""}>✏️ Mis preguntas</option>` : "");
   const qs = parseQ(qText), as = activeSet(); $("#qInfo").textContent = `${qs.length} preguntas de opción múltiple · ${as ? (mixQ ? "anexos + generales" : "de los anexos") + " · " + as.title : "tus preguntas"}`; $("#mixQ").checked = mixQ; $("#mixQ").disabled = !as;
   const sub = $("#setup .sub"); if (sub) sub.textContent = `Esc. Sec. Diurna No. 48 “Juan Ruiz de Alarcón y Mendoza” · Español ${as ? as.grade : ""}`;
-  $("#resumeBtn").hidden = !store.get("sec48.save2");
+  renderSigns();
 }
 $("#setPick").onchange = e=>{ setId = e.target.value; store.set("sec48.set", setId); qText = setId==="custom" ? customQ : setText(activeSet()); renderSetup(); };
 $("#mixQ").onchange = e=>{ mixQ = e.target.checked; store.set("sec48.mix", mixQ); if (activeSet()) qText = setText(activeSet()); renderSetup(); };
-function openSetup(){ $("#results").hidden = true; $("#menu").hidden = true; renderSetup(); $("#setup").hidden = false; }
-function enterSchool(then){ const st = $("#setup"); if (st.classList.contains("opening")) return; ctx(); SND.bell(); st.classList.add("opening");
+function fitFacade(){ const svg = $("#facSvg"); if (!svg) return; const ar = innerWidth/Math.max(1,innerHeight);
+  let w = Math.min(2400, Math.max(1040, ar*1000)), h = w/ar; if (h < 1000){ h = 1000; w = Math.min(2400, h*ar); }
+  const cxv = w >= 1500 ? 1100 : 1190, x0 = Math.max(0, Math.min(2400 - w, cxv - w/2)); svg.setAttribute("viewBox", `${x0} ${1000-h} ${w} ${h}`); }
+addEventListener("resize", fitFacade);
+function openSign(p, el){ if (p==="go"){ $("#startBtn").click(); return; }
+  const card = $("#signCard"); card.dataset.p = p; $("#signBox").hidden = false;
+  if (el){ const r = el.getBoundingClientRect(); card.style.setProperty("--fx", (r.left + r.width/2 - innerWidth/2) + "px"); card.style.setProperty("--fy", (r.top + r.height/2 - innerHeight/2) + "px"); }
+  card.style.animation = "none"; void card.offsetWidth; card.style.animation = ""; SND.hop(); }
+document.querySelectorAll("#facade .sign").forEach(g=>{ g.addEventListener("click", ()=>{ ctx(); openSign(g.dataset.p, g); }); g.addEventListener("keydown", e=>{ if (e.key==="Enter"||e.key===" "){ e.preventDefault(); openSign(g.dataset.p, g); } }); });
+$("#signOk").onclick = ()=>{ $("#signBox").hidden = true; };
+$("#signBox").onclick = e=>{ if (e.target.id==="signBox") $("#signBox").hidden = true; };
+function wrap2(t, n){ if (t.length <= n) return [t, ""]; const w = t.split(" "); let a = ""; while (w.length && (a + " " + w[0]).trim().length <= n) a = (a + " " + w.shift()).trim(); let b = w.join(" "); if (b.length > n+2) b = b.slice(0, n) + "…"; return [a, b]; }
+function renderSigns(){ const as = activeSet(), qs = parseQ(qText);
+  $("#sgTeamsN").textContent = cfg.n; $("#sgTeamsE").textContent = TEAM_EMOJI.slice(0, cfg.n).join("");
+  $("#sgTime").textContent = cfg.time ? (cfg.time>=60 ? "1 min" : cfg.time+" s") : "Libre";
+  const t = as ? as.title.replace(/:.*$/,"").replace(/\s*\(.*\)/,"") : "Mis preguntas", [l1, l2] = wrap2(t, 20);
+  $("#sgTopicG").textContent = as ? `${as.grade} · ${as.weeks}` : "Personalizadas"; $("#sgTopic1").textContent = l1; $("#sgTopic2").textContent = l2;
+  $("#sgTopicN").textContent = `${qs.length} preguntas${as ? (mixQ ? " · anexos + generales" : " de los anexos") : ""}`;
+  const sv = store.get("sec48.save2"); $("#sgResume").style.display = sv ? "" : "none";
+  if (sv) $("#resumeInfo").textContent = sv.teams.map(t=>`${t.emoji} ${t.name}: casilla ${t.pos}`).join(" · "); }
+function drawFacVian(){ const c2 = $("#facVian"); if (!c2 || c2._done) return; c2._done = true; const g = c2.getContext("2d"); g.save(); g.translate(180, 410); g.scale(1.9, 1.9); drawVian(g, 0, 0, 0, false); g.restore(); }
+function openSetup(){ drawFacVian(); $("#results").hidden = true; $("#menu").hidden = true; $("#signBox").hidden = true; renderSetup(); $("#setup").hidden = false; fitFacade(); }
+function enterSchool(then){ const st = $("#setup"); if (st.classList.contains("opening")) return; ctx(); SND.bell(); $("#signBox").hidden = true;
+  const svg = $("#facSvg"), m = svg.getScreenCTM(); if (m){ const r = svg.getBoundingClientRect(); const gx = 1200*m.a + m.e - r.left, gy = 630*m.d + m.f - r.top; svg.style.transformOrigin = `${gx}px ${gy}px`; }
+  st.classList.add("opening");
   setTimeout(()=>{ tone(180,0,.5,"sawtooth",.05,90); }, 150);
   setTimeout(()=>{ then(); st.classList.remove("opening"); }, 2150); }
 $("#startBtn").onclick = ()=>enterSchool(()=>{ newGame(); MUSIC.start(); });
 $("#resumeBtn").onclick = ()=>{ const s = store.get("sec48.save2"); if (!s) return; enterSchool(()=>{ S = s; MUSIC.start(); $("#setup").hidden = true; $("#game").hidden = false; render(); vianSay("¿Ya regresaron?", 1600); }); };
 $("#again").onclick = openSetup;
+$("#hudBtn").onclick = ()=>{ document.body.classList.toggle("hudmin"); SND.hop(); };
 $("#menuBtn").onclick = ()=>{ $("#menu").hidden = false; };
 $("#mClose").onclick = ()=>{ $("#menu").hidden = true; };
 $("#mEnd").onclick = ()=>{ $("#menu").hidden = true; if (S && !S.over) finish(); };
