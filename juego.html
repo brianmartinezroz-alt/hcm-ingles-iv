@@ -1951,8 +1951,14 @@ function startTanks(base, order){
   tk.sprites = game.teams.map((tm,i)=>makeSprite(tm.color, tm.skin, i));
   game.shotsLeft = 1;
   game.tanks = base.teams.map((_,i)=>makeTank(i));
-  game.phase = "deploy"; game.deployI = 0; game.zonesTaken = [];
-  setTimeout(openDeploy, 900);
+  // no deployment roulette: every tank parachutes into its own random zone (zone perks still apply)
+  game.zonesTaken = [];
+  const nT = game.tanks.length, zs = deployZones(), off = Math.random() < .5 ? 0 : 1;
+  const spots = shuffle(Array.from({length:nT},(_,i)=>Math.min(7, Math.floor(i*8/nT) + (nT<=4 ? off : 0))));   // spread out across the map
+  game.tanks.forEach((t,ti)=>{ const z = zs[spots[ti]]; game.zonesTaken.push(z.i);
+    t.alive=true; t.x = zoneX(z); t.y = rnd(-220,-40); t.vx=0; t.vy=0; t.chute=true; t.hp=100; t.onGround=false; t.angle = t.x<TK.W/2 ? 45 : 135; t.perk = z.perk || null;
+    if (z.perk==="supply"){ const k = ITEM_KEYS[Math.floor(Math.random()*ITEM_KEYS.length)]; game.inv[ti][k]=(game.inv[ti][k]||0)+1; } });
+  game.phase = "question";
   newWind();
   for (let i=0;i<Math.round(TK.W/800);i++) dropCrate(true);
 }
