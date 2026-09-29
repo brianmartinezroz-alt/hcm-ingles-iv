@@ -406,11 +406,18 @@ body.qopen .tkscreen .tktop{display:none!important}
 .tkmenu{position:absolute;right:0;top:44px;display:flex;flex-direction:column;gap:6px;background:var(--paper);border:var(--stroke);border-radius:14px;padding:8px;box-shadow:0 4px 0 var(--ink);min-width:160px;z-index:6}
 .tkmenu .btn{justify-content:flex-start;width:100%}
 .wsel{display:inline-flex;align-items:center;gap:6px;font-weight:900;background:var(--cream);border:2.5px solid var(--ink);border-radius:999px;padding:4px 10px;white-space:nowrap}
-.wsel .x{border:0;background:var(--ink);color:#fff;border-radius:999px;width:22px;height:22px;font-size:12px}
+.wsel{cursor:pointer}
+.wsel .x{display:inline-grid;place-items:center;border:0;background:var(--ink);color:#fff;border-radius:999px;width:22px;height:22px;font-size:12px}
 .wsel .shots{color:var(--bad)}
 .pubtn{background:var(--cream);font-weight:900}
 .pubtn.has{background:var(--sun);animation:wiggle 1.4s ease-in-out infinite}
-.pubtn b{background:var(--ink);color:#fff;border-radius:999px;padding:0 7px;font-size:13px}
+.pubtn b,.wbtn b{background:var(--ink);color:#fff;border-radius:999px;padding:0 7px;font-size:13px}
+.wbtn{background:#FFD9DF;font-weight:900}
+.pubtn.used{opacity:.55;animation:none;background:var(--cream)}
+.pucard[disabled]{opacity:.45;cursor:not-allowed;transform:none}
+.pucard.main{border-color:var(--bad);box-shadow:0 5px 0 var(--bad)}
+.pucard[aria-pressed="true"]{background:var(--sun)}
+.pusub{grid-column:1/-1;margin:0;font-weight:900;color:var(--ink)}
 @keyframes wiggle{0%,80%,100%{transform:rotate(0)}85%{transform:rotate(-4deg)}90%{transform:rotate(4deg)}95%{transform:rotate(-2deg)}}
 .pugrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
 .pucard{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;background:var(--paper);border:var(--stroke);border-radius:18px;padding:12px 10px;box-shadow:0 5px 0 var(--ink);position:relative;cursor:pointer}
@@ -601,7 +608,8 @@ body.qopen .tkscreen .tktop{display:none!important}
         <div class="tkgroup"><span class="label">Aim</span><b class="big" id="tkAngle">45°</b><span class="hint">Touch the map</span></div>
         <div class="tkgroup"><span class="label">Power · slide your finger</span><div class="powbar" id="tkPowTrack" role="slider" aria-label="Power" aria-valuemin="10" aria-valuemax="100" tabindex="0"><i id="tkPowerBar"></i><b id="tkPower">60%</b><span class="knob" id="tkKnob"></span></div></div>
         <div class="tkgroup"><span class="label">Wind</span><b class="big" id="tkWindDock">calm</b></div>
-        <div class="tkgroup"><span class="label">Weapon</span><div class="row" style="flex-wrap:nowrap"><span class="wsel" id="tkWsel">💣 Shell</span><button class="btn pubtn" id="tkPU">🎁 Power-ups <b id="tkPUn">0</b></button></div></div>
+        <div class="tkgroup"><span class="label">Weapon</span><div class="row" style="flex-wrap:nowrap"><button class="wsel" id="tkWsel">💣 Shell</button><button class="btn wbtn" id="tkWB">🚀 Weapons <b id="tkWn">0</b></button></div></div>
+        <div class="tkgroup"><span class="label">Power-up · 1 per turn</span><div class="row" style="flex-wrap:nowrap"><button class="btn pubtn" id="tkPU">🎁 Power-ups <b id="tkPUn">0</b></button></div></div>
         <div hidden id="tkWgroup"><div id="tkWeapons"></div></div>
       </div>
       <button class="firebtn" id="tkFire" hidden>FIRE!</button>
@@ -778,7 +786,7 @@ body.qopen .tkscreen .tktop{display:none!important}
 </div>
 <div class="overlay" id="puSheet" hidden style="z-index:12">
   <div class="sheet pickSheet" role="dialog" aria-label="Power-ups">
-    <div class="sheethead"><h2>🎁 Power-ups</h2><button class="btn" id="puClose">Close</button></div>
+    <div class="sheethead"><h2 id="puTitle">🎁 Power-ups</h2><button class="btn" id="puClose">Close</button></div>
     <div class="pugrid" id="puGrid"></div>
   </div>
 </div>
@@ -1438,8 +1446,14 @@ const WEAPONS = {
   medic:{name:"Medic Drop", icon:"🚑", desc:"+70 life right now."},
   shield:{name:"Shield", icon:"🛡️", desc:"Blocks the next hit on your tank."},
   teleport:{name:"Teleport", icon:"🌀", desc:"Jump to any spot on the map. Tap it."},
+  calm:{name:"Calm Wind", icon:"🍃", desc:"No wind for your shot this turn."},
+  fuel:{name:"Extra Fuel", icon:"⛽", desc:"One more move this turn."},
+  armor:{name:"Iron Armor", icon:"🦾", desc:"The next 2 hits do half damage."},
 };
-const ITEM_KEYS = ["bigbomb","triple","airstrike","sniper","twin","barrage","bouncer","napalm","driller","mortar","double","repair","medic","shield","teleport"];
+// WEAPONS = what you shoot with (1 shot per turn). POWER-UPS = help, never a shot (max 1 per turn).
+const WPN_KEYS = ["bigbomb","triple","airstrike","sniper","twin","barrage","bouncer","napalm","driller","mortar"];
+const PU_KEYS = ["double","repair","medic","shield","teleport","calm","fuel","armor"];
+const ITEM_KEYS = WPN_KEYS.concat(PU_KEYS);
 const MOVE_STEP = 240;
 const TS = 2;   // tank drawing scale (2x the original tank)
 // the tank's body in world units, used for hits and blast damage
@@ -1951,7 +1965,7 @@ function startTanks(base, order){
   const type = cfg.terrain==="random" ? Object.keys(TERRAINS)[Math.floor(Math.random()*6)] : cfg.terrain;
   const bw = shuffle(BASE_W.slice());
   game = {...base, mode:"tanks", order, qPtr:0, asked:0, total:order.length, phase:"question", wind:0, weapon:"shell", baseW: base.teams.map((_,i)=>bw[i % bw.length]), correct: base.teams.map(()=>0), target:null, over:false, moved:false, rounds:0, nextRou: 2+Math.floor(Math.random()*2),
-    inv: (()=>{ const pool = shuffle(ITEM_KEYS.slice()); return base.teams.map((_,i)=>({[pool[i % pool.length]]:1})); })(), tanks:[], season, terrain:type, backdrop:cfg.backdrop};
+    inv: (()=>{ const wp = shuffle(WPN_KEYS.slice()), pp = shuffle(PU_KEYS.slice()); return base.teams.map((_,i)=>({[wp[i % wp.length]]:1, [pp[i % pp.length]]:1})); })(), puUsed:false, tanks:[], season, terrain:type, backdrop:cfg.backdrop};
   const size = cfg.mapSize==="auto" ? autoMap(base.teams.length) : cfg.mapSize;
   TK.W = MAP_W[size]; game.mapSize = size;
   const mw = Math.round(112*TK.W/TK.H); tkMini.width = mw; tkMini.style.aspectRatio = `${mw}/112`; tkMini.style.width = `min(${Math.min(mw,300)}px, 36vw)`;
@@ -1992,8 +2006,8 @@ function rewardCorrect(){
   const n = ++game.correct[ti];
   if (n % 3 === 0){ const opts = UPGRADE_W.filter(k=>k!==baseW(ti)); const k = opts[Math.floor(Math.random()*opts.length)]; game.baseW[ti] = k;
     setTimeout(()=>{ puBannerRaw(WEAPONS[k].icon, "NEW WEAPON: "+WEAPONS[k].name, tm.color); if (t && t.alive) float(t.x, t.y-115, `${n} correct! 🔄`, "#FFD21A"); jingle([523,659,784,1047],80,.12); renderTkUI(); }, 350); }
-  else if (n % 2 === 0){ const opts = ITEM_KEYS.filter(k=>k!==baseW(ti)); const k = opts[Math.floor(Math.random()*opts.length)]; game.inv[ti][k] = (game.inv[ti][k]||0)+1;
-    setTimeout(()=>{ puBannerRaw(WEAPONS[k].icon, "BONUS: "+WEAPONS[k].name, tm.color); if (t && t.alive) float(t.x, t.y-115, `${n} correct! 🎁`, "#FFD21A"); jingle([784,988,1175,1568],75,.12); renderTkUI(); }, 350); }
+  else if (n % 2 === 0){ const opts = PU_KEYS; const k = opts[Math.floor(Math.random()*opts.length)]; game.inv[ti][k] = (game.inv[ti][k]||0)+1;
+    setTimeout(()=>{ puBannerRaw(WEAPONS[k].icon, "POWER-UP: "+WEAPONS[k].name, tm.color); if (t && t.alive) float(t.x, t.y-115, `${n} correct! 🎁`, "#FFD21A"); jingle([784,988,1175,1568],75,.12); renderTkUI(); }, 350); }
 }
 
 // ---- physics
@@ -2036,6 +2050,7 @@ function hurt(t, amt, by){
   if (t.shield){ t.shield=false; float(t.x, t.y-105, "🛡️ BLOCKED!", "#4DA8FF"); beep(1300,.15); return; }
   if (by!=null && by!==t.team && game.tanks[by] && game.tanks[by].perk==="high") amt = Math.round(amt*1.15);
   if (t.perk==="bunker") amt = Math.max(1, Math.round(amt*0.75));
+  if (t.armor>0){ t.armor--; amt = Math.max(1, Math.round(amt*0.5)); float(t.x, t.y-125, "🦾 ARMOR -50%", "#9AA7C7"); }
   const st0 = tankStage(t.hp);
   t.hp -= amt; t.lastHit = by; t.hitT = 14;
   const st1 = tankStage(Math.max(0,t.hp));
@@ -2255,14 +2270,11 @@ function alarmFx(){ const el=$("#tkAlarm"); if (!el) return; el.hidden=false; el
 
 function fire(){
   const t = curTank(); if (!t || !t.alive || game.phase!=="act") return;
-  const w = game.weapon;
-  if (w==="airstrike" || w==="teleport"){ game.phase="target"; game.target=w; renderTkUI(); return; }
-  if (w==="repair" || w==="medic"){ useItem(w); const add = w==="medic"?70:40; puBanner(w); SFX.play(w); game.weapon=baseW();
-    anim({type:w, ti:t.team, max: w==="medic"?120:95, onHit:()=>{ t.hp=Math.min(100,t.hp+add); float(t.x, t.y-105,`+${add} ❤️`,"#3FBF4F"); renderTkUI(); }}); renderTkUI(); return; }
-  if (w==="shield"){ useItem(w); t.shield=true; puBanner(w); SFX.play("shield"); anim({type:"shieldup", ti:t.team, max:70}); float(t.x, t.y-115,"🛡️ SHIELD ON","#4DA8FF"); game.weapon=baseW(); renderTkUI(); return; }
+  let w = game.weapon; if (PU_KEYS.includes(w)){ game.weapon = w = baseW(); }
+  if (w!==baseW() && !(game.inv[game.turn][w]>0)){ game.weapon = w = baseW(); }
+  if (w==="airstrike"){ game.phase="target"; game.target=w; renderTkUI(); return; }
   if (w==="barrage"){ const tg = game.tanks.filter(x=>x.alive && x.team!==t.team).map(x=>x.team); if (!tg.length){ float(t.x, t.y-105,"No targets!","#fff"); return; } useItem(w); puBanner(w); alarmFx(); SFX.play("siren"); launchHoming(tg, "barrage"); return; }
   if (w==="sniper" || w==="twin"){ openTargetPick(w); return; }
-  if (w==="double"){ useItem("double"); game.shotsLeft += 1; puBanner(w); SFX.play("double"); anim({type:"double", ti:t.team, max:70}); float(t.x, t.y-115,"2 SHOTS!","#FFD21A"); game.weapon=baseW(); renderTkUI(); return; }
   game.shotsLeft = Math.max(0, game.shotsLeft-1);
   const spec = WEAPONS[w], a = t.angle*Math.PI/180, sp = t.power*0.19;
   const bx = t.x + Math.cos(a)*32*TS, by = t.y-22*TS - Math.sin(a)*32*TS;
@@ -2276,6 +2288,22 @@ function fire(){
   game.weapon=baseW(); game.phase="busy"; tk.busyFrames=0; tk.cam.follow="shot"; renderTkUI();
 }
 function useItem(w){ const inv=game.inv[game.turn]; if (inv[w]) inv[w]--; }
+// power-ups: never a shot, and only ONE per turn
+function usePU(k){
+  const t = curTank(); if (!t || !t.alive || game.phase!=="act") return;
+  if (game.puUsed){ float(t.x, t.y-115, "1 power-up per turn!", "#fff"); beep(220,.12); return; }
+  if (!(game.inv[game.turn][k]>0)) return;
+  if (k==="teleport"){ game.phase="target"; game.target="teleport"; renderTkUI(); return; }
+  game.puUsed = true; useItem(k); puBanner(k);
+  if (k==="repair" || k==="medic"){ const add = k==="medic"?70:40; SFX.play(k);
+    anim({type:k, ti:t.team, max: k==="medic"?120:95, onHit:()=>{ t.hp=Math.min(100,t.hp+add); float(t.x, t.y-105,`+${add} ❤️`,"#3FBF4F"); renderTkUI(); }}); }
+  if (k==="shield"){ t.shield=true; SFX.play("shield"); anim({type:"shieldup", ti:t.team, max:70}); float(t.x, t.y-115,"🛡️ SHIELD ON","#4DA8FF"); }
+  if (k==="double"){ game.shotsLeft += 1; SFX.play("double"); anim({type:"double", ti:t.team, max:70}); float(t.x, t.y-115,"2 SHOTS!","#FFD21A"); }
+  if (k==="calm"){ game.wind = 0; SFX.play("repair"); float(t.x, t.y-115,"🍃 NO WIND!","#3FBF4F"); }
+  if (k==="fuel"){ game.moved = false; SFX.play("double"); float(t.x, t.y-115,"⛽ +1 MOVE","#FFB400"); }
+  if (k==="armor"){ t.armor = 2; SFX.play("shield"); anim({type:"shieldup", ti:t.team, max:70}); float(t.x, t.y-115,"🦾 IRON ARMOR","#9AA7C7"); }
+  renderTkUI();
+}
 function launchHoming(targets, kind){
   const t = curTank(), spec = WEAPONS[kind];
   game.shotsLeft = Math.max(0, game.shotsLeft-1);
@@ -2301,7 +2329,7 @@ function targetClick(x,y){
     anim({type:"vortex", x:t.x, y:t.y-30, max:45});
     t.x=Math.max(16,Math.min(TK.W-16,x)); t.y=yy; t.vx=0; t.vy=0; t.chute=false; t.onGround=false;
     anim({type:"vortex", x:t.x, y:t.y-30, max:55, grow:true});
-    useItem("teleport"); puBanner("teleport"); SFX.play("teleport"); game.phase="act"; tk.cam.follow="tank";
+    useItem("teleport"); game.puUsed = true; puBanner("teleport"); SFX.play("teleport"); game.phase="act"; tk.cam.follow="tank";
   }
   game.target=null; game.weapon=baseW(); renderTkUI();
 }
@@ -2801,14 +2829,15 @@ function renderTkUI(){
   $("#tkCtrl").hidden = game.phase!=="act"; $("#tkFire").hidden = game.phase!=="act";
   if (game.phase==="act"){
     const inv = game.inv[game.turn];
-    const nItems = ITEM_KEYS.reduce((n,k)=>n+(inv[k]||0),0);
-    $("#tkPUn").textContent = nItems; $("#tkPU").classList.toggle("has", nItems>0);
-    $("#tkWsel").innerHTML = `${WEAPONS[game.weapon].icon} ${WEAPONS[game.weapon].name}${game.weapon!==baseW()?' <button class="x" id="tkWx" aria-label="Back to your main weapon">✕</button>':""}${game.shotsLeft>1?` <b class="shots">×${game.shotsLeft} shots</b>`:""}`;
-    if ($("#tkWx")) $("#tkWx").onclick = ()=>{ game.weapon=baseW(); renderTkUI(); };
+    const nPU = PU_KEYS.reduce((n,k)=>n+(inv[k]||0),0), nW = WPN_KEYS.reduce((n,k)=>n+(inv[k]||0),0);
+    $("#tkPUn").textContent = game.puUsed ? "✓" : nPU; $("#tkPU").classList.toggle("has", nPU>0 && !game.puUsed); $("#tkPU").classList.toggle("used", !!game.puUsed);
+    $("#tkWn").textContent = nW + 1;
+    $("#tkWsel").innerHTML = `${WEAPONS[game.weapon].icon} ${WEAPONS[game.weapon].name}${game.weapon!==baseW()?' <span class="x" id="tkWx" role="button" aria-label="Back to your main weapon">✕</span>':""}${game.shotsLeft>1?` <b class="shots">×${game.shotsLeft} shots</b>`:""}`;
+    if ($("#tkWx")) $("#tkWx").onclick = e=>{ e.stopPropagation(); game.weapon=baseW(); renderTkUI(); };
     const wd = game.wind; $("#tkWindDock").textContent = wd===0 ? "calm" : `${wd<0?"◀ ":""}${Math.abs(wd)}${wd>0?" ▶":""}`;
     $("#tkWeapons").innerHTML = [baseW(),...ITEM_KEYS].filter(k=>k===baseW()||inv[k]>0).map(k=>`<button class="wchip" data-w="${k}" aria-pressed="${game.weapon===k}">${WEAPONS[k].name}${k==="shell"?"":` ×${inv[k]}`}</button>`).join("");
     $("#tkWeapons").querySelectorAll(".wchip").forEach(b=>b.onclick=()=>{ game.weapon=b.dataset.w; renderTkUI(); });
-    $("#tkFire").textContent = game.weapon==="repair" ? "REPAIR" : game.weapon==="double" ? "USE" : game.weapon==="airstrike" ? "TARGET" : game.weapon==="teleport" ? "TARGET" : "FIRE!";
+    $("#tkFire").textContent = game.weapon==="airstrike" ? "TARGET" : (game.weapon==="sniper"||game.weapon==="twin") ? "LOCK ON" : "FIRE!";
     $("#tkLeft").disabled = game.moved; $("#tkRight").disabled = game.moved;
     $("#tkMoveNote").textContent = game.moved ? "Move used" : "1 move per turn";
   }
@@ -2825,15 +2854,26 @@ function updateTkLive(){
 }
 function openPU(){
   if (game.phase!=="act") return;
-  const inv = game.inv[game.turn];
-  const owned = ITEM_KEYS.filter(k=>inv[k]>0);
-  $("#puGrid").innerHTML = owned.length ? owned.map(k=>`<button class="pucard" data-k="${k}"><span class="puicon">${WEAPONS[k].icon}</span><b>${WEAPONS[k].name}</b><span class="pudesc">${WEAPONS[k].desc}</span><span class="pun">×${inv[k]}</span></button>`).join("")
-    : `<p class="note" style="grid-column:1/-1;color:var(--ink);font-weight:800">No power-ups yet. Drive over a falling crate 🎁 to get one!</p>`;
-  $("#puGrid").querySelectorAll(".pucard").forEach(b=>b.onclick=()=>{ $("#puSheet").hidden = true; const k=b.dataset.k; game.weapon=k; beep(880,.08);
-    if (["repair","medic","shield","double","barrage","sniper","twin","airstrike","teleport"].includes(k)) fire(); else renderTkUI(); });
+  const inv = game.inv[game.turn], used = !!game.puUsed;
+  $("#puTitle").textContent = "🎁 Power-ups";
+  const owned = PU_KEYS.filter(k=>inv[k]>0);
+  $("#puGrid").innerHTML = `<p class="pusub">${used ? "✓ You already used your power-up this turn. Now shoot!" : "Help for your tank. You can use 1 power-up per turn, and you still shoot after it."}</p>` + (owned.length ? owned.map(k=>`<button class="pucard" data-k="${k}"${used?" disabled":""}><span class="puicon">${WEAPONS[k].icon}</span><b>${WEAPONS[k].name}</b><span class="pudesc">${WEAPONS[k].desc}</span><span class="pun">×${inv[k]}</span></button>`).join("")
+    : `<p class="note" style="grid-column:1/-1;color:var(--ink);font-weight:800">No power-ups yet. Answer 2 questions right or drive over a falling crate 🎁!</p>`);
+  $("#puGrid").querySelectorAll(".pucard").forEach(b=>b.onclick=()=>{ if (b.disabled) return; $("#puSheet").hidden = true; beep(880,.08); usePU(b.dataset.k); });
   $("#puSheet").hidden = false;
 }
-$("#tkPU").onclick = openPU;
+function openWeapons(){
+  if (game.phase!=="act") return;
+  const inv = game.inv[game.turn], mw = baseW();
+  $("#puTitle").textContent = "🚀 Weapons";
+  const owned = WPN_KEYS.filter(k=>k!==mw && inv[k]>0);
+  const card = (k, main)=>`<button class="pucard${main?" main":""}" data-k="${k}" aria-pressed="${game.weapon===k}"><span class="puicon">${WEAPONS[k].icon}</span><b>${WEAPONS[k].name}</b><span class="pudesc">${WEAPONS[k].desc}</span><span class="pun">${main?"∞":"×"+inv[k]}</span></button>`;
+  $("#puGrid").innerHTML = `<p class="pusub">Pick what you shoot with, then press FIRE. Your main weapon never runs out.</p>` + card(mw, true) + owned.map(k=>card(k,false)).join("")
+    + (owned.length ? "" : `<p class="note" style="grid-column:1/-1;color:var(--muted);font-weight:800">Special weapons come from crates 🎁. Every 3 right answers = new main weapon!</p>`);
+  $("#puGrid").querySelectorAll(".pucard").forEach(b=>b.onclick=()=>{ $("#puSheet").hidden = true; game.weapon = b.dataset.k; beep(880,.08); renderTkUI(); });
+  $("#puSheet").hidden = false;
+}
+$("#tkPU").onclick = openPU; $("#tkWB").onclick = openWeapons; $("#tkWsel").onclick = e=>{ if (e.target.id!=="tkWx") openWeapons(); };
 $("#puClose").onclick = ()=>{ $("#puSheet").hidden = true; };
 let tgPick = [], tgNeed = 1, tgKind = "sniper";
 function openTargetPick(kind){
@@ -2868,7 +2908,7 @@ document.addEventListener("pointerdown", e=>{ const m=$("#tkMenu"); if (m && !m.
 function askTank(){
   const team = game.teams[game.turn], q = nextQuestion(); game.asked++;
   askQuestion({team, q, head:`Question ${game.asked} of ${game.total}`, pts:null, cancelLabel:"Skip question", rightLabel:"Your turn!",
-    onRight:()=>{ closeModal(); const t=curTank(); rewardCorrect(); game.weapon=baseW(); if (!t.alive){ game.phase="busy"; tk.busyFrames=0; } else { game.phase="act"; game.moved=false; game.shotsLeft=1; tk.acted=true; tk.cam.follow="tank"; tk.aimPt=null; } renderTkUI(); },
+    onRight:()=>{ closeModal(); const t=curTank(); rewardCorrect(); game.weapon=baseW(); if (!t.alive){ game.phase="busy"; tk.busyFrames=0; } else { game.phase="act"; game.moved=false; game.puUsed=false; game.shotsLeft=1; tk.acted=true; tk.cam.follow="tank"; tk.aimPt=null; } renderTkUI(); },
     onWrong:()=>{ closeModal(); game.shotsLeft=0; tk.acted=false; game.phase="busy"; tk.busyFrames=40; renderTkUI(); }});
 }
 function tkWorld(e){
@@ -3356,7 +3396,7 @@ async function resumeSaved(){
     tk.crates = (d.tk.crates||[]).map(c=>({x:c.x, y:c.y, vy:0, chute:false, item:c.item, landed:false}));
     tk.sprites = game.teams.map((tm,i)=>makeSprite(tm.color, tm.skin, i));
     game.tanks.forEach(t=>{ t.vx=0; t.vy=0; t.onGround=false; t.hitT=0; if (!t.alive && !t.respawn) t.respawn = 30; });
-    game.phase = "question"; game.weapon = baseW(); tk.acted = false;
+    game.phase = "question"; game.weapon = baseW(); tk.acted = false; game.puUsed = false;
   }
   show("play");
 }
