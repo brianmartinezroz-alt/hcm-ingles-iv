@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>¡Escapa de Miss Vian!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;800;900&display=swap">
+<style>
+/* Layout: one full-screen school yard. Teams race along the patio path from the classroom to the gate; Miss Vian follows. */
+:root{
+  --wall:#F6C945; --wall2:#EFB92E; --frame:#E4672E; --rail:#2F8F55; --sky:#BFE6F7; --sky2:#EAF7FD;
+  --ink:#2A2140; --paper:#FFFDF6; --muted:#6B6280; --patio:#D9CBB0; --patio2:#CBBB9C;
+  --ok:#2FAE5A; --no:#E0413B; --vian:#8A3FB5; --tile:#FFF7E3;
+  --display:"Baloo 2","Arial Rounded MT Bold","Trebuchet MS",sans-serif;
+  --body:"Nunito","Segoe UI",system-ui,sans-serif;
+  color-scheme: light;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+[hidden]{display:none!important}
+body{margin:0;background:var(--sky2);color:var(--ink);font-family:var(--body);overflow:hidden}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible{outline:4px solid var(--ink);outline-offset:3px}
+.btn{border:3px solid var(--ink);border-radius:14px;background:var(--paper);color:var(--ink);font-weight:900;font-size:16px;padding:10px 18px;box-shadow:0 4px 0 var(--ink);transition:transform .08s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.btn.go{background:var(--frame);color:#fff}
+.btn.small{font-size:14px;padding:6px 12px;border-radius:11px;box-shadow:0 3px 0 var(--ink)}
+.btn:disabled{opacity:.45;cursor:default}
+
+/* ---------- game screen ---------- */
+#game{position:fixed;inset:0;display:flex;flex-direction:column}
+.topbar{display:flex;gap:8px;align-items:center;padding:10px 14px;flex-wrap:wrap;z-index:3}
+.brand{font-family:var(--display);font-weight:800;font-size:22px;line-height:1;margin-right:6px;white-space:nowrap}
+.brand small{display:block;font-family:var(--body);font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.chips{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
+.chip{display:flex;align-items:center;gap:6px;background:var(--paper);border:3px solid var(--ink);border-radius:999px;padding:3px 12px 3px 4px;font-weight:900;font-size:14px;box-shadow:0 3px 0 var(--ink)}
+.chip .av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:18px;border:3px solid var(--tc)}
+.chip.on{background:var(--tc);color:#fff}
+.chip .pos{font-variant-numeric:tabular-nums;opacity:.85;font-size:12px}
+.tools{display:flex;gap:6px}
+#board{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:0 10px}
+#board svg{width:100%;height:100%;max-height:100%}
+.bottombar{display:flex;justify-content:center;padding:10px 14px 14px;z-index:3}
+.turncard{display:flex;align-items:center;gap:14px;background:var(--paper);border:3px solid var(--ink);border-radius:18px;padding:10px 12px 10px 16px;box-shadow:0 5px 0 var(--ink);max-width:640px;width:100%;flex-wrap:wrap}
+.turncard .who{flex:1;min-width:160px}
+.turncard .lab{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.turncard .nm{font-family:var(--display);font-size:26px;font-weight:800;line-height:1.05;color:var(--tc)}
+.turncard .note{font-size:13px;font-weight:800;color:var(--muted)}
+
+/* tokens */
+.tok{transition:transform .26s cubic-bezier(.3,1.6,.5,1)}
+.tok.hop{animation:hop .26s ease-out}
+@keyframes hop{50%{translate:0 -18px}}
+#vian{transition:transform .32s ease-in-out}
+.bubble{transition:opacity .25s}
+
+/* ---------- overlays ---------- */
+.overlay{position:fixed;inset:0;background:rgba(42,33,64,.55);display:grid;place-items:center;padding:16px;z-index:10}
+.card{background:var(--paper);border:4px solid var(--ink);border-radius:24px;box-shadow:0 8px 0 var(--ink);width:min(760px,100%);max-height:94vh;overflow:auto;padding:20px}
+.qhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.qtag{background:var(--tc);color:#fff;border:3px solid var(--ink);border-radius:999px;padding:3px 12px;font-weight:900;font-size:14px}
+.qnum{font-size:13px;font-weight:800;color:var(--muted)}
+.timer{height:12px;border:3px solid var(--ink);border-radius:999px;overflow:hidden;background:#fff;margin:12px 0 4px}
+.timer i{display:block;height:100%;background:var(--ok);width:100%}
+.qtext{font-family:var(--display);font-weight:800;font-size:clamp(24px,3.6vw,38px);line-height:1.12;margin:12px 0 16px;text-wrap:balance}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:560px){.opts{grid-template-columns:1fr}}
+.opt{display:flex;align-items:center;gap:12px;text-align:left;border:3px solid var(--ink);border-radius:16px;background:var(--oc);color:#fff;font-weight:900;font-size:clamp(17px,2.2vw,22px);padding:14px;box-shadow:0 5px 0 var(--ink);min-height:64px}
+.opt .l{flex:none;width:34px;height:34px;border-radius:50%;background:#fff;color:var(--ink);display:grid;place-items:center;border:3px solid var(--ink);font-size:17px}
+.opt.dim{opacity:.35}
+.opt.right{outline:5px solid var(--ok);outline-offset:3px;opacity:1}
+.opt.wrong{outline:5px solid var(--no);outline-offset:3px}
+.verdict{margin-top:14px;font-family:var(--display);font-size:28px;font-weight:800;text-align:center}
+.verdict.ok{color:var(--ok)} .verdict.no{color:var(--no)}
+.verdict small{display:block;font-family:var(--body);font-size:15px;color:var(--muted);font-weight:800}
+
+/* setup */
+.setup h1{font-family:var(--display);font-size:clamp(34px,6vw,54px);line-height:.95;margin:0 0 4px}
+.setup h1 span{color:var(--vian)}
+.setup .sub{color:var(--muted);font-weight:800;margin:0 0 14px}
+.fld{display:grid;gap:6px;margin:14px 0}
+.fld>b{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{border:3px solid var(--ink);border-radius:12px;background:#fff;font-weight:900;padding:6px 12px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.trow{display:flex;align-items:center;gap:8px;border:3px solid var(--ink);border-radius:14px;padding:6px 8px;background:#fff}
+.trow .av{flex:none;width:38px;height:38px;border-radius:50%;border:4px solid var(--tc);display:grid;place-items:center;font-size:22px;background:#fff}
+.trow input{flex:1;min-width:0;border:0;border-bottom:2px dashed var(--muted);font:inherit;font-weight:900;font-size:16px;background:transparent;color:var(--ink);padding:4px 2px}
+.rules{background:#FFF1C9;border:3px dashed var(--frame);border-radius:14px;padding:10px 14px;font-weight:700;font-size:14px;line-height:1.45}
+.rules b{font-weight:900}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+textarea{width:100%;min-height:220px;border:3px solid var(--ink);border-radius:12px;font:600 14px/1.4 ui-monospace,Menlo,Consolas,monospace;padding:10px;box-sizing:border-box;background:#fff;color:var(--ink)}
+.results h2{font-family:var(--display);font-size:clamp(30px,5vw,46px);margin:0}
+.rank{display:grid;gap:8px;margin:14px 0}
+.rank div{display:flex;align-items:center;gap:10px;border:3px solid var(--ink);border-radius:14px;padding:8px 12px;font-weight:900;background:#fff}
+.rank div .p{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--muted)}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:20}
+@media (max-width:640px){.brand{display:none}.chips{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}.chip{flex:none}.turncard .nm{font-size:21px}}
+@media (prefers-reduced-motion:reduce){.tok,#vian{transition:none}.tok.hop{animation:none}}
+</style>
+
+</head>
+<body>
+<div id="game" hidden>
+  <div class="topbar">
+    <div class="brand">¡Escapa de Miss Vian!<small>Sec. 48 · Español 2°</small></div>
+    <div class="chips" id="chips"></div>
+    <div class="tools">
+      <button class="btn small" id="soundBtn" aria-label="Sonido">🔊</button>
+      <button class="btn small" id="menuBtn">☰ Menú</button>
+    </div>
+  </div>
+  <div id="board"></div>
+  <div class="bottombar"><div class="turncard" id="turn"></div></div>
+</div>
+
+<div class="overlay" id="setup" hidden>
+  <div class="card setup">
+    <h1>¡Escapa de <span>Miss Vian</span>!</h1>
+    <p class="sub">Esc. Sec. Diurna No. 48 “Juan Ruiz de Alarcón y Mendoza” · Español 2°</p>
+    <div class="rules">
+      <b>Cómo se juega:</b> cada equipo contesta una pregunta. <b>Correcta:</b> avanza 2 casillas hacia la salida.
+      <b>Incorrecta:</b> Miss Vian da un paso. Si alcanza a un equipo, <b>¡lo regresa al salón!</b><br>
+      🔔 Timbre: todos avanzan 1 · 🍪 Cooperativa: salto extra · 🚪 Dirección: pierden su siguiente turno · 🏁 Gana quien llegue primero a la salida.
+    </div>
+    <div class="fld"><b>Equipos</b><div class="seg" id="nTeams"></div></div>
+    <div class="teams" id="teamRows"></div>
+    <div class="fld"><b>Tiempo para contestar</b><div class="seg" id="timeSeg"></div></div>
+    <div class="fld"><b>Preguntas</b><div class="row"><span id="qInfo" class="qnum"></span><button class="btn small" id="editQ">✏️ Cambiar preguntas</button></div></div>
+    <div class="row" style="justify-content:flex-end;margin-top:8px">
+      <button class="btn" id="resumeBtn" hidden>↩ Continuar partida guardada</button>
+      <button class="btn go" id="startBtn">¡A jugar! ▶</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="qBox" hidden><div class="card" id="qCard"></div></div>
+
+<div class="overlay" id="menu" hidden>
+  <div class="card" style="width:min(420px,100%)">
+    <h2 style="font-family:var(--display);margin:0 0 10px">Menú</h2>
+    <div class="row" style="flex-direction:column;align-items:stretch">
+      <button class="btn" id="mClose">▶ Seguir jugando</button>
+      <button class="btn" id="mEnd">🏁 Terminar y ver resultados</button>
+      <button class="btn" id="mNew">🔄 Nueva partida</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="editor" hidden>
+  <div class="card">
+    <h2 style="font-family:var(--display);margin:0">Preguntas</h2>
+    <p class="qnum" style="margin:4px 0 10px">Una pregunta por renglón, separada con tabulador (como se copia de Excel o Sheets):<br><b>pregunta ⇥ respuesta correcta ⇥ incorrecta ⇥ incorrecta ⇥ incorrecta</b>. El orden de las opciones se revuelve solo.</p>
+    <textarea id="qText" spellcheck="false" aria-label="Preguntas"></textarea>
+    <p class="qnum" id="qParse"></p>
+    <div class="row" style="justify-content:space-between">
+      <button class="btn small" id="qReset">↺ Usar las preguntas originales</button>
+      <div class="row"><button class="btn small" id="qCancel">Cancelar</button><button class="btn go small" id="qSave">Guardar</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="results" hidden>
+  <div class="card results">
+    <h2 id="resTitle">¡Escaparon!</h2>
+    <p class="sub" id="resSub" style="font-weight:800;color:var(--muted);margin:4px 0 0"></p>
+    <div class="rank" id="rank"></div>
+    <div class="row" style="justify-content:flex-end"><button class="btn go" id="again">Jugar otra vez</button></div>
+  </div>
+</div>
+<canvas id="confetti" hidden></canvas>
+
+<script>
+(()=>{
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const shuffle = a => { for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const store = { get(k){ try{ return JSON.parse(localStorage.getItem(k)||"null"); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }, del(k){ try{ localStorage.removeItem(k); }catch(e){} } };
+
+// ---------- questions (Español 2°: verbos, adverbios y demás categorías gramaticales) ----------
+const DEFAULT_Q = `¿Cuál es el verbo en: “Mariana escribe un poema”?	escribe	Mariana	poema	un
+“Nosotros cantamos en el festival.” ¿En qué tiempo está el verbo?	presente	pretérito (pasado)	futuro	pospretérito
+“Ayer comí tacos.” ¿En qué tiempo está el verbo?	pretérito (pasado)	presente	futuro	copretérito
+“Mañana viajaré a Puebla.” ¿En qué tiempo está el verbo?	futuro	presente	pretérito	copretérito
+¿Cuál es el infinitivo de “corrieron”?	correr	corrían	corriendo	corre
+“Cantando”, “comiendo” y “viviendo” son…	gerundios	participios	infinitivos	adverbios
+“Escrito”, “roto” y “hecho” son…	participios	gerundios	infinitivos	sustantivos
+“Cierra la puerta, por favor.” ¿En qué modo está el verbo?	imperativo	indicativo	subjuntivo	infinitivo
+“Ojalá llueva mañana.” ¿En qué modo está el verbo?	subjuntivo	indicativo	imperativo	gerundio
+¿Cuál verbo está en copretérito?	jugaba	jugó	jugará	juega
+¿Cómo se conjuga “salir” en primera persona del presente?	salgo	salo	salí	saldré
+“Ellos cantan.” ¿Qué persona gramatical es?	tercera persona del plural	primera persona del plural	segunda persona del singular	tercera persona del singular
+¿Cuál de estos verbos es regular?	amar	ser	ir	tener
+¿Cuál de estos verbos es irregular?	tener	cantar	bailar	caminar
+“Si tuviera dinero, compraría un libro.” “Compraría” está en…	pospretérito (condicional)	futuro	presente	pretérito
+¿Qué oración tiene el verbo en futuro?	Estudiaremos juntos.	Estudiamos ayer.	Estudiábamos mucho.	Estudia más.
+“Llegué, vi y vencí.” Los verbos están en…	pretérito	futuro	presente	copretérito
+¿Cuál palabra es un verbo en infinitivo?	leer	leído	leyendo	leo
+¿Cuál de estas palabras es un adverbio?	rápidamente	rapidez	veloz	correr
+“Llegamos tarde a la escuela.” “Tarde” es un adverbio de…	tiempo	lugar	modo	cantidad
+“El libro está aquí.” “Aquí” es un adverbio de…	lugar	tiempo	modo	negación
+“Habla muy despacio.” “Muy” es un adverbio de…	cantidad	lugar	tiempo	afirmación
+“Sí iré a la fiesta.” “Sí” es un adverbio de…	afirmación	negación	duda	lugar
+“Quizá llueva hoy.” “Quizá” es un adverbio de…	duda	afirmación	cantidad	modo
+“No quiero salir.” “No” es un adverbio de…	negación	afirmación	duda	tiempo
+¿Qué adverbio de modo se forma con “fácil”?	fácilmente	facilidad	facilito	fácil
+“Corre velozmente.” ¿A qué palabra modifica “velozmente”?	corre (el verbo)	a un sustantivo	a un artículo	a ninguna
+¿Qué oración tiene un adverbio de tiempo?	Mañana tenemos examen.	La casa es grande.	Mi perro ladra.	Ana y Luis juegan.
+“Comió mucho.” “Mucho” es un adverbio de…	cantidad	modo	lugar	tiempo
+¿Cuál es un adverbio de lugar?	lejos	ayer	bien	bastante
+¿Cuál es un adverbio de modo?	así	allá	pronto	demasiado
+¿Cuál es un adjetivo calificativo?	alegre	alegría	alegrar	alegremente
+“El gato negro duerme.” ¿Cuál es el sustantivo?	gato	negro	duerme	el
+“Monterrey” es un sustantivo…	propio	común	colectivo	abstracto
+“Ella me llamó.” “Ella” es un…	pronombre	adjetivo	verbo	adverbio
+¿Cuál de estas palabras es una preposición?	desde	rápido	cantar	feliz
+¿Cuál de estas palabras es una conjunción?	pero	mesa	lejos	dormir
+“Los niños juegan felices.” ¿Cuál es el adjetivo?	felices	juegan	niños	los
+¿Cuál es el superlativo de “grande”?	grandísimo	más grande	grandote	grandeza
+¿Cuál de estas palabras es un artículo?	la	muy	con	sol`;
+function parseQ(txt){
+  return txt.split(/\r?\n/).map(l=>l.split("\t").map(x=>x.trim())).filter(c=>c.length>=3 && c[0] && c[1]).map(c=>({q:c[0], a:c[1], w:c.slice(2).filter(Boolean).slice(0,3)}));
+}
+let qText = store.get("sec48.q") || DEFAULT_Q;
+
+// ---------- board ----------
+// 16 squares over the patio (0 = salón, 15 = salida), plus the teachers' room where Miss Vian starts
+const SQ = [];
+[120,258,396,534,672,810,948,1086].forEach(x=>SQ.push({x, y:640}));
+[1086,948,810,672,534,396,258,120].forEach(x=>SQ.push({x, y:505}));
+const SPECIAL = {0:{ico:"🏫",name:"Salón 2°A"}, 3:{ico:"🔔",name:"Timbre",fx:"bell"}, 6:{ico:"⚽",name:"Patio"}, 9:{ico:"📚",name:"Biblioteca"},
+  11:{ico:"🚪",name:"Dirección",fx:"office"}, 13:{ico:"🍪",name:"Cooperativa",fx:"coop"}, 15:{ico:"🏁",name:"¡Salida!"}};
+const GOAL = 15, VIAN_START = -1;
+const VIAN_SPOT = {x:120, y:765};   // sala de maestros, below the salón
+const TEAM_COLORS = ["#E0413B","#2F7FD8","#2FAE5A","#F08A1C","#8A3FB5","#D8398F"];
+const TEAM_EMOJI = ["🦊","🐸","🐼","🐯","🦄","🐙"];
+const TEAM_NAMES = ["Los Verbos","Los Adverbios","Los Adjetivos","Los Sustantivos","Los Pronombres","Los Artículos"];
+const OPT_COLORS = ["#E0413B","#2F7FD8","#2FAE5A","#F08A1C"];
+const VIAN_LINES = ["¿A dónde van, jóvenes?","¡Saquen su libreta!","¡Los estoy viendo!","¡Nadie sale sin terminar!","¿Y la tarea?","¡A su lugar!","¡Ese uniforme!","¡Sin correr en el pasillo!"];
+
+function sceneSVG(){
+  // building across the top, patio and path below, all drawn with the school's own colors
+  let s = `<svg viewBox="0 0 1200 820" role="img" aria-label="Mapa de la escuela: del salón a la salida">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9FD8F2"/><stop offset="1" stop-color="#E8F6FD"/></linearGradient>
+    <pattern id="tiles" width="46" height="46" patternUnits="userSpaceOnUse"><rect width="46" height="46" fill="#D9CBB0"/><path d="M0 0H46V46" fill="none" stroke="#C9B894" stroke-width="2"/></pattern>
+  </defs>
+  <rect width="1200" height="820" fill="url(#sky)"/>
+  <g fill="#fff" opacity=".9"><ellipse cx="190" cy="60" rx="70" ry="20"/><ellipse cx="240" cy="48" rx="46" ry="22"/><ellipse cx="930" cy="70" rx="80" ry="22"/><ellipse cx="985" cy="56" rx="50" ry="24"/></g>
+  <rect x="0" y="392" width="1200" height="428" fill="url(#tiles)"/>`;
+  // building: two floors, yellow walls with orange frames
+  s += `<g stroke="#2A2140" stroke-width="4">
+    <rect x="40" y="120" width="1120" height="272" fill="#F6C945"/>
+    <rect x="40" y="96" width="1120" height="28" fill="#E4672E"/>
+    <line x1="40" y1="256" x2="1160" y2="256" stroke="#E4672E" stroke-width="12"/>`;
+  for (let i=0;i<10;i++){ const x = 64 + i*110; if (i===4||i===5) continue;
+    s += `<rect x="${x}" y="146" width="84" height="82" rx="4" fill="#9FD1EA"/><line x1="${x+42}" y1="146" x2="${x+42}" y2="228" stroke-width="3"/>
+          <rect x="${x}" y="282" width="84" height="80" rx="4" fill="#9FD1EA"/><line x1="${x+42}" y1="282" x2="${x+42}" y2="362" stroke-width="3"/>`;
+    s += `<rect x="${x-8}" y="138" width="100" height="98" fill="none" stroke="#E4672E" stroke-width="6"/><rect x="${x-8}" y="274" width="100" height="96" fill="none" stroke="#E4672E" stroke-width="6"/>`; }
+  s += `</g>`;
+  // entrance with the sign
+  s += `<g stroke="#2A2140" stroke-width="4">
+    <rect x="496" y="150" width="208" height="70" rx="8" fill="#FFFDF6"/>
+    <rect x="530" y="272" width="140" height="120" fill="#F3B021"/><line x1="600" y1="272" x2="600" y2="392" stroke-width="3"/>
+    <rect x="522" y="262" width="156" height="14" fill="#E4672E"/></g>
+  <text x="600" y="176" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="900" font-size="13" fill="#2A2140">ESC. SEC. DIURNA No. 48</text>
+  <text x="600" y="196" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="800" font-size="11.5" fill="#2A2140">“JUAN RUIZ DE ALARCÓN</text>
+  <text x="600" y="211" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="800" font-size="11.5" fill="#2A2140">Y MENDOZA”</text>`;
+  // green railing and trees in front
+  s += `<g stroke="#2F8F55" stroke-width="5" fill="none"><line x1="20" y1="420" x2="480" y2="420"/><line x1="720" y1="420" x2="1180" y2="420"/>`;
+  for (let x=28;x<=480;x+=22) s += `<path d="M${x} 440V412a6 6 0 0 1 12 0"/>`;
+  for (let x=726;x<=1178;x+=22) s += `<path d="M${x} 440V412a6 6 0 0 1 12 0"/>`;
+  s += `</g>`;
+  [[30,360],[1170,360],[470,380],[730,380]].forEach(([x,y])=>{ s += `<g stroke="#2A2140" stroke-width="4"><rect x="${x-7}" y="${y}" width="14" height="70" fill="#8A5A34"/><circle cx="${x}" cy="${y-18}" r="46" fill="#4FA85E"/><circle cx="${x-24}" cy="${y+2}" r="26" fill="#3E9150"/><circle cx="${x+26}" cy="${y}" r="24" fill="#3E9150"/></g>`; });
+  // cooperativa kiosk and gate labels
+  // path between squares
+  s += `<polyline points="${SQ.map(p=>p.x+","+p.y).join(" ")}" fill="none" stroke="#FFFDF6" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" opacity=".8"/>
+        <polyline points="${SQ.map(p=>p.x+","+p.y).join(" ")}" fill="none" stroke="#2A2140" stroke-width="3" stroke-dasharray="4 12" stroke-linecap="round"/>`;
+  SQ.forEach((p,i)=>{ const sp = SPECIAL[i]; const fill = i===GOAL ? "#FFD84A" : sp ? "#FFF1C9" : "#FFFDF6";
+    s += `<g><rect x="${p.x-54}" y="${p.y-42}" width="108" height="84" rx="18" fill="${fill}" stroke="#2A2140" stroke-width="4"/>
+      <text x="${p.x-44}" y="${p.y-22}" font-family="Nunito,sans-serif" font-weight="900" font-size="14" fill="#6B6280">${i}</text>`;
+    if (sp) s += `<text x="${p.x}" y="${p.y+4}" text-anchor="middle" font-size="30">${sp.ico}</text><text x="${p.x}" y="${p.y+32}" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="900" font-size="13" fill="#2A2140">${sp.name}</text>`;
+    s += `</g>`; });
+  // teachers' room
+  s += `<g><rect x="${VIAN_SPOT.x-60}" y="${VIAN_SPOT.y-34}" width="120" height="64" rx="16" fill="#EBD9F5" stroke="#2A2140" stroke-width="4" stroke-dasharray="8 6"/>
+    <text x="${VIAN_SPOT.x+58}" y="${VIAN_SPOT.y+8}" font-family="Nunito,sans-serif" font-weight="900" font-size="15" fill="#2A2140">☕ Sala de maestros</text></g>`;
+  // tokens layer
+  s += `<g id="tokens"></g>${vianSVG()}</svg>`;
+  return s;
+}
+function vianSVG(){
+  // Miss Vian: glasses, a bun, purple blouse and her red grade book
+  return `<g id="vian"><g transform="translate(0,-34)">
+    <ellipse cx="0" cy="62" rx="30" ry="7" fill="rgba(42,33,64,.25)"/>
+    <path d="M-24 58 Q-26 10 0 8 Q26 10 24 58Z" fill="#8A3FB5" stroke="#2A2140" stroke-width="4"/>
+    <circle cx="0" cy="-16" r="22" fill="#F2C7A5" stroke="#2A2140" stroke-width="4"/>
+    <path d="M-23 -16 Q-22 -42 0 -40 Q22 -42 23 -16 Q14 -30 0 -28 Q-14 -30 -23 -16Z" fill="#3B2418" stroke="#2A2140" stroke-width="3"/>
+    <circle cx="0" cy="-44" r="11" fill="#3B2418" stroke="#2A2140" stroke-width="3"/>
+    <g fill="none" stroke="#2A2140" stroke-width="3"><circle cx="-9" cy="-15" r="7"/><circle cx="9" cy="-15" r="7"/><line x1="-2" y1="-15" x2="2" y2="-15"/></g>
+    <path d="M-7 -3 Q0 3 7 -3" fill="none" stroke="#C2344A" stroke-width="3" stroke-linecap="round"/>
+    <rect x="12" y="18" width="22" height="28" rx="3" fill="#E0413B" stroke="#2A2140" stroke-width="4" transform="rotate(10 23 32)"/>
+    <line x1="17" y1="24" x2="29" y2="26" stroke="#fff" stroke-width="2"/>
+  </g>
+  <g class="bubble" id="vbub" opacity="0"><rect x="-120" y="-150" width="240" height="46" rx="16" fill="#fff" stroke="#2A2140" stroke-width="4"/>
+    <path d="M-10 -106 L0 -86 L12 -106Z" fill="#fff" stroke="#2A2140" stroke-width="4"/><rect x="-11" y="-110" width="22" height="7" fill="#fff"/>
+    <text id="vtxt" x="0" y="-120" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="900" font-size="18" fill="#2A2140"></text></g></g>`;
+}
+
+// ---------- sound ----------
+let ac = null, soundOn = store.get("sec48.sound") !== false;
+function ctx(){ if (!ac){ try{ ac = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if (ac && ac.state==="suspended") ac.resume(); return ac; }
+function tone(f, at, dur, type, vol, f2){ if (!soundOn) return; const c = ctx(); if (!c) return; const t = c.currentTime+at, o = c.createOscillator(), g = c.createGain();
+  o.type = type||"triangle"; o.frequency.setValueAtTime(f,t); if (f2) o.frequency.exponentialRampToValueAtTime(f2,t+dur);
+  g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(vol||.2,t+.01); g.gain.exponentialRampToValueAtTime(.0001,t+dur); o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+dur+.05); }
+const SND = {
+  right(){ [523,659,784,1047].forEach((f,i)=>tone(f,i*.08,.18,"triangle",.22)); },
+  wrong(){ tone(220,0,.35,"sawtooth",.12,140); tone(180,.12,.35,"square",.06,110); },
+  hop(){ tone(700,0,.08,"sine",.18,980); },
+  step(){ tone(140,0,.07,"square",.1,90); tone(90,.14,.07,"square",.08,70); },
+  bell(){ [0,.12,.24,.36,.48].forEach(a=>{ tone(1320,a,.1,"square",.07); tone(1760,a+.05,.1,"square",.05); }); },
+  caught(){ tone(1500,0,.25,"sine",.2,2200); tone(900,.3,.4,"triangle",.2,300); },
+  coop(){ [784,988,1175].forEach((f,i)=>tone(f,i*.07,.14,"sine",.2)); },
+  office(){ tone(330,0,.25,"triangle",.18); tone(262,.25,.35,"triangle",.18); },
+  win(){ [523,523,523,698,880,784,1047].forEach((f,i)=>tone(f,i*.12,.22,"square",.1)); },
+};
+
+// ---------- state ----------
+let cfg = store.get("sec48.cfg") || {n:4, names:TEAM_NAMES.slice(), time:30};
+let S = null;   // the running game
+let busy = false;
+function newGame(){
+  const qs = parseQ(qText); if (!qs.length) return;
+  S = { teams: Array.from({length:cfg.n},(_,i)=>({name:(cfg.names[i]||"").trim()||TEAM_NAMES[i], color:TEAM_COLORS[i], emoji:TEAM_EMOJI[i], pos:0, skip:false, right:0})),
+        turn:0, vian:VIAN_START, round:1, order: shuffle(qs.map((_,i)=>i)), qi:0, qs, over:false, time:cfg.time };
+  save(); $("#setup").hidden = true; $("#game").hidden = false; render(); vianSay("¡Nadie sale de mi clase!", 1800);
+}
+function save(){ if (S && !S.over) store.set("sec48.save", S); }
+function curTeam(){ return S.teams[S.turn]; }
+
+// ---------- rendering ----------
+function sqPos(i){ return i<0 ? VIAN_SPOT : SQ[Math.min(GOAL,i)]; }
+function tokenXY(ti){
+  const t = S.teams[ti], p = sqPos(t.pos), same = S.teams.map((x,j)=>j).filter(j=>S.teams[j].pos===t.pos), k = same.indexOf(ti), n = same.length;
+  const offs = n<=1 ? [[0,0]] : n===2 ? [[-22,-6],[22,-6]] : n<=4 ? [[-24,-16],[24,-16],[-24,18],[24,18]] : [[-30,-18],[0,-18],[30,-18],[-30,18],[0,18],[30,18]];
+  const o = offs[k % offs.length]; return [p.x+o[0], p.y+o[1]-4];
+}
+function render(){
+  if (!$("#board svg")) $("#board").innerHTML = sceneSVG();
+  const g = $("#tokens");
+  if (g.children.length !== S.teams.length){
+    g.innerHTML = S.teams.map((t,i)=>`<g class="tok" data-i="${i}"><circle r="27" fill="#fff" stroke="${t.color}" stroke-width="7"/><circle r="27" fill="none" stroke="#2A2140" stroke-width="3"/><text y="11" text-anchor="middle" font-size="30">${t.emoji}</text></g>`).join("");
+  }
+  S.teams.forEach((t,i)=>{ const [x,y] = tokenXY(i); g.children[i].setAttribute("transform", `translate(${x} ${y})`); });
+  const vp = sqPos(S.vian); $("#vian").setAttribute("transform", `translate(${vp.x + (S.vian>=0?0:0)} ${vp.y - (S.vian>=0?8:0)})`);
+  $("#chips").innerHTML = S.teams.map((t,i)=>`<div class="chip${i===S.turn&&!S.over?" on":""}" style="--tc:${t.color}"><span class="av">${t.emoji}</span>${esc(t.name)}<span class="pos">${t.pos>=GOAL?"🏁":"casilla "+t.pos}</span></div>`).join("");
+  const t = curTeam(), left = S.order.length - S.qi;
+  $("#turn").style.setProperty("--tc", t.color);
+  $("#turn").innerHTML = S.over ? `<div class="who"><div class="lab">Fin del juego</div><div class="nm">¡Ya salieron!</div></div>` :
+    `<div class="who"><div class="lab">Turno · ronda ${S.round} · quedan ${left} preguntas</div><div class="nm">${t.emoji} ${esc(t.name)}</div>${t.skip?'<div class="note">🚪 Están en la Dirección: pierden este turno.</div>':''}</div>
+     <button class="btn go" id="askBtn">${t.skip?"Pasar turno ▶":"Pregunta ▶"}</button>`;
+  const b = $("#askBtn"); if (b) b.onclick = ()=>{ if (busy) return; t.skip ? skipTurn() : ask(); };
+}
+function hopTok(ti){ const el = $("#tokens").children[ti]; if (!el) return; el.classList.remove("hop"); void el.getBBox; el.classList.add("hop"); }
+const wait = ms => new Promise(r=>setTimeout(r, ms));
+async function moveTeam(ti, steps){
+  const t = S.teams[ti], dir = Math.sign(steps);
+  for (let k=0;k<Math.abs(steps);k++){ if (dir>0 && t.pos>=GOAL) break; if (dir<0 && t.pos<=0) break; t.pos += dir; render(); hopTok(ti); SND.hop(); await wait(300); }
+}
+async function moveVian(steps){
+  for (let k=0;k<steps;k++){ S.vian = Math.min(GOAL-1, S.vian+1); render(); SND.step(); await wait(380); }
+}
+let bubT = 0;
+function vianSay(text, ms){ $("#vtxt").textContent = text; $("#vbub").setAttribute("opacity","1"); clearTimeout(bubT); bubT = setTimeout(()=>$("#vbub").setAttribute("opacity","0"), ms||2200); }
+
+// ---------- a turn ----------
+let timerId = 0;
+function ask(){
+  if (S.qi >= S.order.length){ finish(); return; }
+  const q = S.qs[S.order[S.qi]], t = curTeam();
+  const opts = shuffle([q.a, ...q.w]);
+  $("#qCard").style.setProperty("--tc", t.color);
+  $("#qCard").innerHTML = `<div class="qhead"><span class="qtag">${t.emoji} ${esc(t.name)}</span><span class="qnum">Pregunta ${S.qi+1} de ${S.order.length}</span></div>
+    ${S.time?'<div class="timer"><i id="tbar"></i></div>':''}
+    <div class="qtext">${esc(q.q)}</div>
+    <div class="opts">${opts.map((o,i)=>`<button class="opt" data-o="${esc(o)}" style="--oc:${OPT_COLORS[i]}"><span class="l">${"ABCD"[i]}</span><span>${esc(o)}</span></button>`).join("")}</div>
+    <div id="verdict"></div>`;
+  $("#qBox").hidden = false; ctx();
+  let answered = false;
+  const pick = (o, btn)=>{ if (answered) return; answered = true; clearInterval(timerId);
+    const ok = o === q.a;
+    $("#qCard").querySelectorAll(".opt").forEach(b=>{ const isA = b.dataset.o===q.a; b.classList.add(isA?"right":"dim"); if (b===btn && !ok) { b.classList.remove("dim"); b.classList.add("wrong"); } });
+    $("#verdict").innerHTML = ok ? `<div class="verdict ok">¡Correcto! <small>Avanzan 2 casillas</small></div>` : `<div class="verdict no">${o===null?"¡Se acabó el tiempo!":"¡Ups!"}<small>La respuesta era: ${esc(q.a)} · Miss Vian da un paso…</small></div>`;
+    ok ? SND.right() : SND.wrong();
+    S.qi++; busy = true;
+    setTimeout(()=>{ $("#qBox").hidden = true; resolve(ok); }, ok ? 1300 : 2300);
+  };
+  $("#qCard").querySelectorAll(".opt").forEach(b=>b.onclick = ()=>pick(b.dataset.o, b));
+  if (S.time){ const t0 = Date.now(), T = S.time*1000; timerId = setInterval(()=>{ const f = Math.max(0, 1-(Date.now()-t0)/T); const bar = $("#tbar"); if (bar){ bar.style.width = (f*100)+"%"; bar.style.background = f<.25 ? "var(--no)" : f<.5 ? "#F0B21C" : "var(--ok)"; } if (f<=0) pick(null, null); }, 100); }
+}
+async function resolve(ok){
+  const ti = S.turn, t = curTeam();
+  if (ok){
+    t.right++;
+    await moveTeam(ti, 2);
+    await squareFx(ti);
+  } else {
+    vianSay(VIAN_LINES[Math.floor(Math.random()*VIAN_LINES.length)]);
+    await moveVian(1);
+  }
+  await checkCatch();
+  if (S.teams.some(x=>x.pos>=GOAL)){ busy = false; finish(); return; }
+  nextTurn();
+}
+async function squareFx(ti){
+  const t = S.teams[ti], sp = SPECIAL[t.pos]; if (!sp || !sp.fx) return;
+  if (sp.fx==="coop"){ SND.coop(); vianSay("¡Nada de comer en clase!", 1600); await wait(300); await moveTeam(ti, 1); }
+  if (sp.fx==="office"){ SND.office(); t.skip = true; vianSay("¡A la Dirección!", 1600); await wait(700); }
+  if (sp.fx==="bell"){ SND.bell(); await wait(500); for (let j=0;j<S.teams.length;j++) if (j!==ti && S.teams[j].pos<GOAL) await moveTeam(j, 1); }
+}
+async function checkCatch(){
+  if (S.vian < 1) return;
+  const caught = S.teams.map((t,i)=>i).filter(i=>S.teams[i].pos>0 && S.teams[i].pos<=S.vian && S.teams[i].pos<GOAL);
+  if (!caught.length) return;
+  SND.caught(); vianSay("¡Los atrapé! ¡Al salón! 📚", 2400); await wait(700);
+  for (const i of caught){ const t = S.teams[i]; while (t.pos>0){ t.pos = Math.max(0, t.pos-3); render(); hopTok(i); await wait(180); } }
+  await wait(500);
+  S.vian = VIAN_START; render(); vianSay("Voy por mi café… ☕", 1600);
+}
+function nextTurn(){
+  S.turn = (S.turn+1) % S.teams.length;
+  if (S.turn===0){ S.round++;
+    if (S.round%2===0){ busy = true; render(); vianSay("Miss Vian hace su ronda…", 1500); moveVian(1).then(checkCatch).then(()=>{ busy = false; save(); render(); }); return; } }
+  busy = false; save(); render();
+}
+function skipTurn(){ curTeam().skip = false; SND.office(); nextTurn(); }
+
+// ---------- end ----------
+function finish(){
+  S.over = true; store.del("sec48.save"); render();
+  const ranked = S.teams.slice().sort((a,b)=>b.pos-a.pos || b.right-a.right);
+  const w = ranked[0], escaped = w.pos>=GOAL;
+  $("#resTitle").textContent = escaped ? `¡${w.name} escaparon!` : `¡Ganan ${w.name}!`;
+  $("#resSub").textContent = escaped ? "Llegaron a la salida antes de que Miss Vian los atrapara." : "Se acabaron las preguntas: gana el equipo que llegó más lejos.";
+  $("#rank").innerHTML = ranked.map((t,i)=>`<div style="border-color:${t.color}"><span style="font-size:22px">${["🥇","🥈","🥉"][i]||"🎖️"}</span>${t.emoji} ${esc(t.name)}<span class="p">${t.pos>=GOAL?"🏁 salida":"casilla "+t.pos} · ${t.right} correctas</span></div>`).join("");
+  $("#results").hidden = false; SND.win(); confetti();
+}
+function confetti(){
+  const cv = $("#confetti"), c = cv.getContext("2d"); cv.hidden = false; cv.width = innerWidth; cv.height = innerHeight;
+  const P = Array.from({length:160},()=>({x:Math.random()*cv.width, y:-20-Math.random()*cv.height*.5, vx:(Math.random()-.5)*3, vy:2+Math.random()*3, r:Math.random()*6, col:["#E0413B","#2F7FD8","#2FAE5A","#F6C945","#8A3FB5","#E4672E"][Math.floor(Math.random()*6)]}));
+  let n = 0; const step = ()=>{ c.clearRect(0,0,cv.width,cv.height); P.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.r+=.1; c.save(); c.translate(p.x,p.y); c.rotate(p.r); c.fillStyle=p.col; c.fillRect(-5,-3,10,6); c.restore(); }); if (++n<260) requestAnimationFrame(step); else cv.hidden = true; };
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) step(); else cv.hidden = true;
+}
+
+// ---------- setup screen ----------
+function renderSetup(){
+  $("#nTeams").innerHTML = [2,3,4,5,6].map(n=>`<button aria-pressed="${cfg.n===n}" data-n="${n}">${n} equipos</button>`).join("");
+  $("#nTeams").querySelectorAll("button").forEach(b=>b.onclick = ()=>{ cfg.n = +b.dataset.n; store.set("sec48.cfg", cfg); renderSetup(); });
+  $("#teamRows").innerHTML = Array.from({length:cfg.n},(_,i)=>`<label class="trow" style="--tc:${TEAM_COLORS[i]}"><span class="av">${TEAM_EMOJI[i]}</span><input id="tn${i}" data-i="${i}" value="${esc(cfg.names[i]||TEAM_NAMES[i])}" maxlength="22" aria-label="Nombre del equipo ${i+1}"></label>`).join("");
+  $("#teamRows").querySelectorAll("input").forEach(inp=>inp.oninput = ()=>{ cfg.names[+inp.dataset.i] = inp.value; store.set("sec48.cfg", cfg); });
+  $("#timeSeg").innerHTML = [[0,"Sin tiempo"],[20,"20 s"],[30,"30 s"],[45,"45 s"],[60,"1 min"]].map(([v,l])=>`<button aria-pressed="${cfg.time===v}" data-v="${v}">${l}</button>`).join("");
+  $("#timeSeg").querySelectorAll("button").forEach(b=>b.onclick = ()=>{ cfg.time = +b.dataset.v; store.set("sec48.cfg", cfg); renderSetup(); });
+  const qs = parseQ(qText); $("#qInfo").textContent = `${qs.length} preguntas de opción múltiple${qText===DEFAULT_Q?" (verbos, adverbios y demás categorías gramaticales)":" (tus preguntas)"}`;
+  $("#resumeBtn").hidden = !store.get("sec48.save");
+}
+function openSetup(){ $("#results").hidden = true; $("#menu").hidden = true; renderSetup(); $("#setup").hidden = false; }
+$("#startBtn").onclick = ()=>{ ctx(); newGame(); };
+$("#resumeBtn").onclick = ()=>{ const s = store.get("sec48.save"); if (!s) return; S = s; ctx(); $("#setup").hidden = true; $("#game").hidden = false; render(); vianSay("¿Ya regresaron?", 1600); };
+$("#again").onclick = openSetup;
+$("#menuBtn").onclick = ()=>{ $("#menu").hidden = false; };
+$("#mClose").onclick = ()=>{ $("#menu").hidden = true; };
+$("#mEnd").onclick = ()=>{ $("#menu").hidden = true; if (S && !S.over) finish(); };
+$("#mNew").onclick = ()=>{ store.del("sec48.save"); openSetup(); };
+function syncSound(){ $("#soundBtn").textContent = soundOn ? "🔊" : "🔇"; }
+$("#soundBtn").onclick = ()=>{ soundOn = !soundOn; store.set("sec48.sound", soundOn); syncSound(); if (soundOn) SND.hop(); };
+syncSound();
+// question editor
+$("#editQ").onclick = ()=>{ $("#qText").value = qText; showParse(); $("#editor").hidden = false; };
+function showParse(){ const n = parseQ($("#qText").value).length; $("#qParse").textContent = n ? `✔ ${n} preguntas listas` : "No encuentro preguntas: revisa que cada renglón tenga pregunta, respuesta correcta e incorrectas separadas con tabulador."; $("#qSave").disabled = !n; }
+$("#qText").oninput = showParse;
+$("#qReset").onclick = ()=>{ $("#qText").value = DEFAULT_Q; showParse(); };
+$("#qCancel").onclick = ()=>{ $("#editor").hidden = true; };
+$("#qSave").onclick = ()=>{ qText = $("#qText").value; if (qText===DEFAULT_Q) store.del("sec48.q"); else store.set("sec48.q", qText); $("#editor").hidden = true; renderSetup(); };
+document.addEventListener("keydown", e=>{ if ($("#qBox").hidden) return; const i = "abcd1234".indexOf(e.key.toLowerCase()); if (i<0) return; const b = $("#qCard").querySelectorAll(".opt")[i%4]; if (b) b.click(); });
+
+openSetup();
+window.__sec48 = { get S(){ return S; } };
+})();
+</script>
+
+</body>
+</html>

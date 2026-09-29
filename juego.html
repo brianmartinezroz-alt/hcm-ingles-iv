@@ -241,6 +241,10 @@ body.qopen .tkpan{display:none}
 .txtbtn small{font-weight:800;opacity:.75}
 .savedbtn{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:20px;padding:12px 26px}
 .savedbtn small{font-size:13px;font-weight:700;opacity:.9}
+.nukefx{position:fixed;inset:0;z-index:26;pointer-events:none;background:radial-gradient(circle at 50% 60%, #fff 0%, #FFF3B0 25%, #FF9A2E 60%, rgba(160,40,20,.85) 100%)}
+.nukefx.go{animation:nuke 2.6s ease-out both}
+@keyframes nuke{0%{opacity:0}4%{opacity:1;filter:brightness(2.2)}14%{opacity:1;filter:brightness(1.3)}45%{opacity:.55}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.nukefx.go{animation-duration:.6s}}
 </style>
 
 <style>
@@ -751,6 +755,7 @@ body.qopen .tkscreen .tktop{display:none!important}
 </div>
 <div id="puBanner" class="pubanner" hidden aria-hidden="true"><span class="pbi"></span><b></b></div>
 <div id="tkAlarm" class="tkalarm" hidden aria-hidden="true"></div>
+<div id="nukeFx" class="nukefx" hidden aria-hidden="true"></div>
 <div class="overlay" id="depSheet" hidden style="z-index:13">
   <div class="sheet rousheet" role="dialog" aria-label="Deployment roulette">
     <h2 class="rouh">🪂 DEPLOYMENT!</h2>
@@ -2044,7 +2049,12 @@ function hurt(t, amt, by){
 function kill(t, label){
   if (!t.alive) return;
   t.alive=false; t.hp=0; t.respawn=120;
-  explosionFx(t.x, t.y-10, 50); boom(70); tk.flash = .5; tk.shake = 16;
+  // tank destroyed: a much bigger blast, flying wreckage and a smoke column
+  explosionFx(t.x, t.y-20, 110); explosionFx(t.x-40, t.y-40, 70); setTimeout(()=>{ if (tk) explosionFx(t.x+45, t.y-30, 80); }, 140);
+  SFX.play("x_bigbomb"); boom(120); tk.flash = .85; tk.shake = 30;
+  anim({type:"shock", x:t.x, y:t.y-30, max:30, col:"#FF8A3D"}); anim({type:"mushroom", x:t.x, y:t.y, max:140, small:true});
+  const col = game.teams[t.team].color;
+  for (let i=0;i<26;i++){ const a2 = rnd(-Math.PI*.95, -Math.PI*.05), v = rnd(4,13); tk.parts.push({x:t.x, y:t.y-30, vx:Math.cos(a2)*v, vy:Math.sin(a2)*v, life:rnd(60,110), max:110, size:rnd(7,16), col: i%3===0 ? col : i%3===1 ? "#3B3458" : "#6B6480", g:.3, chunk:true, rot:rnd(0,6)}); }
   float(t.x, t.y-95, label, "#fff");
   const by = t.lastHit;
   if (by!=null && by!==t.team){ game.teams[by].score += 50; float(t.x, t.y-130, `+50 ${game.teams[by].name}`, game.teams[by].color); }
@@ -2055,7 +2065,7 @@ function explode(x,y,r,dmg,owner,kind,direct){
   carve(x,y,r); hitBuilding(x,y,r,owner); explosionFx(x,y,r);
   if (kind && kind!=="shell") SFX.play("x_"+kind, r); else boom(r);
   if (kind!=="fire") powFx(x, y-60, r>=50);
-  if (kind==="bigbomb") anim({type:"mushroom", x, y, max:200});
+  if (kind==="bigbomb"){ anim({type:"mushroom", x, y, max:230, big:true}); anim({type:"shock", x, y, max:40, col:"#FFF6C8", big:true}); nukeFx(); tk.shake = 42; tk.flash = 1; }
   if (kind==="napalm"){ const list = tk.born || tk.shots; for (let i=0;i<7;i++) list.push({x, y:y-10, vx:rnd(-4.5,4.5), vy:rnd(-7,-3), r:18, dmg:14, owner, age:30, trail:[], kind:"fire", mini:true});
     for (let i=0;i<30;i++){ const a2=rnd(0,Math.PI*2), v=rnd(1,5); tk.parts.push({x,y,vx:Math.cos(a2)*v,vy:Math.sin(a2)*v-2,life:rnd(30,50),max:50,size:rnd(6,12),col:i%2?"#FF5A1F":"#FFB400",g:-.02,fire:true}); } }
   if (kind==="twin" || kind==="sniper" || kind==="barrage") anim({type:"shock", x, y, max:26, col: kind==="barrage"?"#FFD21A":"#FF4F6D"});
@@ -2201,8 +2211,9 @@ function drawAnims(c, now){
       c.font = `400 ${a.big?50:40}px 'Lilita One','Arial Rounded MT Bold',sans-serif`; c.textAlign="center"; c.textBaseline="middle";
       c.lineWidth=9; c.strokeStyle=INK; c.lineJoin="round"; c.strokeText(a.text, 0, 3); c.fillStyle="#fff"; c.fillText(a.text, 0, 3); c.textBaseline="alphabetic";
     }
-    if (a.type==="shock"){ c.globalAlpha=1-p; c.lineWidth=8*(1-p)+2; c.strokeStyle=a.col; c.beginPath(); c.arc(a.x,a.y,10+p*90,0,7); c.stroke(); }
+    if (a.type==="shock"){ c.globalAlpha=1-p; c.lineWidth=8*(1-p)+2; c.strokeStyle=a.col; c.beginPath(); c.arc(a.x,a.y,10+p*(a.big?650:90),0,7); c.stroke(); }
     if (a.type==="mushroom"){
+      if (a.big || a.small){ const k = a.big ? 2.1 : 0.85; c.translate(a.x, a.y); c.scale(k, k); c.translate(-a.x, -a.y); }
       const g = Math.min(1, a.t/45), fade = a.t<130 ? 1 : 1-(a.t-130)/70, H = 40+g*170;
       c.globalAlpha = fade*0.9; c.fillStyle = a.t<30 ? "#FF8A3D" : "rgba(120,110,130,1)";
       roundRect(c, a.x-14-g*6, a.y-H, 28+g*12, H, 12); c.fill();
@@ -2235,6 +2246,8 @@ function puBanner(k){
   el.style.setProperty("--tc", tm ? tm.color : "#FFD21A"); el.hidden = false; el.classList.remove("go"); void el.offsetWidth; el.classList.add("go");
   clearTimeout(puBanner._t); puBanner._t = setTimeout(()=>{ el.hidden = true; el.classList.remove("go"); }, 1500);
 }
+function nukeFx(){ const el=$("#nukeFx"); if (!el) return; el.hidden=false; el.classList.remove("go"); void el.offsetWidth; el.classList.add("go");
+  setTimeout(()=>SFX.play("x_driller"), 150); clearTimeout(nukeFx._t); nukeFx._t=setTimeout(()=>{ el.hidden=true; }, 2600); }
 function alarmFx(){ const el=$("#tkAlarm"); if (!el) return; el.hidden=false; el.classList.remove("go"); void el.offsetWidth; el.classList.add("go"); clearTimeout(alarmFx._t); alarmFx._t=setTimeout(()=>{ el.hidden=true; }, 2000); }
 
 function fire(){
@@ -2545,9 +2558,13 @@ $("#depGo").onclick = nextDeploy;
 // ---- camera + drawing
 function view2(){ // canvas px -> world
   const cw = tkCanvas.width, ch = tkCanvas.height;
-  const zoom = tk && tk.fit ? Math.min(ch/TK.H, cw/TK.W) : Math.max(ch/TK.H, cw/TK.W);
+  const fill = Math.max(ch/TK.H, cw/TK.W), fitZ = Math.min(ch/TK.H, cw/TK.W);
+  let zoom = tk && tk.fit ? fitZ : fill * ((tk && tk.zmul) || 1);
+  zoom = Math.max(fitZ, Math.min(fill*3, zoom));
   const vw = cw/zoom, vh = ch/zoom;
-  return {zoom, vw, vh, camY: tk && tk.fit ? TK.H - vh : Math.max(0, TK.H - vh)};
+  let camY = TK.H - vh;
+  if (vh < TK.H && tk && tk.cam && tk.cam.y!=null) camY = Math.max(0, Math.min(TK.H - vh, tk.cam.y - vh*0.55));
+  return {zoom, vw, vh, camY};
 }
 function sizeTk(){
   const w = tkCanvas.clientWidth || 1000, h = tkCanvas.clientHeight || 600, dpr = Math.min(window.devicePixelRatio||1, 2);
@@ -2557,8 +2574,10 @@ function sizeTk(){
 function stepCam(){
   const {vw} = view2(), cam = tk.cam, t = curTank();
   if (tk.panDir){ cam.follow="free"; cam.x += tk.panDir*Math.max(9, vw/70); cam.target = cam.x; }
-  if (cam.follow==="tank" && t && t.alive) cam.target = t.x - vw/2;
-  else if (cam.follow==="shot" && tk.shots.length) cam.target = tk.shots[0].x - vw/2;
+  if (cam.y==null) cam.y = TK.H;
+  if (cam.follow==="tank" && t && t.alive){ cam.target = t.x - vw/2; cam.ty = t.y - 40; }
+  else if (cam.follow==="shot" && tk.shots.length){ cam.target = tk.shots[0].x - vw/2; cam.ty = tk.shots[0].y; }
+  if (cam.ty!=null && cam.follow!=="free") cam.y += (cam.ty - cam.y) * 0.08;
   else if (cam.follow==="point") cam.target = cam.target;
   const maxX = Math.max(0, TK.W - vw);
   cam.target = Math.max(0, Math.min(maxX, cam.target));
@@ -2838,7 +2857,7 @@ $("#tgGo").onclick = ()=>{ if (tgPick.length!==tgNeed) return; $("#tgSheet").hid
 [["#tkPanL",-1],["#tkPanR",1]].forEach(([id,d])=>{ const b=$(id);
   b.onpointerdown = e=>{ e.preventDefault(); e.stopPropagation(); if (tk){ tk.panDir=d; } b.setPointerCapture(e.pointerId); };
   b.onpointerup = b.onpointercancel = b.onlostpointercapture = ()=>{ if (tk) tk.panDir=0; }; });
-$("#tkFit").onclick = e=>{ e.stopPropagation(); if (!tk) return; tk.fit = !tk.fit; $("#tkFit").setAttribute("aria-pressed", tk.fit); $("#tkFit").textContent = tk.fit ? "🔍 Zoom" : "🗺️ Map"; if (!tk.fit) tk.cam.follow="tank"; beep(760,.05); };
+$("#tkFit").onclick = e=>{ e.stopPropagation(); if (!tk) return; tk.fit = !tk.fit; tk.zmul = 1; $("#tkFit").setAttribute("aria-pressed", tk.fit); $("#tkFit").textContent = tk.fit ? "🔍 Zoom" : "🗺️ Map"; if (!tk.fit) tk.cam.follow="tank"; beep(760,.05); };
 $("#tkTeams").addEventListener("click", e=>{ const ch = e.target.closest(".tkchip"); if (!ch || !tk) return; const t = game.tanks[+ch.dataset.i]; if (!t || !t.alive) return;
   tk.cam.follow="point"; tk.cam.target = t.x - view2().vw/2; beep(700,.04); });
 $("#tkMenuBtn").onclick = e=>{ e.stopPropagation(); const m=$("#tkMenu"); m.hidden=!m.hidden; $("#tkMenuBtn").setAttribute("aria-expanded", !m.hidden); };
@@ -2859,8 +2878,18 @@ function aimTo(wx, wy){
   t.angle = Math.max(0, Math.min(180, ang)); tk.aimPt = {x:wx, y:wy};
   if (dx<0 && tk.aimPt) {} return Math.hypot(dx,dy);
 }
+const tkTouches = new Map(); let tkPinch = null;
+function pinchInfo(){ const p = [...tkTouches.values()]; return {d: Math.hypot(p[0].x-p[1].x, p[0].y-p[1].y)||1, mx:(p[0].x+p[1].x)/2, my:(p[0].y+p[1].y)/2}; }
+tkCanvas.addEventListener("pointerdown", e=>{ tkTouches.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if (tkTouches.size===2 && tk){ const i = pinchInfo(); tkPinch = {d0:i.d, z0:tk.zmul||1, mx:i.mx, my:i.my}; tkPtr = null; tk.aimPt = null; } }, true);
+tkCanvas.addEventListener("pointermove", e=>{ if (!tkTouches.has(e.pointerId)) return; tkTouches.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if (tkPinch && tkTouches.size>=2 && tk){ const i = pinchInfo(), r = tkCanvas.getBoundingClientRect(), dpr = tkCanvas.width/r.width;
+    tk.fit = false; tk.zmul = Math.max(0.3, Math.min(3, tkPinch.z0 * i.d / tkPinch.d0));
+    const {zoom} = view2(); tk.cam.follow = "free"; tk.cam.x -= (i.mx - tkPinch.mx)*dpr/zoom; tk.cam.target = tk.cam.x; tk.cam.y = (tk.cam.y==null?TK.H:tk.cam.y) - (i.my - tkPinch.my)*dpr/zoom;
+    tkPinch.mx = i.mx; tkPinch.my = i.my; e.stopImmediatePropagation(); } }, true);
+["pointerup","pointercancel"].forEach(ev=>tkCanvas.addEventListener(ev, e=>{ tkTouches.delete(e.pointerId); if (tkTouches.size<2) tkPinch = null; }, true));
 tkCanvas.addEventListener("pointerdown", e=>{
-  if (!game || game.mode!=="tanks") return;
+  if (!game || game.mode!=="tanks" || tkPinch) return;
   tkCanvas.setPointerCapture(e.pointerId);
   const [wx,wy] = tkWorld(e), t = curTank();
   let mode = "pan";
@@ -2887,7 +2916,9 @@ function endPtr(e, cancel){
 }
 tkCanvas.addEventListener("pointerup", e=>endPtr(e,false));
 tkCanvas.addEventListener("pointercancel", e=>endPtr(e,true));
-tkCanvas.addEventListener("wheel", e=>{ if (!tk) return; e.preventDefault(); const {zoom}=view2(); tk.cam.follow="free"; tk.cam.x += (e.deltaX||e.deltaY)/zoom; tk.cam.target=tk.cam.x; }, {passive:false});
+tkCanvas.addEventListener("wheel", e=>{ if (!tk) return; e.preventDefault();
+  if (e.ctrlKey){ tk.fit = false; tk.zmul = Math.max(0.3, Math.min(3, (tk.zmul||1) * Math.exp(-e.deltaY*0.01))); return; }   // trackpad pinch / ctrl+wheel
+  const {zoom}=view2(); tk.cam.follow="free"; tk.cam.x += (e.deltaX||e.deltaY)/zoom; tk.cam.target=tk.cam.x; }, {passive:false});
 function miniJump(e){ const r=tkMini.getBoundingClientRect(), {vw}=view2(); tk.cam.follow="free"; tk.cam.x = (e.clientX-r.left)/r.width*TK.W - vw/2; tk.cam.target=tk.cam.x; }
 tkMini.addEventListener("pointerdown", e=>{ if(!tk) return; tkMini.setPointerCapture(e.pointerId); miniJump(e); tkMini.dataset.drag="1"; });
 tkMini.addEventListener("pointermove", e=>{ if (tkMini.dataset.drag==="1") miniJump(e); });
