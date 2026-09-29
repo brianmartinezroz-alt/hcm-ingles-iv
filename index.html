@@ -13926,6 +13926,235 @@ function hcmTutorial(){
   }
 })();
 
+/* PRESENTE_PERFECTO_HCM ══════════════════════════════════════════════
+   El presente perfecto no es una de las 19 paradas del ALC, así que no
+   se mete al mapa ni mueve las fechas de los exámenes: vive aparte, en
+   "Todo lo demás".
+
+   Dos decisiones de fondo:
+
+   1. Los verbos NO son una lista de las que vienen en cualquier libro.
+      Son exactamente los que aparecen en el vocabulario de las lecciones
+      1 a 17 y en las oraciones del propio material de la app. Cada uno
+      trae la lección de la que sale. Si un verbo no se ve en el curso,
+      no está aquí.
+
+   2. Los reactivos no son "conjuga este verbo". Cada uno ocurre en la
+      situación de su lección — el banco, el accidente, el taller, el
+      comedor, el cuartel, las compras, la familia, el trabajo — para que
+      el verbo venga con su contexto y no suelto.                        */
+(function(){
+  var VERBOS = [{"b": "apologize", "p": "apologized", "pp": "apologized", "lec": "6, 8", "tipo": "regular"}, {"b": "apply", "p": "applied", "pp": "applied", "lec": "1, 16", "tipo": "regular"}, {"b": "arrive", "p": "arrived", "pp": "arrived", "lec": "8, 11, 14, 17", "tipo": "regular"}, {"b": "ask", "p": "asked", "pp": "asked", "lec": "4", "tipo": "regular"}, {"b": "attend", "p": "attended", "pp": "attended", "lec": "13", "tipo": "regular"}, {"b": "be born", "p": "was/were born", "pp": "been born", "lec": "15", "tipo": "irregular"}, {"b": "begin", "p": "began", "pp": "begun", "lec": "14", "tipo": "irregular"}, {"b": "break", "p": "broke", "pp": "broken", "lec": "8", "tipo": "irregular"}, {"b": "break down", "p": "broke down", "pp": "broken down", "lec": "5", "tipo": "irregular"}, {"b": "buy", "p": "bought", "pp": "bought", "lec": "12", "tipo": "irregular"}, {"b": "call", "p": "called", "pp": "called", "lec": "13, 14, 15", "tipo": "regular"}, {"b": "change", "p": "changed", "pp": "changed", "lec": "5, 14", "tipo": "regular"}, {"b": "check", "p": "checked", "pp": "checked", "lec": "5, 14", "tipo": "regular"}, {"b": "choose", "p": "chose", "pp": "chosen", "lec": "12", "tipo": "irregular"}, {"b": "clean", "p": "cleaned", "pp": "cleaned", "lec": "10", "tipo": "regular"}, {"b": "complain", "p": "complained", "pp": "complained", "lec": "6", "tipo": "regular"}, {"b": "connect", "p": "connected", "pp": "connected", "lec": "10", "tipo": "regular"}, {"b": "cost", "p": "cost", "pp": "cost", "lec": "material", "tipo": "irregular"}, {"b": "cross", "p": "crossed", "pp": "crossed", "lec": "4, 17", "tipo": "regular"}, {"b": "damage", "p": "damaged", "pp": "damaged", "lec": "8", "tipo": "regular"}, {"b": "decide", "p": "decided", "pp": "decided", "lec": "6, 7", "tipo": "regular"}, {"b": "deposit", "p": "deposited", "pp": "deposited", "lec": "1", "tipo": "regular"}, {"b": "do", "p": "did", "pp": "done", "lec": "material", "tipo": "irregular"}, {"b": "drink", "p": "drank", "pp": "drunk", "lec": "material", "tipo": "irregular"}, {"b": "drive", "p": "drove", "pp": "driven", "lec": "5, 17", "tipo": "irregular"}, {"b": "earn", "p": "earned", "pp": "earned", "lec": "16", "tipo": "regular"}, {"b": "eat", "p": "ate", "pp": "eaten", "lec": "material", "tipo": "irregular"}, {"b": "exchange", "p": "exchanged", "pp": "exchanged", "lec": "12", "tipo": "regular"}, {"b": "exercise", "p": "exercised", "pp": "exercised", "lec": "11", "tipo": "regular"}, {"b": "explain", "p": "explained", "pp": "explained", "lec": "6, 7, 8", "tipo": "regular"}, {"b": "feel", "p": "felt", "pp": "felt", "lec": "2, 7", "tipo": "irregular"}, {"b": "fill out", "p": "filled out", "pp": "filled out", "lec": "1", "tipo": "regular"}, {"b": "find out", "p": "found out", "pp": "found out", "lec": "7", "tipo": "irregular"}, {"b": "finish", "p": "finished", "pp": "finished", "lec": "11", "tipo": "regular"}, {"b": "fix", "p": "fixed", "pp": "fixed", "lec": "5, 8", "tipo": "regular"}, {"b": "fly", "p": "flew", "pp": "flown", "lec": "17", "tipo": "irregular"}, {"b": "forbid", "p": "forbade", "pp": "forbidden", "lec": "4", "tipo": "irregular"}, {"b": "forget", "p": "forgot", "pp": "forgotten", "lec": "7, 8", "tipo": "irregular"}, {"b": "forgive", "p": "forgave", "pp": "forgiven", "lec": "8", "tipo": "irregular"}, {"b": "freeze", "p": "froze", "pp": "frozen", "lec": "10", "tipo": "irregular"}, {"b": "get", "p": "got", "pp": "gotten", "lec": "material", "tipo": "irregular"}, {"b": "get along", "p": "got along", "pp": "gotten along", "lec": "15", "tipo": "irregular"}, {"b": "get dressed", "p": "got dressed", "pp": "gotten dressed", "lec": "11", "tipo": "irregular"}, {"b": "get up", "p": "got up", "pp": "gotten up", "lec": "11", "tipo": "irregular"}, {"b": "give", "p": "gave", "pp": "given", "lec": "material", "tipo": "irregular"}, {"b": "go", "p": "went", "pp": "gone", "lec": "material", "tipo": "irregular"}, {"b": "grow up", "p": "grew up", "pp": "grown up", "lec": "15", "tipo": "irregular"}, {"b": "have", "p": "had", "pp": "had", "lec": "material", "tipo": "irregular"}, {"b": "hear", "p": "heard", "pp": "heard", "lec": "7", "tipo": "irregular"}, {"b": "hire", "p": "hired", "pp": "hired", "lec": "16", "tipo": "regular"}, {"b": "hit", "p": "hit", "pp": "hit", "lec": "3", "tipo": "irregular"}, {"b": "install", "p": "installed", "pp": "installed", "lec": "10", "tipo": "regular"}, {"b": "introduce", "p": "introduced", "pp": "introduced", "lec": "13, 15", "tipo": "regular"}, {"b": "invite", "p": "invited", "pp": "invited", "lec": "13", "tipo": "regular"}, {"b": "know", "p": "knew", "pp": "known", "lec": "7", "tipo": "irregular"}, {"b": "leave", "p": "left", "pp": "left", "lec": "11, 14, 17", "tipo": "irregular"}, {"b": "lend", "p": "lent", "pp": "lent", "lec": "1", "tipo": "irregular"}, {"b": "let", "p": "let", "pp": "let", "lec": "material", "tipo": "irregular"}, {"b": "live", "p": "lived", "pp": "lived", "lec": "15", "tipo": "regular"}, {"b": "lose", "p": "lost", "pp": "lost", "lec": "8", "tipo": "irregular"}, {"b": "make", "p": "made", "pp": "made", "lec": "material", "tipo": "irregular"}, {"b": "manage", "p": "managed", "pp": "managed", "lec": "16", "tipo": "regular"}, {"b": "marry", "p": "married", "pp": "married", "lec": "15", "tipo": "regular"}, {"b": "meet", "p": "met", "pp": "met", "lec": "13, 15", "tipo": "irregular"}, {"b": "miss", "p": "missed", "pp": "missed", "lec": "8, 15", "tipo": "regular"}, {"b": "notice", "p": "noticed", "pp": "noticed", "lec": "7", "tipo": "regular"}, {"b": "offer", "p": "offered", "pp": "offered", "lec": "6", "tipo": "regular"}, {"b": "open", "p": "opened", "pp": "opened", "lec": "14", "tipo": "regular"}, {"b": "order", "p": "ordered", "pp": "ordered", "lec": "2, 4", "tipo": "regular"}, {"b": "overtake", "p": "overtook", "pp": "overtaken", "lec": "3", "tipo": "irregular"}, {"b": "park", "p": "parked", "pp": "parked", "lec": "5", "tipo": "regular"}, {"b": "pay", "p": "paid", "pp": "paid", "lec": "8, 12", "tipo": "irregular"}, {"b": "practice", "p": "practiced", "pp": "practiced", "lec": "6", "tipo": "regular"}, {"b": "promise", "p": "promised", "pp": "promised", "lec": "7, 8", "tipo": "regular"}, {"b": "put", "p": "put", "pp": "put", "lec": "material", "tipo": "irregular"}, {"b": "quit", "p": "quit", "pp": "quit", "lec": "16", "tipo": "irregular"}, {"b": "realize", "p": "realized", "pp": "realized", "lec": "7", "tipo": "regular"}, {"b": "remember", "p": "remembered", "pp": "remembered", "lec": "7", "tipo": "regular"}, {"b": "repair", "p": "repaired", "pp": "repaired", "lec": "5, 16", "tipo": "regular"}, {"b": "replace", "p": "replaced", "pp": "replaced", "lec": "5, 8", "tipo": "regular"}, {"b": "retire", "p": "retired", "pp": "retired", "lec": "15", "tipo": "regular"}, {"b": "return", "p": "returned", "pp": "returned", "lec": "11, 12", "tipo": "regular"}, {"b": "run", "p": "ran", "pp": "run", "lec": "material", "tipo": "irregular"}, {"b": "save", "p": "saved", "pp": "saved", "lec": "1, 12", "tipo": "regular"}, {"b": "say", "p": "said", "pp": "said", "lec": "material", "tipo": "irregular"}, {"b": "see", "p": "saw", "pp": "seen", "lec": "7", "tipo": "irregular"}, {"b": "sell", "p": "sold", "pp": "sold", "lec": "12", "tipo": "irregular"}, {"b": "shake", "p": "shook", "pp": "shaken", "lec": "13", "tipo": "irregular"}, {"b": "shave", "p": "shaved", "pp": "shaved", "lec": "11", "tipo": "regular"}, {"b": "sign", "p": "signed", "pp": "signed", "lec": "1", "tipo": "regular"}, {"b": "sleep", "p": "slept", "pp": "slept", "lec": "material", "tipo": "irregular"}, {"b": "speak", "p": "spoke", "pp": "spoken", "lec": "13", "tipo": "irregular"}, {"b": "speed", "p": "sped", "pp": "sped", "lec": "3", "tipo": "irregular"}, {"b": "spend", "p": "spent", "pp": "spent", "lec": "1, 12", "tipo": "irregular"}, {"b": "stand", "p": "stood", "pp": "stood", "lec": "material", "tipo": "irregular"}, {"b": "stand in line", "p": "stood in line", "pp": "stood in line", "lec": "1", "tipo": "irregular"}, {"b": "start", "p": "started", "pp": "started", "lec": "5, 11, 14", "tipo": "regular"}, {"b": "stop", "p": "stopped", "pp": "stopped", "lec": "5, 14", "tipo": "regular"}, {"b": "study", "p": "studied", "pp": "studied", "lec": "15", "tipo": "regular"}, {"b": "take", "p": "took", "pp": "taken", "lec": "14, 17", "tipo": "irregular"}, {"b": "take care of", "p": "took care of", "pp": "taken care of", "lec": "15", "tipo": "irregular"}, {"b": "tell", "p": "told", "pp": "told", "lec": "4", "tipo": "irregular"}, {"b": "think", "p": "thought", "pp": "thought", "lec": "7", "tipo": "irregular"}, {"b": "travel", "p": "traveled", "pp": "traveled", "lec": "17", "tipo": "regular"}, {"b": "turn off", "p": "turned off", "pp": "turned off", "lec": "10", "tipo": "regular"}, {"b": "turn on", "p": "turned on", "pp": "turned on", "lec": "10", "tipo": "regular"}, {"b": "understand", "p": "understood", "pp": "understood", "lec": "7", "tipo": "irregular"}, {"b": "visit", "p": "visited", "pp": "visited", "lec": "15", "tipo": "regular"}, {"b": "wait", "p": "waited", "pp": "waited", "lec": "14", "tipo": "regular"}, {"b": "wake up", "p": "woke up", "pp": "woken up", "lec": "11", "tipo": "irregular"}, {"b": "withdraw", "p": "withdrew", "pp": "withdrawn", "lec": "1", "tipo": "irregular"}, {"b": "work", "p": "worked", "pp": "worked", "lec": "10, 15", "tipo": "regular"}];
+  var PP     = [[1, "The cadet has ______ five hundred pesos from his account.", "withdrawn", ["withdrew", "withdraw", "withdrawed"], "Después de has va el participio: withdraw – withdrew – withdrawn."], [1, "We have already ______ the loan papers.", "signed", ["sign", "signing", "signs"], "Sign es regular: signed para el pasado y para el participio."], [1, "They have ______ in line since eight o'clock.", "stood", ["standed", "stand", "standing"], "Stand – stood – stood. Con since, la fila empezó antes y sigue."], [2, "The cook has ______ the bread for the whole company.", "baked", ["bake", "baking", "bakes"], "Bake es regular. Lo que importa es que baked va después de has."], [2, "This soup has ______ salty since they changed the cook.", "tasted", ["taste", "tasting", "tastes"], "Taste es copulativo y regular: tasted. Since marca desde cuándo."], [3, "The driver has ______ another car on the highway.", "hit", ["hitted", "hits", "hitting"], "Hit no cambia: hit – hit – hit. Nunca hitted."], [3, "Two passengers have been ______ in the accident.", "injured", ["injure", "injuring", "injures"], "Have been + participio: la voz pasiva del presente perfecto."], [3, "That truck has ______ us twice on this road.", "overtaken", ["overtook", "overtake", "overtaked"], "Overtake – overtook – overtaken. Con has va el participio."], [4, "The sergeant has ______ us to fasten our seat belts.", "told", ["tell", "telled", "telling"], "Tell – told – told. Y después de told va la persona: told us to..."], [4, "The officer has ______ him to show his license.", "asked", ["ask", "asking", "asks"], "Ask es regular: asked. Ask someone TO do something."], [5, "The mechanic has ______ the flat tire.", "replaced", ["replace", "replacing", "replaces"], "Replace termina en e: solo se le agrega la d."], [5, "The engine has ______ down twice this month.", "broken", ["broke", "breaked", "breaking"], "Break – broke – broken. Broke es pasado; con has va broken."], [6, "He has ______ to the captain for the delay.", "apologized", ["apologize", "apologizing", "apologizes"], "Apologize es regular y va con for: apologize for something."], [7, "Nobody has ______ the answer yet.", "known", ["knew", "knowed", "knowing"], "Know – knew – known. Yet en negativo: todavía no."], [7, "I have ______ that the tank was empty.", "realized", ["realize", "realizing", "realizes"], "Realize es regular. Después va that + sujeto + verbo."], [8, "He has ______ the window, so he has to apologize.", "broken", ["broke", "breaked", "breaking"], "Break – broke – broken. El resultado sigue ahí: la ventana está rota."], [8, "I have ______ my wallet somewhere in the barracks.", "lost", ["losed", "lose", "losing"], "Lose – lost – lost. Losed no existe."], [8, "They have ______ the ceremony three times this year.", "missed", ["miss", "missing", "misses"], "Miss es regular: missed. This year todavía no termina."], [10, "Somebody has ______ the air conditioner off.", "turned", ["turn", "turning", "turns"], "Turn off es regular. El off puede ir después del objeto."], [10, "The technician has ______ the new printer.", "installed", ["install", "installing", "installs"], "Install es regular: installed."], [11, "The cadets have ______ up at four thirty every day this week.", "woken", ["woke", "waked", "waking"], "Wake up – woke up – woken up. Con have va woken."], [11, "She has ______ the base before six every morning.", "left", ["leaved", "leave", "leaving"], "Leave – left – left. Leaved no existe."], [12, "They have ______ a new uniform at the mall.", "bought", ["buyed", "buy", "buying"], "Buy – bought – bought. Buyed no existe."], [12, "We have ______ the whole afternoon looking for shoes.", "spent", ["spend", "spended", "spending"], "Spend – spent – spent. Se usa spend para el tiempo y para el dinero."], [13, "The captain has ______ hands with every cadet.", "shaken", ["shook", "shaked", "shaking"], "Shake – shook – shaken. Shook es pasado; con has va shaken."], [13, "We have ______ English since the first year.", "spoken", ["spoke", "speaked", "speaking"], "Speak – spoke – spoken. Since + el momento en que empezó."], [15, "My uncle has ______ in Monterrey for twenty years.", "lived", ["live", "living", "lives"], "Live es regular. For + cuánto tiempo lleva."], [15, "My sister has ______ care of my grandmother since March.", "taken", ["took", "take", "taked"], "Take care of – took – taken. Con has va taken."], [16, "He has ______ his job at the repair shop.", "quit", ["quitted", "quits", "quitting"], "Quit no cambia: quit – quit – quit."], [17, "I have never ______ to Houston.", "flown", ["flew", "flied", "flying"], "Fly – flew – flown. Never va entre have y el participio."]];
+  var CON    = [[3, "______ the accident last night on the highway.", "I saw", ["I have seen", "I seen", "I was seeing"], "Last night ya terminó, así que va el pasado simple: saw."], [8, "______ my wallet. I can't pay the bill.", "I have lost", ["I lost", "I have lose", "I am losing"], "No dice cuándo y el problema sigue ahora: presente perfecto."], [1, "______ the papers yesterday at the bank.", "He signed", ["He has signed", "He have signed", "He signing"], "Yesterday manda: pasado simple."], [11, "______ here since four o'clock.", "We have been", ["We were", "We are being", "We have be"], "Since + un momento: empezó antes y sigue. Presente perfecto."], [12, "______ that jacket last Saturday.", "She bought", ["She has bought", "She have bought", "She buyed"], "Last Saturday es un momento terminado: pasado simple."], [5, "______ the car three times this month.", "They have repaired", ["They repaired", "They has repaired", "They repairing"], "This month todavía no acaba: presente perfecto."], [7, "When ______ that the tank was empty?", "did you realize", ["have you realized", "you realized", "you have realize"], "Las preguntas con when piden pasado simple."], [13, "______ the new lieutenant yet?", "Have you met", ["Did you meet", "Have you meet", "You have met"], "Yet en pregunta va con presente perfecto."], [15, "My parents ______ in 1998.", "got married", ["have got married", "has got married", "are getting married"], "Un año concreto: pasado simple."], [17, "______ to El Paso twice.", "I have traveled", ["I traveled twice", "I has traveled", "I am traveling"], "Sin decir cuándo, contando experiencias: presente perfecto."]];
+
+  function e(s){ try{ return esc(s); }catch(err){ return String(s==null?'':s); } }
+  function mezcla(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t;} return a; }
+
+  /* ── memoria de lo practicado, para que vea su propio avance ── */
+  var LLAVE='hcm-perfecto';
+  function leer(){ try{ return JSON.parse(localStorage.getItem(LLAVE)||'{}')||{}; }catch(err){ return {}; } }
+  function anotar(id, bien){
+    try{
+      var d=leer(); d[id]=d[id]||{ok:0,no:0}; bien?d[id].ok++:d[id].no++;
+      localStorage.setItem(LLAVE, JSON.stringify(d));
+    }catch(err){}
+  }
+  function cuenta(){
+    var d=leer(), ok=0, tot=0;
+    for(var k in d){ if(!d.hasOwnProperty(k)) continue; tot++; if(d[k].ok>0) ok++; }
+    return {ok:ok, tot:tot};
+  }
+
+  /* ── la regla, en dos frases ── */
+  function tarjetaRegla(){
+    return '<div class="qcard"><div class="qlbl">La regla</div>'+
+      '<div class="qtxt">have / has + participio</div>'+
+      '<div class="qsub">Se usa cuando la acción ya pasó <b>pero cuenta ahora</b>: '+
+      'no importa cuándo, importa el resultado. <i>I have lost my wallet</i> quiere decir '+
+      'que sigo sin cartera. Si dices <b>cuándo</b> pasó — yesterday, last night, in 1998 — '+
+      'ya no es presente perfecto, es pasado simple.</div></div>'+
+      '<div class="card" style="margin-top:10px">'+
+      '<h3 style="margin:0 0 6px">Las palabras que lo delatan</h3>'+
+      '<p class="sub" style="margin:0 0 4px"><b>since</b> + el momento en que empezó · <i>since four o\'clock</i></p>'+
+      '<p class="sub" style="margin:0 0 4px"><b>for</b> + cuánto tiempo lleva · <i>for twenty years</i></p>'+
+      '<p class="sub" style="margin:0 0 4px"><b>already</b> · ya · <b>yet</b> · todavía no, o en pregunta</p>'+
+      '<p class="sub" style="margin:0 0 4px"><b>ever</b> · alguna vez · <b>never</b> · nunca</p>'+
+      '<p class="sub" style="margin:0"><b>this week, this month, this year</b> — el periodo aún no termina</p>'+
+      '</div>';
+  }
+
+  /* ── la tabla de verbos del curso ── */
+  function filaV(v){
+    return '<tr data-b="'+e(v.b)+'">'+
+      '<td style="padding:6px 8px;font-weight:600">'+e(v.b)+'</td>'+
+      '<td style="padding:6px 8px">'+e(v.p)+'</td>'+
+      '<td style="padding:6px 8px">'+e(v.pp)+'</td>'+
+      '<td style="padding:6px 8px;opacity:.6;font-size:12px;white-space:nowrap">'+e(v.lec)+'</td></tr>';
+  }
+  function tablaVerbos(){
+    var irr = VERBOS.filter(function(v){ return v.tipo==='irregular'; });
+    var reg = VERBOS.filter(function(v){ return v.tipo==='regular'; });
+    var h = '<div class="card" style="margin-top:10px">'+
+      '<h3 style="margin:0 0 2px">Los verbos del curso</h3>'+
+      '<p class="sub" style="margin:0 0 8px">'+VERBOS.length+' verbos: los '+irr.length+' irregulares y los '+
+      reg.length+' regulares que salen en las lecciones y en los exámenes. La última columna dice de qué lección viene.</p>'+
+      '<input id="pp-busca" type="search" placeholder="Buscar un verbo..." '+
+      'style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(0,0,0,.18);font-size:15px;margin-bottom:8px">'+
+      '<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">'+
+      '<button class="btn ghost pp-f on" data-f="todos" style="padding:6px 12px">Todos</button>'+
+      '<button class="btn ghost pp-f" data-f="irregular" style="padding:6px 12px">Irregulares</button>'+
+      '<button class="btn ghost pp-f" data-f="regular" style="padding:6px 12px">Regulares</button></div>'+
+      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:14px">'+
+      '<thead><tr style="text-align:left;border-bottom:2px solid rgba(0,0,0,.15)">'+
+      '<th style="padding:6px 8px">Presente</th><th style="padding:6px 8px">Pasado</th>'+
+      '<th style="padding:6px 8px">Participio</th><th style="padding:6px 8px">Lec.</th></tr></thead>'+
+      '<tbody id="pp-tbody">';
+    for(var i=0;i<VERBOS.length;i++) h += filaV(VERBOS[i]);
+    return h + '</tbody></table></div><p class="sub" id="pp-nada" style="display:none;margin:10px 0 0">Ese verbo no se ve en el curso.</p></div>';
+  }
+  function ligarTabla(){
+    var caja = document.getElementById('pp-busca');
+    var tb   = document.getElementById('pp-tbody');
+    if(!caja || !tb) return;
+    var filtro = 'todos';
+    function pinta(){
+      var q = (caja.value||'').trim().toLowerCase();
+      var vistos = 0;
+      var fs = tb.getElementsByTagName('tr');
+      for(var i=0;i<fs.length;i++){
+        var v = VERBOS[i];
+        var okF = (filtro==='todos') || v.tipo===filtro;
+        var okQ = !q || (v.b+' '+v.p+' '+v.pp).toLowerCase().indexOf(q)>=0;
+        var ver = okF && okQ;
+        fs[i].style.display = ver ? '' : 'none';
+        if(ver) vistos++;
+      }
+      var nada = document.getElementById('pp-nada');
+      if(nada) nada.style.display = vistos ? 'none' : '';
+    }
+    caja.oninput = pinta;
+    var bs = document.querySelectorAll('.pp-f');
+    for(var i=0;i<bs.length;i++){
+      (function(b){
+        b.onclick = function(){
+          filtro = b.getAttribute('data-f');
+          for(var j=0;j<bs.length;j++) bs[j].classList.toggle('on', bs[j]===b);
+          pinta();
+        };
+      })(bs[i]);
+    }
+  }
+
+  /* ── la práctica ── */
+  function tarjetaItem(r, id, clase){
+    var ops = mezcla([r[2]].concat(r[3]));
+    var h = '<div class="card pp-item" data-id="'+id+'" data-ok="'+e(r[2])+'" style="margin-top:10px">'+
+      '<p class="sub" style="margin:0 0 4px;opacity:.6">Lección '+r[0]+' · '+clase+'</p>'+
+      '<p style="margin:0 0 10px;font-size:16px;line-height:1.5">'+e(r[1])+'</p>'+
+      '<div class="pp-ops" style="display:flex;flex-direction:column;gap:6px">';
+    for(var i=0;i<ops.length;i++)
+      h += '<button class="btn ghost pp-op" data-v="'+e(ops[i])+'" style="text-align:left">'+e(ops[i])+'</button>';
+    return h + '</div><p class="pp-nota sub" style="display:none;margin:10px 0 0"></p></div>';
+  }
+  function ligarItems(raiz, notas){
+    var items = raiz.querySelectorAll('.pp-item');
+    for(var i=0;i<items.length;i++){
+      (function(caja){
+        var ok = caja.getAttribute('data-ok');
+        var id = caja.getAttribute('data-id');
+        var ops = caja.querySelectorAll('.pp-op');
+        for(var j=0;j<ops.length;j++){
+          (function(b){
+            b.onclick = function(){
+              if(caja.getAttribute('data-hecho')) return;
+              caja.setAttribute('data-hecho','1');
+              var bien = b.getAttribute('data-v') === ok;
+              anotar(id, bien);
+              for(var k=0;k<ops.length;k++){
+                var esta = ops[k].getAttribute('data-v') === ok;
+                ops[k].style.opacity = (esta || ops[k]===b) ? '1' : '.45';
+                if(esta) ops[k].style.borderColor = '#1D9E75';
+                if(esta) ops[k].style.background = 'rgba(29,158,117,.12)';
+                if(ops[k]===b && !bien) ops[k].style.borderColor = '#C8322D';
+                if(ops[k]===b && !bien) ops[k].style.background = 'rgba(200,50,45,.10)';
+              }
+              var n = caja.querySelector('.pp-nota');
+              if(n){ n.textContent = (bien ? '✓ ' : '') + (notas[id]||''); n.style.display=''; }
+            };
+          })(ops[j]);
+        }
+      })(items[i]);
+    }
+  }
+
+  function pantallaPerfecto(){
+    var notas = {};
+    var h = (typeof atras==='function'?atras():'') +
+      '<div class="qcard"><div class="qlbl">Extra</div>'+
+      '<div class="qtxt">Presente perfecto</div>'+
+      '<div class="qsub">Los verbos del curso en sus tres formas, y la práctica en las mismas '+
+      'situaciones de las lecciones. No cuenta para tu avance: es para llegar listo a la clase.</div></div>';
+
+    var c = cuenta();
+    if(c.tot) h += '<div class="card" style="margin-top:10px"><p class="sub" style="margin:0">'+
+      'Llevas '+c.ok+' de '+c.tot+' reactivos resueltos bien al menos una vez.</p></div>';
+
+    h += tarjetaRegla();
+
+    h += '<div class="card" style="margin-top:14px;background:transparent;border:0;padding:0">'+
+         '<h3 style="margin:0">Practica · have / has + participio</h3>'+
+         '<p class="sub" style="margin:2px 0 0">Treinta reactivos, cada uno en la situación de su lección.</p></div>';
+    var ppm = mezcla(PP);
+    for(var i=0;i<ppm.length;i++){
+      var id = 'pp'+i+'-'+ppm[i][0];
+      notas[id] = ppm[i][4];
+      h += tarjetaItem(ppm[i], id, 'presente perfecto');
+    }
+
+    h += '<div class="card" style="margin-top:18px;background:transparent;border:0;padding:0">'+
+         '<h3 style="margin:0">Practica · ¿pasado simple o presente perfecto?</h3>'+
+         '<p class="sub" style="margin:2px 0 0">Aquí se decide con la marca de tiempo, no con el verbo.</p></div>';
+    var cm = mezcla(CON);
+    for(var j=0;j<cm.length;j++){
+      var id2 = 'con'+j+'-'+cm[j][0];
+      notas[id2] = cm[j][4];
+      h += tarjetaItem(cm[j], id2, 'contraste');
+    }
+
+    h += tablaVerbos();
+
+    APP.innerHTML = h;
+    if(typeof ligarAtras==='function') ligarAtras(function(){ try{ menu(); }catch(err){ mostrarMapa(); } });
+    ligarItems(APP, notas);
+    ligarTabla();
+    try{ window.scrollTo(0,0); }catch(err){}
+  }
+  try{ window.__hcmPerfecto = pantallaPerfecto; }catch(err){}
+
+  /* entrada desde "Todo lo demás", junto a los juegos */
+  if(typeof menu === 'function'){
+    var menuBase = menu;
+    menu = function(){
+      var r = menuBase.apply(this, arguments);
+      try{
+        var ref = document.getElementById('hcm-juegos') ||
+                  document.getElementById('hcm-niv') ||
+                  document.getElementById('hcm-son');
+        if(ref && !document.getElementById('hcm-perfecto')){
+          var b = document.createElement('button');
+          b.className = 'btn ghost'; b.id = 'hcm-perfecto';
+          b.style.marginTop = '6px';
+          b.textContent = 'Presente perfecto · verbos';
+          ref.parentNode.insertBefore(b, ref.nextSibling);
+          b.onclick = function(){ pantallaPerfecto(); };
+        }
+      }catch(err){}
+      return r;
+    };
+  }
+})();
+
 })();
 
 </script>
