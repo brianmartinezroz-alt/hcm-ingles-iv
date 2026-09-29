@@ -239,6 +239,8 @@ body.qopen .tkpan{display:none}
 @media (max-width:600px){.tkpan{width:42px;height:70px;font-size:20px}}
 .txtbtn.lost{background:#FFE3E8;color:#B3123A;opacity:1}
 .txtbtn small{font-weight:800;opacity:.75}
+.savedbtn{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:20px;padding:12px 26px}
+.savedbtn small{font-size:13px;font-weight:700;opacity:.9}
 </style>
 
 <style>
@@ -525,6 +527,7 @@ body.qopen .tkscreen .tktop{display:none!important}
         </button>
       </div>
       <div class="row" style="justify-content:center"><button class="btn" id="homeEdit">✏️ Create or edit questions</button><button class="btn" id="homeResume" hidden>↩ Back to current game</button></div>
+      <div class="row" style="justify-content:center"><button class="btn primary savedbtn" id="homeSaved" hidden></button></div>
     </div>
   </section>
 
@@ -978,6 +981,7 @@ $("#startBtn").onclick = ()=>{ closeSetup(); startGame(); };
 function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
 
 function startGame(setId){
+  clearSave();
   cfg.skins = uniqueList(cfg.skins || DEFAULT_SKINS.slice(), SKINS.map(k=>k.id), DEFAULT_SKINS);
   cfg.balls = uniqueList(cfg.balls || DEFAULT_BALLS.slice(), BALLS, DEFAULT_BALLS);
   const set = allSets().find(s=>s.id===(setId||cfg.setId));
@@ -1932,7 +1936,8 @@ function hitBuilding(x,y,r,owner){
 function startTanks(base, order){
   const season = cfg.season==="random" ? Object.keys(SEASONS)[Math.floor(Math.random()*4)] : cfg.season;
   const type = cfg.terrain==="random" ? Object.keys(TERRAINS)[Math.floor(Math.random()*6)] : cfg.terrain;
-  game = {...base, mode:"tanks", order, qPtr:0, asked:0, total:order.length, phase:"question", wind:0, weapon:"shell", target:null, over:false, moved:false, rounds:0, nextRou: 2+Math.floor(Math.random()*2),
+  const bw = shuffle(BASE_W.slice());
+  game = {...base, mode:"tanks", order, qPtr:0, asked:0, total:order.length, phase:"question", wind:0, weapon:"shell", baseW: base.teams.map((_,i)=>bw[i % bw.length]), correct: base.teams.map(()=>0), target:null, over:false, moved:false, rounds:0, nextRou: 2+Math.floor(Math.random()*2),
     inv: (()=>{ const pool = shuffle(ITEM_KEYS.slice()); return base.teams.map((_,i)=>({[pool[i % pool.length]]:1})); })(), tanks:[], season, terrain:type, backdrop:cfg.backdrop};
   const size = cfg.mapSize==="auto" ? autoMap(base.teams.length) : cfg.mapSize;
   TK.W = MAP_W[size]; game.mapSize = size;
@@ -1958,6 +1963,19 @@ function jingle(notes, gap, dur){ notes.forEach((f,i)=>setTimeout(()=>beep(f, du
 function dropCrate(silent){ const c={x:rnd(100,TK.W-100), y:rnd(-200,-40), vy:0, chute:true, item:ITEM_KEYS[Math.floor(Math.random()*ITEM_KEYS.length)], landed:false}; tk.crates.push(c);
   if (!silent){ jingle([523,659,784,1047,784,1047], 85, .1); float(c.x, 90, "SUPPLY DROP!", "#FFD21A"); } }
 function curTank(){ return game.tanks[game.turn]; }
+// every team starts with its own main weapon (unlimited shots)
+const BASE_W = ["shell","bouncer","mortar","napalm","triple","driller"];
+const UPGRADE_W = ["shell","bouncer","mortar","napalm","triple","driller","bigbomb"];
+function baseW(ti){ ti = ti==null ? game.turn : ti; return (game.baseW && game.baseW[ti]) || "shell"; }
+// correct answers pay off: every 3rd → a new main weapon, every 2nd → a free power-up
+function rewardCorrect(){
+  const ti = game.turn, tm = game.teams[ti], t = game.tanks[ti]; if (!game.correct) return;
+  const n = ++game.correct[ti];
+  if (n % 3 === 0){ const opts = UPGRADE_W.filter(k=>k!==baseW(ti)); const k = opts[Math.floor(Math.random()*opts.length)]; game.baseW[ti] = k;
+    setTimeout(()=>{ puBannerRaw(WEAPONS[k].icon, "NEW WEAPON: "+WEAPONS[k].name, tm.color); if (t && t.alive) float(t.x, t.y-115, `${n} correct! 🔄`, "#FFD21A"); jingle([523,659,784,1047],80,.12); renderTkUI(); }, 350); }
+  else if (n % 2 === 0){ const opts = ITEM_KEYS.filter(k=>k!==baseW(ti)); const k = opts[Math.floor(Math.random()*opts.length)]; game.inv[ti][k] = (game.inv[ti][k]||0)+1;
+    setTimeout(()=>{ puBannerRaw(WEAPONS[k].icon, "BONUS: "+WEAPONS[k].name, tm.color); if (t && t.alive) float(t.x, t.y-115, `${n} correct! 🎁`, "#FFD21A"); jingle([784,988,1175,1568],75,.12); renderTkUI(); }, 350); }
+}
 
 // ---- physics
 function stepTank(t){
@@ -2192,23 +2210,23 @@ function fire(){
   const t = curTank(); if (!t || !t.alive || game.phase!=="act") return;
   const w = game.weapon;
   if (w==="airstrike" || w==="teleport"){ game.phase="target"; game.target=w; renderTkUI(); return; }
-  if (w==="repair" || w==="medic"){ useItem(w); const add = w==="medic"?70:40; puBanner(w); SFX.play(w); game.weapon="shell";
+  if (w==="repair" || w==="medic"){ useItem(w); const add = w==="medic"?70:40; puBanner(w); SFX.play(w); game.weapon=baseW();
     anim({type:w, ti:t.team, max: w==="medic"?120:95, onHit:()=>{ t.hp=Math.min(100,t.hp+add); float(t.x, t.y-105,`+${add} ❤️`,"#3FBF4F"); renderTkUI(); }}); renderTkUI(); return; }
-  if (w==="shield"){ useItem(w); t.shield=true; puBanner(w); SFX.play("shield"); anim({type:"shieldup", ti:t.team, max:70}); float(t.x, t.y-115,"🛡️ SHIELD ON","#4DA8FF"); game.weapon="shell"; renderTkUI(); return; }
+  if (w==="shield"){ useItem(w); t.shield=true; puBanner(w); SFX.play("shield"); anim({type:"shieldup", ti:t.team, max:70}); float(t.x, t.y-115,"🛡️ SHIELD ON","#4DA8FF"); game.weapon=baseW(); renderTkUI(); return; }
   if (w==="barrage"){ const tg = game.tanks.filter(x=>x.alive && x.team!==t.team).map(x=>x.team); if (!tg.length){ float(t.x, t.y-105,"No targets!","#fff"); return; } useItem(w); puBanner(w); alarmFx(); SFX.play("siren"); launchHoming(tg, "barrage"); return; }
   if (w==="sniper" || w==="twin"){ openTargetPick(w); return; }
-  if (w==="double"){ useItem("double"); game.shotsLeft += 1; puBanner(w); SFX.play("double"); anim({type:"double", ti:t.team, max:70}); float(t.x, t.y-115,"2 SHOTS!","#FFD21A"); game.weapon="shell"; renderTkUI(); return; }
+  if (w==="double"){ useItem("double"); game.shotsLeft += 1; puBanner(w); SFX.play("double"); anim({type:"double", ti:t.team, max:70}); float(t.x, t.y-115,"2 SHOTS!","#FFD21A"); game.weapon=baseW(); renderTkUI(); return; }
   game.shotsLeft = Math.max(0, game.shotsLeft-1);
   const spec = WEAPONS[w], a = t.angle*Math.PI/180, sp = t.power*0.19;
   const bx = t.x + Math.cos(a)*32*TS, by = t.y-22*TS - Math.sin(a)*32*TS;
   if (w==="mortar") [-13,-6.5,0,6.5,13].forEach((da,k)=>{ const aa=a+da*Math.PI/180, v=sp*(0.9+k%2*0.12); tk.shots.push({x:bx,y:by,vx:Math.cos(aa)*v,vy:-Math.sin(aa)*v,r:spec.r,dmg:spec.dmg,owner:t.team,age:0,trail:[],kind:w,mini:true}); });
   else tk.shots.push({x:bx,y:by,vx:Math.cos(a)*sp,vy:-Math.sin(a)*sp,r:spec.r,dmg:spec.dmg,owner:t.team,age:0,trail:[],big:w==="bigbomb",cluster:w==="triple",kind:w});
-  if (w!=="shell") puBanner(w);
+  if (w!==baseW()) puBanner(w);
   for (let i=0;i<12;i++) tk.parts.push({x:bx,y:by,vx:Math.cos(a)*rnd(1,4)+rnd(-1,1),vy:-Math.sin(a)*rnd(1,4)+rnd(-1,1),life:rnd(10,20),max:20,size:rnd(4,9),col:i%2?"#FFD21A":"#FF8A3D",g:0,fire:true});
   t.recoil = 7;
-  if (w!=="shell") useItem(w);
+  if (w!==baseW()) useItem(w);
   SFX.play("f_"+w); sayFx(t, pickLine(TAUNTS));
-  game.weapon="shell"; game.phase="busy"; tk.busyFrames=0; tk.cam.follow="shot"; renderTkUI();
+  game.weapon=baseW(); game.phase="busy"; tk.busyFrames=0; tk.cam.follow="shot"; renderTkUI();
 }
 function useItem(w){ const inv=game.inv[game.turn]; if (inv[w]) inv[w]--; }
 function launchHoming(targets, kind){
@@ -2221,7 +2239,7 @@ function launchHoming(targets, kind){
   if (t.team!=null && game.tanks[t.team]===t) sayFx(t, pickLine(TAUNTS), 500);
   t.recoil = 7; boom(18);
   tk.missileFollow = targets[0];
-  game.weapon="shell"; game.phase="busy"; tk.busyFrames=0; tk.cam.follow="shot"; renderTkUI();
+  game.weapon=baseW(); game.phase="busy"; tk.busyFrames=0; tk.cam.follow="shot"; renderTkUI();
 }
 function targetClick(x,y){
   const t = curTank();
@@ -2238,7 +2256,7 @@ function targetClick(x,y){
     anim({type:"vortex", x:t.x, y:t.y-30, max:55, grow:true});
     useItem("teleport"); puBanner("teleport"); SFX.play("teleport"); game.phase="act"; tk.cam.follow="tank";
   }
-  game.target=null; game.weapon="shell"; renderTkUI();
+  game.target=null; game.weapon=baseW(); renderTkUI();
 }
 function stepShots(){
   tk.strikes = tk.strikes.filter(s=>{ if (s.delay-- > 0) return true;
@@ -2342,7 +2360,7 @@ function endTankTurn(){
   nextTurn(); newWind(); game.moved=false; tk.moveLeft=0;
   if (Math.random()<0.45) dropCrate();
   if (game.turn <= prev){ game.rounds++;                       // everybody had a turn: a new round starts
-    if (game.rounds >= game.nextRou && game.tanks.some(t=>t.alive)){ game.nextRou = game.rounds + 2 + Math.floor(Math.random()*2); game.phase="roulette"; renderTkUI(); setTimeout(openRoulette, 700); return; } }
+  }
   game.phase="question"; tk.cam.follow="tank"; renderTkUI();
 }
 
@@ -2716,7 +2734,7 @@ function renderTkUI(){
   $("#vTank").dataset.phase = game.phase;
   const pill = $("#tkPill"); pill.style.setProperty("--tc", team.color);
   pill.innerHTML = `<span class="dot" style="background:${team.color}"></span>${esc(team.name)}${game.phase==="act" && game.shotsLeft>1 ? ` · <b>${game.shotsLeft} shots</b>`:""}${game.phase==="target" ? ` · ${game.target==="airstrike"?"tap the target":"tap a spot"} <button class="btn small" id="tkCancelT2">Cancel</button>`:""}`;
-  if ($("#tkCancelT2")) $("#tkCancelT2").onclick = ()=>{ game.phase="act"; game.target=null; game.weapon="shell"; renderTkUI(); };
+  if ($("#tkCancelT2")) $("#tkCancelT2").onclick = ()=>{ game.phase="act"; game.target=null; game.weapon=baseW(); renderTkUI(); };
   const wq = game.wind; const windTxt = wq===0 ? "calm" : `${wq<0?"◀ ":""}${Math.abs(wq)}${wq>0?" ▶":""}`;
   let html = `<div class="label">${game.phase==="over"?"Game over":`Turn · Question ${Math.min(game.asked+(game.phase==="question"?1:0),game.total)} of ${game.total} · Wind ${windTxt}`}</div><div class="tname">${esc(team.name)}</div>`;
   if (game.phase==="question") html += `<button class="btn primary" id="tkAsk">Ask a question</button>`;
@@ -2726,16 +2744,16 @@ function renderTkUI(){
   if (game.phase==="over") html += `<span class="tip">Last question done. Final scores!</span>`;
   tb.innerHTML = html;
   if ($("#tkAsk")) $("#tkAsk").onclick = askTank;
-  if ($("#tkCancelT")) $("#tkCancelT").onclick = ()=>{ game.phase="act"; game.target=null; game.weapon="shell"; renderTkUI(); };
+  if ($("#tkCancelT")) $("#tkCancelT").onclick = ()=>{ game.phase="act"; game.target=null; game.weapon=baseW(); renderTkUI(); };
   $("#tkCtrl").hidden = game.phase!=="act"; $("#tkFire").hidden = game.phase!=="act";
   if (game.phase==="act"){
     const inv = game.inv[game.turn];
     const nItems = ITEM_KEYS.reduce((n,k)=>n+(inv[k]||0),0);
     $("#tkPUn").textContent = nItems; $("#tkPU").classList.toggle("has", nItems>0);
-    $("#tkWsel").innerHTML = `${WEAPONS[game.weapon].icon} ${WEAPONS[game.weapon].name}${game.weapon!=="shell"?' <button class="x" id="tkWx" aria-label="Back to normal shell">✕</button>':""}${game.shotsLeft>1?` <b class="shots">×${game.shotsLeft} shots</b>`:""}`;
-    if ($("#tkWx")) $("#tkWx").onclick = ()=>{ game.weapon="shell"; renderTkUI(); };
+    $("#tkWsel").innerHTML = `${WEAPONS[game.weapon].icon} ${WEAPONS[game.weapon].name}${game.weapon!==baseW()?' <button class="x" id="tkWx" aria-label="Back to your main weapon">✕</button>':""}${game.shotsLeft>1?` <b class="shots">×${game.shotsLeft} shots</b>`:""}`;
+    if ($("#tkWx")) $("#tkWx").onclick = ()=>{ game.weapon=baseW(); renderTkUI(); };
     const wd = game.wind; $("#tkWindDock").textContent = wd===0 ? "calm" : `${wd<0?"◀ ":""}${Math.abs(wd)}${wd>0?" ▶":""}`;
-    $("#tkWeapons").innerHTML = ["shell",...ITEM_KEYS].filter(k=>k==="shell"||inv[k]>0).map(k=>`<button class="wchip" data-w="${k}" aria-pressed="${game.weapon===k}">${WEAPONS[k].name}${k==="shell"?"":` ×${inv[k]}`}</button>`).join("");
+    $("#tkWeapons").innerHTML = [baseW(),...ITEM_KEYS].filter(k=>k===baseW()||inv[k]>0).map(k=>`<button class="wchip" data-w="${k}" aria-pressed="${game.weapon===k}">${WEAPONS[k].name}${k==="shell"?"":` ×${inv[k]}`}</button>`).join("");
     $("#tkWeapons").querySelectorAll(".wchip").forEach(b=>b.onclick=()=>{ game.weapon=b.dataset.w; renderTkUI(); });
     $("#tkFire").textContent = game.weapon==="repair" ? "REPAIR" : game.weapon==="double" ? "USE" : game.weapon==="airstrike" ? "TARGET" : game.weapon==="teleport" ? "TARGET" : "FIRE!";
     $("#tkLeft").disabled = game.moved; $("#tkRight").disabled = game.moved;
@@ -2768,7 +2786,7 @@ let tgPick = [], tgNeed = 1, tgKind = "sniper";
 function openTargetPick(kind){
   tgKind = kind; tgNeed = kind==="twin" ? 2 : 1; tgPick = [];
   const me = game.turn, foes = game.tanks.filter(x=>x.alive && x.team!==me);
-  if (!foes.length){ float(curTank().x, curTank().y-105, "No targets!", "#fff"); game.weapon="shell"; renderTkUI(); return; }
+  if (!foes.length){ float(curTank().x, curTank().y-105, "No targets!", "#fff"); game.weapon=baseW(); renderTkUI(); return; }
   tgNeed = Math.min(tgNeed, foes.length);
   $("#tgTitle").textContent = kind==="twin" ? `${WEAPONS.twin.icon} Pick ${tgNeed} tank${tgNeed>1?"s":""}` : `${WEAPONS.sniper.icon} Pick your target`;
   $("#tgGrid").innerHTML = foes.map(f=>{ const tm=game.teams[f.team]; return `<button class="tgcard" data-t="${f.team}" style="--tc:${tm.color}"><canvas width="200" height="120"></canvas><b>${esc(tm.name)}</b><span class="hp"><i style="width:${f.hp}%"></i></span></button>`; }).join("");
@@ -2783,7 +2801,7 @@ function openTargetPick(kind){
   $("#tgGo").disabled = true;
   $("#tgSheet").hidden = false;
 }
-$("#tgCancel").onclick = ()=>{ $("#tgSheet").hidden = true; game.weapon="shell"; renderTkUI(); };
+$("#tgCancel").onclick = ()=>{ $("#tgSheet").hidden = true; game.weapon=baseW(); renderTkUI(); };
 $("#tgGo").onclick = ()=>{ if (tgPick.length!==tgNeed) return; $("#tgSheet").hidden = true; useItem(tgKind); puBanner(tgKind); launchHoming(tgPick.slice(), tgKind); };
 // map navigation: hold the side arrows to scroll, 🗺️ to see the whole map, tap a team to jump to its tank
 [["#tkPanL",-1],["#tkPanR",1]].forEach(([id,d])=>{ const b=$(id);
@@ -2797,7 +2815,7 @@ document.addEventListener("pointerdown", e=>{ const m=$("#tkMenu"); if (m && !m.
 function askTank(){
   const team = game.teams[game.turn], q = nextQuestion(); game.asked++;
   askQuestion({team, q, head:`Question ${game.asked} of ${game.total}`, pts:null, cancelLabel:"Skip question", rightLabel:"Your turn!",
-    onRight:()=>{ closeModal(); const t=curTank(); if (!t.alive){ game.phase="busy"; tk.busyFrames=0; } else { game.phase="act"; game.moved=false; game.shotsLeft=1; tk.acted=true; tk.cam.follow="tank"; tk.aimPt=null; } renderTkUI(); },
+    onRight:()=>{ closeModal(); const t=curTank(); rewardCorrect(); game.weapon=baseW(); if (!t.alive){ game.phase="busy"; tk.busyFrames=0; } else { game.phase="act"; game.moved=false; game.shotsLeft=1; tk.acted=true; tk.cam.follow="tank"; tk.aimPt=null; } renderTkUI(); },
     onWrong:()=>{ closeModal(); game.shotsLeft=0; tk.acted=false; game.phase="busy"; tk.busyFrames=40; renderTkUI(); }});
 }
 function tkWorld(e){
@@ -3051,6 +3069,7 @@ $("#endBtn").onclick = ()=>confirmEnd("#endConfirm", ()=>endGame());
 $("#c4endBtn").onclick = ()=>confirmEnd("#c4endConfirm", ()=>endGame(null));
 $("#plEndBtn").onclick = ()=>confirmEnd("#plEndConfirm", ()=>{ plBall=null; endGame(); });
 function endGame(c4Winner){
+  clearSave();
   closeModal();
   const isC4 = game.mode==="c4";
   let ranked = game.teams.slice().sort((a,b)=>b.score-a.score), label;
@@ -3229,6 +3248,63 @@ function start(data){
   }).catch(()=>{});
   window.claude?.use?.("assets").then(a=>{ assets = a; if (view==="edit") renderEditor(); }).catch(()=>{});
 }
+// ---------- save & resume: the game is saved after every turn, so a reload (or an update) can continue it ----------
+const SAVE_KEY = "tilerush.save";
+let saveSig = "";
+function canSave(){
+  if (!game || game.over || view!=="play" || !$("#overlay").hidden) return false;
+  if (game.mode==="tanks") return game.phase==="question" && tk && !(tk.shots||[]).length;
+  if (game.mode==="c4" || game.mode==="plinko") return game.phase==="question";
+  return true;
+}
+function saveNow(){
+  try{
+    if (!canSave()) return;
+    const sig = JSON.stringify([game.mode, game.turn, game.asked, game.qPtr, game.teams.map(t=>t.score), game.used ? Object.keys(game.used).length : 0, game.tanks ? game.tanks.map(t=>[t.hp|0,t.x|0]) : 0]);
+    if (sig === saveSig) return; saveSig = sig;
+    const data = {v:1, savedAt: Date.now(), game: JSON.parse(JSON.stringify(game))};
+    if (game.mode==="tanks"){
+      data.tk = {W: TK.W, terr: tk.terr.toDataURL("image/png"), decor: tk.decor.toDataURL("image/png"),
+        blds: tk.blds.map(b=>({hp:b.hp, stage:b.stage, gone:!!b.gone})), crates: tk.crates.filter(c=>!c.taken).map(c=>({x:c.x,y:c.y,item:c.item})), camX: tk.cam.x};
+    }
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  }catch(e){ console.warn("save failed", e); }
+}
+function loadSave(){ try{ const d = JSON.parse(localStorage.getItem(SAVE_KEY)||"null"); return d && d.v===1 && d.game && !d.game.over ? d : null; }catch(e){ return null; } }
+function clearSave(){ saveSig = ""; try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+function loadImg(src){ return new Promise(res=>{ const im = new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src=src; }); }
+async function resumeSaved(){
+  const d = loadSave(); if (!d) return;
+  closeModal(); game = d.game;
+  if (game.mode==="tanks"){
+    TK.W = d.tk.W;
+    const mw = Math.round(112*TK.W/TK.H); tkMini.width = mw; tkMini.style.aspectRatio = `${mw}/112`;
+    tk = buildWorld(game.terrain, game.season, game.backdrop);
+    Object.assign(tk, {anims:[], shots:[], parts:[], floats:[], crates:[], strikes:[], shake:0, flash:0, busyFrames:0, frame:0, moveLeft:0, moveDir:0, miniDirty:true,
+      cam:{x:d.tk.camX||0, target:d.tk.camX||0, follow:"tank"}, clouds: Array.from({length:7},()=>({x:rnd(0,TK.W), y:rnd(40,240), s:rnd(.8,1.6)})),
+      snow: Array.from({length:90},()=>({x:rnd(0,1),y:rnd(0,1),v:rnd(.6,1.6),a:rnd(0,6),s:rnd(3,7)}))});
+    const [ti, di] = await Promise.all([loadImg(d.tk.terr), loadImg(d.tk.decor)]);
+    if (ti){ tk.tctx.globalCompositeOperation="source-over"; tk.tctx.clearRect(0,0,TK.W,TK.H); tk.tctx.drawImage(ti,0,0); }
+    if (di){ tk.dctx.globalCompositeOperation="source-over"; tk.dctx.clearRect(0,0,TK.W,TK.H); tk.dctx.drawImage(di,0,0); }
+    updateAlpha(0,0,TK.W,TK.H);
+    (d.tk.blds||[]).forEach((b,i)=>{ if (tk.blds[i]) Object.assign(tk.blds[i], b); });
+    tk.crates = (d.tk.crates||[]).map(c=>({x:c.x, y:c.y, vy:0, chute:false, item:c.item, landed:false}));
+    tk.sprites = game.teams.map((tm,i)=>makeSprite(tm.color, tm.skin, i));
+    game.tanks.forEach(t=>{ t.vx=0; t.vy=0; t.onGround=false; t.hitT=0; if (!t.alive && !t.respawn) t.respawn = 30; });
+    game.phase = "question"; game.weapon = baseW(); tk.acted = false;
+  }
+  show("play");
+}
+setInterval(saveNow, 2500);
+window.addEventListener("pagehide", saveNow);
+function refreshSavedBtn(){ const d = loadSave(), b = $("#homeSaved"); if (!b) return;
+  if (!d || (game && !game.over)){ b.hidden = true; return; }
+  const names = {tiles:"Tile Board", c4:"Four in a Row", plinko:"Ball Drop", tanks:"Tank Battle"};
+  const sc = d.game.teams.map(t=>`${t.name} ${t.score}`).join(" · "), when = new Date(d.savedAt).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  b.innerHTML = `▶ Continue saved game<small>${names[d.game.mode]||""} · ${esc(sc)} · ${when}</small>`; b.hidden = false; }
+$("#homeSaved").onclick = resumeSaved;
+setInterval(()=>{ if (view==="home") refreshSavedBtn(); }, 1500);
+
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
 })();
 </script>
