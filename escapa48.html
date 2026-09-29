@@ -114,6 +114,14 @@ button:focus-visible{outline:4px solid var(--ink);outline-offset:3px}
 @keyframes vianBob{50%{transform:translateX(-50%) translateY(-8px)}}
 .facHint{position:absolute;left:0;right:0;top:calc(12px + clamp(30px,5vw,58px) + 8px);text-align:center;margin:0;color:#fff;font-weight:900;font-size:clamp(13px,1.6vw,17px);text-shadow:0 2px 0 var(--ink);pointer-events:none}
 #facade .sign{cursor:pointer;outline:none}
+#facade .sign:not(.gate){transform-box:fill-box;transform-origin:50% 50%;transition:transform .2s}
+#facade .sign[data-p="teams"]{transform:translateX(-18px) scale(1.3)}
+#facade .sign[data-p="rules"]{transform:scale(1.3)}
+#facade .sign[data-p="topic"]{transform:translate(4px,-8px) scale(1.3)}
+#facade .sign[data-p="time"]{transform:translateY(14px) scale(1.25)}
+#facade .sign[data-p="resume"]{transform:scale(1.2)}
+#facade .sign[data-p="teams"]:hover{transform:translateX(-18px) scale(1.36)} #facade .sign[data-p="rules"]:hover{transform:scale(1.36)} #facade .sign[data-p="topic"]:hover{transform:translate(4px,-8px) scale(1.36)} #facade .sign[data-p="time"]:hover{transform:translateY(14px) scale(1.31)}
+
 #facade .sign .glow{fill:none;stroke:#FFD84A;stroke-width:8;opacity:0;animation:signGlow 2.4s ease-in-out infinite}
 #facade .sign:nth-of-type(2) .glow{animation-delay:.6s} #facade .sign:nth-of-type(3) .glow{animation-delay:1.2s}
 #facade .sign:hover .glow,#facade .sign:focus .glow{opacity:1;animation:none}
@@ -854,7 +862,7 @@ function renderSetup(){
 $("#setPick").onchange = e=>{ setId = e.target.value; store.set("sec48.set", setId); qText = setId==="custom" ? customQ : setText(activeSet()); renderSetup(); };
 $("#mixQ").onchange = e=>{ mixQ = e.target.checked; store.set("sec48.mix", mixQ); if (activeSet()) qText = setText(activeSet()); renderSetup(); };
 function fitFacade(){ const svg = $("#facSvg"); if (!svg) return; const ar = innerWidth/Math.max(1,innerHeight);
-  let w = Math.min(2400, Math.max(1040, ar*1000)), h = w/ar; if (h < 1000){ h = 1000; w = Math.min(2400, h*ar); }
+  let w = Math.min(2400, Math.max(1130, ar*1000)), h = w/ar; if (h < 1000){ h = 1000; w = Math.min(2400, h*ar); }
   const cxv = w >= 1500 ? 1100 : 1190, x0 = Math.max(0, Math.min(2400 - w, cxv - w/2)); svg.setAttribute("viewBox", `${x0} ${1000-h} ${w} ${h}`); }
 addEventListener("resize", fitFacade);
 function openSign(p, el){ if (p==="go"){ $("#startBtn").click(); return; }
