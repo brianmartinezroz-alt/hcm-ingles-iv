@@ -54,6 +54,11 @@ button:focus-visible{outline:4px solid var(--ink);outline-offset:3px}
 @keyframes hop{50%{translate:0 -18px}}
 #vian{transition:transform .32s ease-in-out}
 .bubble{transition:opacity .25s}
+#board .zone,#board .sq{cursor:pointer}
+#board .zone:hover rect:first-of-type,#board .zone:focus rect:first-of-type{filter:brightness(1.06)}
+#board .zone:focus{outline:none}
+#board .zone:focus rect:nth-of-type(2){stroke:#2F7FD8;stroke-width:5}
+#tip{transition:opacity .2s}
 
 /* ---------- overlays ---------- */
 .overlay{position:fixed;inset:0;background:rgba(42,33,64,.55);display:grid;place-items:center;padding:16px;z-index:10}
@@ -123,7 +128,7 @@ textarea{width:100%;min-height:220px;border:3px solid var(--ink);border-radius:1
     <div class="rules">
       <b>Cómo se juega:</b> cada equipo contesta una pregunta. <b>Correcta:</b> avanza 2 casillas hacia la salida.
       <b>Incorrecta:</b> Miss Vian da un paso. Si alcanza a un equipo, <b>¡lo regresa al salón!</b><br>
-      🔔 Timbre: todos avanzan 1 · 🍪 Cooperativa: salto extra · 🚪 Dirección: pierden su siguiente turno · 🏁 Gana quien llegue primero a la salida.
+      Recorren la escuela: salón → pasillo → escaleras → planta baja → patio → portón.<br>🔔 Timbre: los demás avanzan 1 · 📚 Biblioteca y 🍪 Cooperativa: salto extra · 🚪 Dirección: pierden su siguiente turno · 🏁 Gana quien llegue primero al portón.
     </div>
     <div class="fld"><b>Equipos</b><div class="seg" id="nTeams"></div></div>
     <div class="teams" id="teamRows"></div>
@@ -227,13 +232,33 @@ let qText = store.get("sec48.q") || DEFAULT_Q;
 
 // ---------- board ----------
 // 16 squares over the patio (0 = salón, 15 = salida), plus the teachers' room where Miss Vian starts
+// Top-down plan of the school. The path zig-zags through it: salón (planta alta) → pasillo → escaleras →
+// pasillo de planta baja (biblioteca, dirección, baños) → patio → cooperativa → portón.
 const SQ = [];
-[120,258,396,534,672,810,948,1086].forEach(x=>SQ.push({x, y:640}));
-[1086,948,810,672,534,396,258,120].forEach(x=>SQ.push({x, y:505}));
-const SPECIAL = {0:{ico:"🏫",name:"Salón 2°A"}, 3:{ico:"🔔",name:"Timbre",fx:"bell"}, 6:{ico:"⚽",name:"Patio"}, 9:{ico:"📚",name:"Biblioteca"},
-  11:{ico:"🚪",name:"Dirección",fx:"office"}, 13:{ico:"🍪",name:"Cooperativa",fx:"coop"}, 15:{ico:"🏁",name:"¡Salida!"}};
-const GOAL = 15, VIAN_START = -1;
-const VIAN_SPOT = {x:120, y:765};   // sala de maestros, below the salón
+[120,260,400,540,680,820,960].forEach(x=>SQ.push({x, y:238}));          // 0-6  pasillo de salones
+SQ.push({x:1098, y:330});                                               // 7    escaleras
+[960,820,680,540,400,260].forEach(x=>SQ.push({x, y:440}));              // 8-13 pasillo de planta baja
+SQ.push({x:120, y:548});                                                // 14   rampa al patio
+[270,470,680,880].forEach((x,k)=>SQ.push({x, y: k%2 ? 690 : 650}));     // 15-18 patio
+SQ.push({x:1090, y:720});                                               // 19   portón
+const SPECIAL = {0:{ico:"🏫",name:"Salón 2°A"}, 3:{ico:"🔔",name:"Timbre",fx:"bell"}, 7:{ico:"🪜",name:"Escaleras"}, 9:{ico:"📚",name:"Biblioteca",fx:"lib"},
+  11:{ico:"🚪",name:"Dirección",fx:"office"}, 13:{ico:"🚻",name:"Baños"}, 15:{ico:"⚽",name:"Cancha"}, 17:{ico:"🍪",name:"Cooperativa",fx:"coop"}, 19:{ico:"🏁",name:"¡Portón!"}};
+const GOAL = 19, VIAN_START = -1;
+const VIAN_SPOT = {x:120, y:340};   // sala de maestros, between the two corridors
+// rooms that can be tapped on the plan
+const ZONES = [
+  {x:40,y:56,w:160,h:130,name:"Salón 2°A",info:"Aquí empiezan todos. ¡Que no los vea Miss Vian!"},
+  {x:210,y:56,w:160,h:130,name:"Salón 2°B",info:"El salón de al lado."},
+  {x:380,y:56,w:160,h:130,name:"Salón 3°A",info:"Pasen sin hacer ruido."},
+  {x:550,y:56,w:160,h:130,name:"Laboratorio",info:"Nada de tocar los matraces."},
+  {x:720,y:56,w:160,h:130,name:"Sala de cómputo",info:"Ya casi llegan a las escaleras."},
+  {x:890,y:56,w:120,h:130,name:"Salón 1°A",info:"Los de primero los están viendo."},
+  {x:1030,y:56,w:140,h:330,name:"Escaleras",info:"Bajan a la planta baja.",stairs:true},
+  {x:40,y:292,w:160,h:92,name:"Sala de maestros",info:"Aquí sale Miss Vian a buscarlos ☕",teacher:true},
+  {x:210,y:292,w:160,h:92,name:"Baños",info:"Parada técnica."},
+  {x:380,y:292,w:320,h:92,name:"Dirección",info:"Si caen aquí, pierden su siguiente turno 🚪",fx:true},
+  {x:710,y:292,w:300,h:92,name:"Biblioteca",info:"Si caen aquí, contesten bien la siguiente y… ¡silencio! 📚"},
+];
 const TEAM_COLORS = ["#E0413B","#2F7FD8","#2FAE5A","#F08A1C","#8A3FB5","#D8398F"];
 const TEAM_EMOJI = ["🦊","🐸","🐼","🐯","🦄","🐙"];
 const TEAM_NAMES = ["Los Verbos","Los Adverbios","Los Adjetivos","Los Sustantivos","Los Pronombres","Los Artículos"];
@@ -241,53 +266,55 @@ const OPT_COLORS = ["#E0413B","#2F7FD8","#2FAE5A","#F08A1C"];
 const VIAN_LINES = ["¿A dónde van, jóvenes?","¡Saquen su libreta!","¡Los estoy viendo!","¡Nadie sale sin terminar!","¿Y la tarea?","¡A su lugar!","¡Ese uniforme!","¡Sin correr en el pasillo!"];
 
 function sceneSVG(){
-  // building across the top, patio and path below, all drawn with the school's own colors
-  let s = `<svg viewBox="0 0 1200 820" role="img" aria-label="Mapa de la escuela: del salón a la salida">
+  const F = `font-family="Nunito,sans-serif" font-weight="900"`;
+  let s = `<svg viewBox="0 0 1200 830" role="img" aria-label="Plano de la escuela: del salón al portón">
   <defs>
-    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9FD8F2"/><stop offset="1" stop-color="#E8F6FD"/></linearGradient>
-    <pattern id="tiles" width="46" height="46" patternUnits="userSpaceOnUse"><rect width="46" height="46" fill="#D9CBB0"/><path d="M0 0H46V46" fill="none" stroke="#C9B894" stroke-width="2"/></pattern>
+    <pattern id="tiles" width="40" height="40" patternUnits="userSpaceOnUse"><rect width="40" height="40" fill="#E4D6BA"/><path d="M0 0H40V40" fill="none" stroke="#D3C29F" stroke-width="2"/></pattern>
+    <pattern id="floor" width="24" height="24" patternUnits="userSpaceOnUse"><rect width="24" height="24" fill="#FFF6DD"/><path d="M0 0H24V24" fill="none" stroke="#F1E3BD" stroke-width="2"/></pattern>
   </defs>
-  <rect width="1200" height="820" fill="url(#sky)"/>
-  <g fill="#fff" opacity=".9"><ellipse cx="190" cy="60" rx="70" ry="20"/><ellipse cx="240" cy="48" rx="46" ry="22"/><ellipse cx="930" cy="70" rx="80" ry="22"/><ellipse cx="985" cy="56" rx="50" ry="24"/></g>
-  <rect x="0" y="392" width="1200" height="428" fill="url(#tiles)"/>`;
-  // building: two floors, yellow walls with orange frames
-  s += `<g stroke="#2A2140" stroke-width="4">
-    <rect x="40" y="120" width="1120" height="272" fill="#F6C945"/>
-    <rect x="40" y="96" width="1120" height="28" fill="#E4672E"/>
-    <line x1="40" y1="256" x2="1160" y2="256" stroke="#E4672E" stroke-width="12"/>`;
-  for (let i=0;i<10;i++){ const x = 64 + i*110; if (i===4||i===5) continue;
-    s += `<rect x="${x}" y="146" width="84" height="82" rx="4" fill="#9FD1EA"/><line x1="${x+42}" y1="146" x2="${x+42}" y2="228" stroke-width="3"/>
-          <rect x="${x}" y="282" width="84" height="80" rx="4" fill="#9FD1EA"/><line x1="${x+42}" y1="282" x2="${x+42}" y2="362" stroke-width="3"/>`;
-    s += `<rect x="${x-8}" y="138" width="100" height="98" fill="none" stroke="#E4672E" stroke-width="6"/><rect x="${x-8}" y="274" width="100" height="96" fill="none" stroke="#E4672E" stroke-width="6"/>`; }
-  s += `</g>`;
-  // entrance with the sign
-  s += `<g stroke="#2A2140" stroke-width="4">
-    <rect x="496" y="150" width="208" height="70" rx="8" fill="#FFFDF6"/>
-    <rect x="530" y="272" width="140" height="120" fill="#F3B021"/><line x1="600" y1="272" x2="600" y2="392" stroke-width="3"/>
-    <rect x="522" y="262" width="156" height="14" fill="#E4672E"/></g>
-  <text x="600" y="176" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="900" font-size="13" fill="#2A2140">ESC. SEC. DIURNA No. 48</text>
-  <text x="600" y="196" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="800" font-size="11.5" fill="#2A2140">“JUAN RUIZ DE ALARCÓN</text>
-  <text x="600" y="211" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="800" font-size="11.5" fill="#2A2140">Y MENDOZA”</text>`;
-  // green railing and trees in front
-  s += `<g stroke="#2F8F55" stroke-width="5" fill="none"><line x1="20" y1="420" x2="480" y2="420"/><line x1="720" y1="420" x2="1180" y2="420"/>`;
-  for (let x=28;x<=480;x+=22) s += `<path d="M${x} 440V412a6 6 0 0 1 12 0"/>`;
-  for (let x=726;x<=1178;x+=22) s += `<path d="M${x} 440V412a6 6 0 0 1 12 0"/>`;
-  s += `</g>`;
-  [[30,360],[1170,360],[470,380],[730,380]].forEach(([x,y])=>{ s += `<g stroke="#2A2140" stroke-width="4"><rect x="${x-7}" y="${y}" width="14" height="70" fill="#8A5A34"/><circle cx="${x}" cy="${y-18}" r="46" fill="#4FA85E"/><circle cx="${x-24}" cy="${y+2}" r="26" fill="#3E9150"/><circle cx="${x+26}" cy="${y}" r="24" fill="#3E9150"/></g>`; });
-  // cooperativa kiosk and gate labels
-  // path between squares
-  s += `<polyline points="${SQ.map(p=>p.x+","+p.y).join(" ")}" fill="none" stroke="#FFFDF6" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" opacity=".8"/>
+  <rect width="1200" height="830" fill="#CFE9C4"/>
+  <rect x="20" y="30" width="1160" height="750" rx="18" fill="url(#tiles)" stroke="#2A2140" stroke-width="5"/>`;
+  // corridors
+  s += `<rect x="40" y="196" width="990" height="84" rx="10" fill="url(#floor)" stroke="#2A2140" stroke-width="3"/>
+        <rect x="40" y="396" width="1130" height="88" rx="10" fill="url(#floor)" stroke="#2A2140" stroke-width="3"/>
+`;
+  // rooms (yellow walls, orange frame, a door toward the corridor)
+  ZONES.forEach((z,k)=>{
+    const fill = z.teacher ? "#EBD9F5" : z.fx ? "#FFE0CC" : z.stairs ? "#F3E6C4" : "#F6C945";
+    s += `<g class="zone" data-z="${k}" tabindex="0" role="button" aria-label="${z.name}"><title>${z.name}</title>
+      <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="8" fill="${fill}" stroke="#E4672E" stroke-width="7"/>
+      <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="8" fill="none" stroke="#2A2140" stroke-width="3"/>`;
+    if (z.stairs){ for (let y=z.y+20; y<z.y+z.h-10; y+=18) s += `<line x1="${z.x+14}" y1="${y}" x2="${z.x+z.w-14}" y2="${y}" stroke="#B08A3E" stroke-width="4"/>`; }
+    else if (z.y<100){ for (let r=0;r<2;r++) for (let c2=0;c2<Math.floor((z.w-30)/34);c2++) s += `<rect x="${z.x+20+c2*34}" y="${z.y+56+r*30}" width="22" height="14" rx="3" fill="#C98A4B" opacity=".75"/>`;
+      s += `<rect x="${z.x+14}" y="${z.y+20}" width="${z.w-28}" height="8" rx="3" fill="#2F6E4A"/>`; }
+    s += `<text x="${z.x+z.w/2}" y="${z.y + (z.y<100 ? 46 : 36)}" text-anchor="middle" ${F} font-size="${z.w<140?15:17}" fill="#2A2140">${z.name}</text></g>`;
+  });
+  // patio: cancha, cooperativa kiosk, trees, railing and the gate on the street
+  s += `<g stroke="#2A2140" stroke-width="3">
+    <rect x="150" y="585" width="250" height="150" rx="6" fill="#7FC98A"/><line x1="275" y1="585" x2="275" y2="735" stroke="#fff" stroke-width="4"/><circle cx="275" cy="660" r="26" fill="none" stroke="#fff" stroke-width="4"/>
+    <rect x="430" y="740" width="100" height="0" fill="none"/>
+    <rect x="600" y="575" width="160" height="56" rx="8" fill="#fff"/><path d="M596 575 L612 552 L748 552 L764 575Z" fill="#E0413B"/>
+    <path d="M612 552 L630 575 M648 552 L666 575 M684 552 L702 575 M720 552 L738 575" stroke="#fff" stroke-width="6"/>
+  </g>
+  <text x="680" y="610" text-anchor="middle" ${F} font-size="16" fill="#2A2140">COOPERATIVA</text>`;
+  [[80,610],[80,740],[560,760],[830,560],[980,560]].forEach(([x,y])=>{ s += `<circle cx="${x}" cy="${y}" r="30" fill="#4FA85E" stroke="#2A2140" stroke-width="3"/><circle cx="${x-10}" cy="${y-8}" r="10" fill="#6CC27A"/>`; });
+  s += `<rect x="20" y="780" width="1160" height="40" fill="#8E8A99"/><text x="560" y="806" text-anchor="middle" ${F} font-size="14" fill="#fff" letter-spacing="2">CALLE</text>
+    <g stroke="#2F8F55" stroke-width="5" fill="none"><line x1="20" y1="778" x2="1000" y2="778"/>`;
+  for (let x=28;x<=990;x+=22) s += `<path d="M${x} 790V770"/>`;
+  s += `</g><rect x="1010" y="752" width="160" height="40" rx="6" fill="#F3B021" stroke="#2A2140" stroke-width="4"/>
+    <text x="1090" y="778" text-anchor="middle" ${F} font-size="15" fill="#2A2140">PORTÓN</text>
+    <rect x="360" y="0" width="480" height="30" rx="0" fill="none"/>
+    <text x="600" y="24" text-anchor="middle" ${F} font-size="15" fill="#2A2140">ESC. SEC. DIURNA No. 48 “JUAN RUIZ DE ALARCÓN Y MENDOZA”</text>`;
+  // the path
+  s += `<polyline points="${SQ.map(p=>p.x+","+p.y).join(" ")}" fill="none" stroke="#FFFDF6" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
         <polyline points="${SQ.map(p=>p.x+","+p.y).join(" ")}" fill="none" stroke="#2A2140" stroke-width="3" stroke-dasharray="4 12" stroke-linecap="round"/>`;
   SQ.forEach((p,i)=>{ const sp = SPECIAL[i]; const fill = i===GOAL ? "#FFD84A" : sp ? "#FFF1C9" : "#FFFDF6";
-    s += `<g><rect x="${p.x-54}" y="${p.y-42}" width="108" height="84" rx="18" fill="${fill}" stroke="#2A2140" stroke-width="4"/>
-      <text x="${p.x-44}" y="${p.y-22}" font-family="Nunito,sans-serif" font-weight="900" font-size="14" fill="#6B6280">${i}</text>`;
-    if (sp) s += `<text x="${p.x}" y="${p.y+4}" text-anchor="middle" font-size="30">${sp.ico}</text><text x="${p.x}" y="${p.y+32}" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="900" font-size="13" fill="#2A2140">${sp.name}</text>`;
+    s += `<g class="sq" data-s="${i}"><rect x="${p.x-52}" y="${p.y-38}" width="104" height="76" rx="16" fill="${fill}" stroke="#2A2140" stroke-width="4"/>
+      <text x="${p.x-42}" y="${p.y-19}" ${F} font-size="13" fill="#6B6280">${i}</text>`;
+    if (sp) s += `<text x="${p.x}" y="${p.y+6}" text-anchor="middle" font-size="26">${sp.ico}</text><text x="${p.x}" y="${p.y+30}" text-anchor="middle" ${F} font-size="12" fill="#2A2140">${sp.name}</text>`;
     s += `</g>`; });
-  // teachers' room
-  s += `<g><rect x="${VIAN_SPOT.x-60}" y="${VIAN_SPOT.y-34}" width="120" height="64" rx="16" fill="#EBD9F5" stroke="#2A2140" stroke-width="4" stroke-dasharray="8 6"/>
-    <text x="${VIAN_SPOT.x+58}" y="${VIAN_SPOT.y+8}" font-family="Nunito,sans-serif" font-weight="900" font-size="15" fill="#2A2140">☕ Sala de maestros</text></g>`;
-  // tokens layer
-  s += `<g id="tokens"></g>${vianSVG()}</svg>`;
+  s += `<g id="tokens"></g>${vianSVG()}
+  <g id="tip" opacity="0" pointer-events="none"><rect id="tipBg" x="0" y="0" width="10" height="44" rx="12" fill="#2A2140"/><text id="tipTx" x="0" y="0" ${F} font-size="16" fill="#fff"></text></g></svg>`;
   return s;
 }
 function vianSVG(){
@@ -336,7 +363,7 @@ function newGame(){
         turn:0, vian:VIAN_START, round:1, order: shuffle(qs.map((_,i)=>i)), qi:0, qs, over:false, time:cfg.time };
   save(); $("#setup").hidden = true; $("#game").hidden = false; render(); vianSay("¡Nadie sale de mi clase!", 1800);
 }
-function save(){ if (S && !S.over) store.set("sec48.save", S); }
+function save(){ if (S && !S.over) store.set("sec48.save2", S); }
 function curTeam(){ return S.teams[S.turn]; }
 
 // ---------- rendering ----------
@@ -347,7 +374,7 @@ function tokenXY(ti){
   const o = offs[k % offs.length]; return [p.x+o[0], p.y+o[1]-4];
 }
 function render(){
-  if (!$("#board svg")) $("#board").innerHTML = sceneSVG();
+  if (!$("#board svg")){ $("#board").innerHTML = sceneSVG(); wireBoard(); }
   const g = $("#tokens");
   if (g.children.length !== S.teams.length){
     g.innerHTML = S.teams.map((t,i)=>`<g class="tok" data-i="${i}"><circle r="27" fill="#fff" stroke="${t.color}" stroke-width="7"/><circle r="27" fill="none" stroke="#2A2140" stroke-width="3"/><text y="11" text-anchor="middle" font-size="30">${t.emoji}</text></g>`).join("");
@@ -370,6 +397,16 @@ async function moveTeam(ti, steps){
 }
 async function moveVian(steps){
   for (let k=0;k<steps;k++){ S.vian = Math.min(GOAL-1, S.vian+1); render(); SND.step(); await wait(380); }
+}
+let tipT = 0;
+function showTip(x, y, text){ const tx = $("#tipTx"), bg = $("#tipBg"); tx.textContent = text; const w = Math.min(560, tx.getComputedTextLength() + 28);
+  const X = Math.max(10, Math.min(1190 - w, x - w/2)), Y = Math.max(8, y - 60); bg.setAttribute("x", X); bg.setAttribute("y", Y); bg.setAttribute("width", w); tx.setAttribute("x", X + 14); tx.setAttribute("y", Y + 28);
+  $("#tip").setAttribute("opacity", "1"); clearTimeout(tipT); tipT = setTimeout(()=>$("#tip").setAttribute("opacity","0"), 2200); }
+const SQ_INFO = {bell:"🔔 Timbre: todos los demás equipos avanzan 1", office:"🚪 Dirección: pierden su siguiente turno", coop:"🍪 Cooperativa: ¡salto extra!", lib:"📚 Biblioteca: avanzan 1 más, en silencio"};
+function wireBoard(){
+  document.querySelectorAll("#board .zone").forEach(g=>{ const z = ZONES[+g.dataset.z]; const f = ()=>{ SND.hop(); showTip(z.x + z.w/2, z.y + 10, `${z.name}: ${z.info}`); }; g.onclick = f; g.onkeydown = e=>{ if (e.key==="Enter"||e.key===" ") f(); }; });
+  document.querySelectorAll("#board .sq").forEach(g=>{ const i = +g.dataset.s, p = SQ[i], sp = SPECIAL[i]; g.onclick = ()=>{ const here = S ? S.teams.filter(t=>t.pos===i).map(t=>t.emoji).join(" ") : "";
+    showTip(p.x, p.y - 20, `Casilla ${i}${sp?" · "+(SQ_INFO[sp.fx]||sp.name):""}${here?" · aquí: "+here:""}`); }; });
 }
 let bubT = 0;
 function vianSay(text, ms){ $("#vtxt").textContent = text; $("#vbub").setAttribute("opacity","1"); clearTimeout(bubT); bubT = setTimeout(()=>$("#vbub").setAttribute("opacity","0"), ms||2200); }
@@ -417,6 +454,7 @@ async function squareFx(ti){
   const t = S.teams[ti], sp = SPECIAL[t.pos]; if (!sp || !sp.fx) return;
   if (sp.fx==="coop"){ SND.coop(); vianSay("¡Nada de comer en clase!", 1600); await wait(300); await moveTeam(ti, 1); }
   if (sp.fx==="office"){ SND.office(); t.skip = true; vianSay("¡A la Dirección!", 1600); await wait(700); }
+  if (sp.fx==="lib"){ SND.coop(); vianSay("¡Silencio en la biblioteca! 🤫", 1600); await wait(400); await moveTeam(ti, 1); }
   if (sp.fx==="bell"){ SND.bell(); await wait(500); for (let j=0;j<S.teams.length;j++) if (j!==ti && S.teams[j].pos<GOAL) await moveTeam(j, 1); }
 }
 async function checkCatch(){
@@ -438,7 +476,7 @@ function skipTurn(){ curTeam().skip = false; SND.office(); nextTurn(); }
 
 // ---------- end ----------
 function finish(){
-  S.over = true; store.del("sec48.save"); render();
+  S.over = true; store.del("sec48.save2"); render();
   const ranked = S.teams.slice().sort((a,b)=>b.pos-a.pos || b.right-a.right);
   const w = ranked[0], escaped = w.pos>=GOAL;
   $("#resTitle").textContent = escaped ? `¡${w.name} escaparon!` : `¡Ganan ${w.name}!`;
@@ -462,16 +500,16 @@ function renderSetup(){
   $("#timeSeg").innerHTML = [[0,"Sin tiempo"],[20,"20 s"],[30,"30 s"],[45,"45 s"],[60,"1 min"]].map(([v,l])=>`<button aria-pressed="${cfg.time===v}" data-v="${v}">${l}</button>`).join("");
   $("#timeSeg").querySelectorAll("button").forEach(b=>b.onclick = ()=>{ cfg.time = +b.dataset.v; store.set("sec48.cfg", cfg); renderSetup(); });
   const qs = parseQ(qText); $("#qInfo").textContent = `${qs.length} preguntas de opción múltiple${qText===DEFAULT_Q?" (verbos, adverbios y demás categorías gramaticales)":" (tus preguntas)"}`;
-  $("#resumeBtn").hidden = !store.get("sec48.save");
+  $("#resumeBtn").hidden = !store.get("sec48.save2");
 }
 function openSetup(){ $("#results").hidden = true; $("#menu").hidden = true; renderSetup(); $("#setup").hidden = false; }
 $("#startBtn").onclick = ()=>{ ctx(); newGame(); };
-$("#resumeBtn").onclick = ()=>{ const s = store.get("sec48.save"); if (!s) return; S = s; ctx(); $("#setup").hidden = true; $("#game").hidden = false; render(); vianSay("¿Ya regresaron?", 1600); };
+$("#resumeBtn").onclick = ()=>{ const s = store.get("sec48.save2"); if (!s) return; S = s; ctx(); $("#setup").hidden = true; $("#game").hidden = false; render(); vianSay("¿Ya regresaron?", 1600); };
 $("#again").onclick = openSetup;
 $("#menuBtn").onclick = ()=>{ $("#menu").hidden = false; };
 $("#mClose").onclick = ()=>{ $("#menu").hidden = true; };
 $("#mEnd").onclick = ()=>{ $("#menu").hidden = true; if (S && !S.over) finish(); };
-$("#mNew").onclick = ()=>{ store.del("sec48.save"); openSetup(); };
+$("#mNew").onclick = ()=>{ store.del("sec48.save2"); openSetup(); };
 function syncSound(){ $("#soundBtn").textContent = soundOn ? "🔊" : "🔇"; }
 $("#soundBtn").onclick = ()=>{ soundOn = !soundOn; store.set("sec48.sound", soundOn); syncSound(); if (soundOn) SND.hop(); };
 syncSound();
