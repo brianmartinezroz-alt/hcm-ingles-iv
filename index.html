@@ -14118,6 +14118,13 @@ function hcmTutorial(){
       '<div class="qsub">Los verbos del curso en sus tres formas, y la práctica en las mismas '+
       'situaciones de las lecciones. No cuenta para tu avance: es para llegar listo a la clase.</div></div>';
 
+    /* el juego de salón que sale de esta misma tabla */
+    h += '<div class="card" style="margin-top:10px">'+
+         '<h3 style="margin:0 0 2px">Juego de verbos</h3>'+
+         '<p class="sub" style="margin:0 0 8px">52 preguntas con estos mismos verbos: las tres formas, '+
+         'presente perfecto y pasado simple. Se abre fuera de la app y no cuenta para tu avance.</p>'+
+         '<button class="btn ghost" id="pp-juego">Jugar en Baamboozle</button></div>';
+
     var c = cuenta();
     if(c.tot) h += '<div class="card" style="margin-top:10px"><p class="sub" style="margin:0">'+
       'Llevas '+c.ok+' de '+c.tot+' reactivos resueltos bien al menos una vez.</p></div>';
@@ -14150,6 +14157,13 @@ function hcmTutorial(){
     if(typeof ligarAtras==='function') ligarAtras(function(){ try{ menu(); }catch(err){ mostrarMapa(); } });
     ligarItems(APP, notas);
     ligarTabla();
+    try{
+      var bj = document.getElementById('pp-juego');
+      if(bj) bj.onclick = function(){
+        var u = 'https://www.baamboozle.com/game/4845643';
+        try{ window.open(u,'_blank','noopener'); }catch(err){ location.href = u; }
+      };
+    }catch(err){}
     try{ window.scrollTo(0,0); }catch(err){}
   }
   try{ window.__hcmPerfecto = pantallaPerfecto; }catch(err){}
