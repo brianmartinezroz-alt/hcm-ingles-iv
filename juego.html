@@ -1479,7 +1479,7 @@ const WEAPONS = {
   twin:{name:"Twin Strike", icon:"⚔️", r:30, dmg:50, desc:"Pick 2 tanks. Hit both at once."},
   barrage:{name:"Mega Barrage", icon:"🚀", r:30, dmg:40, desc:"Missiles hit every tank except yours."},
   bouncer:{name:"Bouncing Bomb", icon:"🏀", r:44, dmg:55, desc:"Bounces 5 times (BOING!), then a big BOOM."},
-  napalm:{name:"Napalm", icon:"🔥", r:38, dmg:30, desc:"A sea of fire! The ground keeps burning and hurts tanks inside."},
+  napalm:{name:"Napalm", icon:"🔥", r:40, dmg:30, desc:"Fire missile! It explodes, throws fire everywhere and sets nearby tanks ON FIRE."},
   driller:{name:"Bunker Buster", icon:"⛏️", r:52, dmg:65, desc:"Drills through the ground, then explodes."},
   mortar:{name:"Mortar Rain", icon:"🌧️", r:24, dmg:25, desc:"Five small shells in a wide spread."},
   double:{name:"Double Shot", icon:"🔁", desc:"Your next FIRE shoots 2 shells super fast, one after the other."},
@@ -2052,6 +2052,9 @@ function rewardCorrect(){
 
 // ---- physics
 function stepTank(t){
+  if (t.burn > 0 && t.alive){ t.burn--;
+    if (tk.frame%4===0) tk.parts.push({x:t.x+rnd(-18*TS,18*TS), y:t.y-rnd(6,22)*TS, vx:rnd(-.5,.5), vy:rnd(-3,-1.5), life:rnd(16,28), max:28, size:rnd(8,14), col:["#FF3D1F","#FF8A1F","#FFD21A"][Math.floor(rnd(0,3))], g:-.05, fire:true});
+    if (t.burn % 30 === 0){ hurt(t, 4, t.burnBy); if (Math.random()<.5) float(t.x, t.y-90, "🔥 BURN!", "#FF5A1F"); } }
   t.recoil *= 0.85;
   if (t.hitT>0) t.hitT--;
   if (t.alive && t.hp<75 && !t.chute && tk.frame % (t.hp<20?3:t.hp<45?5:12)===0)
@@ -2101,6 +2104,15 @@ function stepHazards(){
       if (h.type==="gas" && dx < 24*TS && dy < 34*TS){ hazardBoom(h, null); break; }
       if (h.type==="mine" && dx < 16*TS && dy < 14*TS && t.onGround){ hazardBoom(h, null); break; } } });
   tk.hazards = tk.hazards.filter(h=>h.alive);
+}
+function drawFires(c, now){
+  (tk.fires||[]).forEach((f,i)=>{ const k = Math.min(1, f.life/60) * (f.max ? Math.min(1, (f.max-f.life)/12 + .2) : 1), base = 26*k;
+    if (base < 2) return;
+    for (let j=0;j<3;j++){ const ox = (j-1)*12, fl = Math.sin(now/90 + i*1.7 + j*2.1), h = base*(1.3 + .35*fl) * (j===1 ? 1.35 : 1), w = base*.55;
+      c.beginPath(); c.moveTo(f.x+ox-w, f.y); c.quadraticCurveTo(f.x+ox-w*.9, f.y-h*.55, f.x+ox+fl*4, f.y-h); c.quadraticCurveTo(f.x+ox+w*.9, f.y-h*.55, f.x+ox+w, f.y); c.closePath();
+      c.fillStyle = "#FF4A1C"; c.fill();
+      c.beginPath(); c.moveTo(f.x+ox-w*.5, f.y); c.quadraticCurveTo(f.x+ox-w*.45, f.y-h*.4, f.x+ox+fl*3, f.y-h*.65); c.quadraticCurveTo(f.x+ox+w*.45, f.y-h*.4, f.x+ox+w*.5, f.y); c.closePath();
+      c.fillStyle = "#FFC21A"; c.fill(); } });
 }
 function drawHazards(c, now){
   (tk.hazards||[]).forEach(h=>{ c.save(); c.translate(h.x, h.y); c.scale(TS/1.6, TS/1.6);
@@ -2167,15 +2179,14 @@ function explode(x,y,r,dmg,owner,kind,direct){
     for (let i=0;i<7;i++){ const ang = i/7*Math.PI*2, dd = rnd(r*.9, r*1.6), ex = x+Math.cos(ang)*dd, ey = y+Math.sin(ang)*dd*.55;
       later(10+i*7, ()=>{ carve(ex,ey,38); hitBuilding(ex,ey,60,owner); explosionFx(ex,ey,38); boom(40); tk.shake = Math.max(tk.shake, 14);
         game.tanks.forEach(t=>{ if (t.alive && tankBoxDist(t, ex, ey) < 50) hurt(t, 12, owner); }); tk.miniDirty = true; }); } }
-  if (kind==="napalm"){ const list = tk.born || tk.shots; for (let i=0;i<16;i++) list.push({x, y:y-10, vx:rnd(-6.5,6.5), vy:rnd(-9,-3), r:18, dmg:10, owner, age:30, trail:[], kind:"fire", mini:true});
-    tk.fires = tk.fires || []; for (let k=-6;k<=6;k++){ const fx = x + k*24 + rnd(-6,6); let fy = y-60; let g = 0; while (!tkSolid(fx, fy) && g < 260){ fy++; g++; } if (g < 260) tk.fires.push({x:fx, y:fy, life: Math.round(300 + rnd(0,120)), owner}); }
-    tk.flash = Math.max(tk.flash, .6); float(x, y-110, "🔥 NAPALM! 🔥", "#FF5A1F");
-    for (let i=0;i<90;i++){ const a2=rnd(-Math.PI,0), v=rnd(1,8); tk.parts.push({x:x+rnd(-20,20),y,vx:Math.cos(a2)*v,vy:Math.sin(a2)*v-2,life:rnd(40,80),max:80,size:rnd(10,22),col:["#FF3D1F","#FF8A1F","#FFD21A"][i%3],g:-.03,fire:true}); } }
-  if (kind==="gas"){ boom(70); tk.flash = Math.max(tk.flash,.6); anim({type:"shock", x, y, max:28, col:"#FF8A1F", big:true});
-    tk.fires = tk.fires || []; for (let k=-3;k<=3;k++){ const fx = x + k*22; const fy = surfaceY(fx); if (fy < tk.water) tk.fires.push({x:fx, y:fy, life: 220, owner}); }
-    for (let i=0;i<50;i++){ const a2=rnd(-Math.PI,0), v=rnd(2,9); tk.parts.push({x,y,vx:Math.cos(a2)*v,vy:Math.sin(a2)*v-1,life:rnd(30,60),max:60,size:rnd(9,18),col:["#FF3D1F","#FF8A1F","#FFD21A"][i%3],g:-.02,fire:true}); } }
-  if (kind==="mine"){ boom(55); anim({type:"shock", x, y, max:22, col:"#fff"}); for (let i=0;i<24;i++){ const a2=rnd(-Math.PI*.9,-Math.PI*.1), v=rnd(4,11); tk.parts.push({x,y,vx:Math.cos(a2)*v,vy:Math.sin(a2)*v,life:rnd(40,70),max:70,size:rnd(4,9),col:tk.S.dirt,g:.3,chunk:true,rot:0}); } }
-  if (kind==="fire"){ (tk.fires = tk.fires || []).push({x, y, life: Math.round(200 + rnd(0,80)), owner}); }
+  if (kind==="napalm"){ const list = tk.born || tk.shots;
+    for (let i=0;i<22;i++) list.push({x, y:y-14, vx:rnd(-9,9), vy:rnd(-13,-5), r:16, dmg:8, owner, age:30, trail:[], kind:"fire", mini:true});
+    tk.fires = tk.fires || []; for (let k=-7;k<=7;k++){ const fx = x + k*26 + rnd(-6,6), fy = surfaceY(fx); if (fy < tk.water) tk.fires.push({x:fx, y:fy, life: Math.round(320 + rnd(0,140)), max:460, owner}); }
+    game.tanks.forEach(t=>{ if (t.alive && Math.abs(t.x-x) < 200 && Math.abs(t.y-y) < 140){ t.burn = 200; t.burnBy = owner; float(t.x, t.y-120, "🔥 ON FIRE!", "#FF5A1F"); } });
+    anim({type:"fireball", x, y, max:60}); anim({type:"shock", x, y, max:30, col:"#FF8A1F", big:true});
+    tk.flash = Math.max(tk.flash, .7); tk.shake = Math.max(tk.shake, 22); float(x, y-130, "🔥 NAPALM! 🔥", "#FF5A1F");
+    for (let i=0;i<60;i++){ const a2=rnd(-Math.PI,0), v=rnd(2,10); tk.parts.push({x:x+rnd(-20,20),y,vx:Math.cos(a2)*v,vy:Math.sin(a2)*v-2,life:rnd(40,80),max:80,size:rnd(12,26),col:["#FF3D1F","#FF8A1F","#FFD21A"][i%3],g:-.03,fire:true}); } }
+  if (kind==="fire"){ (tk.fires = tk.fires || []).push({x, y:surfaceY(x), life: Math.round(240 + rnd(0,100)), max:340, owner}); game.tanks.forEach(t=>{ if (t.alive && Math.abs(t.x-x) < 30*TS && Math.abs(t.y-y) < 40*TS){ t.burn = Math.max(t.burn||0, 150); t.burnBy = owner; } }); }
   if (kind==="sniper" && direct){ float(x, y-120, "🎯 HEADSHOT!", "#FF4F6D"); tk.flash = Math.max(tk.flash,.7); tk.punch = 1; anim({type:"shock", x, y, max:30, col:"#fff", big:true}); }
   if (kind==="triple"){ tk.shake = Math.max(tk.shake, 12); for (let i=0;i<14;i++){ const a2=rnd(0,Math.PI*2), v=rnd(2,7); tk.parts.push({x,y,vx:Math.cos(a2)*v,vy:Math.sin(a2)*v-2,life:rnd(22,36),max:36,size:rnd(6,12),col:["#FF4F9A","#FFD21A","#4DA8FF","#3FBF4F"][i%4],g:.05,fire:true}); } }
   if (kind==="bouncer"){ float(x, y-100, "BOOM-BOING!", "#FF8A3D"); }
@@ -2330,6 +2341,9 @@ function drawAnims(c, now){
       c.lineWidth=9; c.strokeStyle=INK; c.lineJoin="round"; c.strokeText(a.text, 0, 3); c.fillStyle="#fff"; c.fillText(a.text, 0, 3); c.textBaseline="alphabetic";
     }
     if (a.type==="shock"){ c.globalAlpha=1-p; c.lineWidth=8*(1-p)+2; c.strokeStyle=a.col; c.beginPath(); c.arc(a.x,a.y,10+p*(a.big?650:90),0,7); c.stroke(); }
+    if (a.type==="fireball"){ const k = a.t/a.max, R = 30 + k*130; c.globalAlpha = 1-k;
+      const g2 = c.createRadialGradient(a.x, a.y-20, 4, a.x, a.y-20, R); g2.addColorStop(0,"#FFF6C8"); g2.addColorStop(.35,"#FFC21A"); g2.addColorStop(.7,"#FF4A1C"); g2.addColorStop(1,"rgba(255,60,20,0)");
+      c.fillStyle = g2; c.beginPath(); c.arc(a.x, a.y-20-k*40, R, 0, 7); c.fill(); c.globalAlpha = 1; }
     if (a.type==="mushroom"){
       if (a.big || a.small){ const k = a.big ? 2.1 : 0.85; c.translate(a.x, a.y); c.scale(k, k); c.translate(-a.x, -a.y); }
       const g = Math.min(1, a.t/45), fade = a.t<130 ? 1 : 1-(a.t-130)/70, H = 40+g*170;
@@ -2462,9 +2476,9 @@ function stepLater(){ if (!tk.later || !tk.later.length) return; const due = [];
 function stepFires(){
   if (!tk.fires || !tk.fires.length) return;
   tk.fires = tk.fires.filter(f=>{ f.life--;
-    if ((tk.frame + (f.x|0))%4===0) tk.parts.push({x:f.x+rnd(-14,14), y:f.y-rnd(0,8), vx:rnd(-.4,.4)+game.wind*0.02, vy:rnd(-3.2,-1.4), life:rnd(18,34), max:34, size:rnd(7,15)*(f.life>40?1:Math.max(.05,f.life/40)), col:["#FF3D1F","#FF8A1F","#FFD21A"][Math.floor(rnd(0,3))], g:-.04, fire:true});
+    if ((tk.frame + (f.x|0))%7===0) tk.parts.push({x:f.x+rnd(-14,14), y:f.y-rnd(0,8), vx:rnd(-.4,.4)+game.wind*0.02, vy:rnd(-3.2,-1.4), life:rnd(18,34), max:34, size:rnd(7,15)*(f.life>40?1:Math.max(.05,f.life/40)), col:["#FF3D1F","#FF8A1F","#FFD21A"][Math.floor(rnd(0,3))], g:-.04, fire:true});
     if ((tk.frame + (f.x|0))%18===0) tk.parts.push({x:f.x+rnd(-10,10), y:f.y-20, vx:rnd(-.3,.3), vy:rnd(-1.2,-.5), life:60, max:60, size:rnd(10,18), col:"rgba(60,40,40,.35)", smoke:true, g:0});
-    if (tk.frame%30===0) game.tanks.forEach(t=>{ if (t.alive && Math.abs(t.x-f.x) < 26*TS && Math.abs(t.y-f.y) < 40){ hurt(t, 4, f.owner); if (Math.random()<.4) float(t.x, t.y-90, "🔥 BURN!", "#FF5A1F"); } });
+    game.tanks.forEach(t=>{ if (t.alive && Math.abs(t.x-f.x) < 24*TS && Math.abs(t.y-f.y) < 50){ t.burn = Math.max(t.burn||0, 120); t.burnBy = f.owner; } });
     return f.life > 0; });
 }
 function stepShots(){
@@ -2863,7 +2877,7 @@ function drawTk(){
   L(1);
   c.drawImage(tk.decor,0,0);
   c.drawImage(tk.terr,0,0);
-  tk.crates.forEach(cr=>drawCrate(c,cr)); drawHazards(c, now);
+  tk.crates.forEach(cr=>drawCrate(c,cr)); drawHazards(c, now); drawFires(c, now);
   game.tanks.forEach((t,i)=>drawTank(c,t,i===game.turn,now));
   drawAnims(c, now, false);
   const t = curTank();
