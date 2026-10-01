@@ -210,7 +210,7 @@ kbd{background:rgba(255,255,255,.3);border:1.5px solid currentColor;border-radiu
 .pubanner.mini .pbi{font-size:64px}
 .pubanner.mini b{font-size:clamp(28px,4.5vmin,44px);-webkit-text-stroke:6px var(--ink,#2B2366)}
 .pubanner .pbBg{position:absolute;inset:0;background:radial-gradient(circle at 50% 45%, transparent 0 18%, color-mix(in srgb, var(--tc) 35%, transparent) 40%, rgba(20,16,50,.72) 100%);opacity:0}
-.pubanner .pbRays{position:absolute;left:50%;top:45%;width:200vmax;height:200vmax;margin:-100vmax 0 0 -100vmax;background:repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--tc) 80%, white) 0 7deg, transparent 7deg 18deg);opacity:0;border-radius:50%;-webkit-mask:radial-gradient(circle, #000 0 8%, rgba(0,0,0,.9) 20%, transparent 55%);mask:radial-gradient(circle, #000 0 8%, rgba(0,0,0,.9) 20%, transparent 55%)}
+.pubanner .pbRays{position:absolute;left:50%;top:45%;width:140vmax;height:140vmax;margin:-70vmax 0 0 -70vmax;will-change:transform,opacity;background:repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--tc) 80%, white) 0 7deg, transparent 7deg 18deg);opacity:0;border-radius:50%}
 .pubanner .pbSlash{position:absolute;left:-10%;width:120%;height:90px;top:calc(45% - 45px);background:var(--tc);border-top:6px solid var(--ink,#2B2366);border-bottom:6px solid var(--ink,#2B2366);transform:rotate(-8deg) translateX(-120%)}
 .pubanner .pbSlash.b{background:var(--ink,#2B2366);height:26px;top:calc(45% + 44px);border:0;transform:rotate(-8deg) translateX(120%)}
 .pubanner .pbCard{position:relative;display:flex;flex-direction:column;align-items:center;margin-top:-10vh;opacity:0}
@@ -418,9 +418,10 @@ body.qopen .tkpan{display:none}
 .powbar .knob{position:absolute;top:50%;left:60%;width:30px;height:30px;transform:translate(-50%,-50%);background:#fff;border:3px solid var(--ink);border-radius:50%;box-shadow:0 2px 0 var(--ink);pointer-events:none}
 @media (max-width:760px){.firebtn{width:60px;height:60px;font-size:16px}}
 /* FIRE button centered above the controls */
-#tkFire{position:absolute;left:50%;bottom:calc(100% + 12px);width:104px;height:104px;font-size:26px;margin-left:-52px;z-index:5;animation:firePulse 1.6s ease-in-out infinite}
+#tkFire{position:absolute;left:50%;bottom:calc(100% + 12px);width:104px;height:104px;font-size:26px;margin-left:-52px;z-index:5;}
+#tkFire::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:6px solid rgba(255,79,109,.45);animation:firePulse 1.6s ease-in-out infinite;pointer-events:none;will-change:transform,opacity}
 #tkFire:active{transform:translateY(5px)}
-@keyframes firePulse{50%{box-shadow:0 7px 0 var(--ink),0 0 0 10px rgba(255,79,109,.25)}}
+@keyframes firePulse{0%{transform:scale(.95);opacity:.9}70%{transform:scale(1.25);opacity:0}100%{opacity:0}}
 @media (max-width:760px){#tkFire{width:84px;height:84px;margin-left:-42px;font-size:20px}}
 
 /* tank HUD v2: clean map */
@@ -443,7 +444,7 @@ body.qopen .tkscreen .tktop{display:none!important}
 .wsel .x{display:inline-grid;place-items:center;border:0;background:var(--ink);color:#fff;border-radius:999px;width:22px;height:22px;font-size:12px}
 .wsel .shots{color:var(--bad)}
 .pubtn{background:var(--cream);font-weight:900}
-.pubtn.has{background:var(--sun);animation:wiggle 1.4s ease-in-out infinite}
+.pubtn.has{background:var(--sun);animation:wiggle 1.4s ease-in-out infinite;will-change:transform}
 .pubtn b,.wbtn b{background:var(--ink);color:#fff;border-radius:999px;padding:0 7px;font-size:13px}
 .wbtn{background:#FFD9DF;font-weight:900}
 .pubtn.used{opacity:.55;animation:none;background:var(--cream)}
@@ -1721,8 +1722,8 @@ function carve(x,y,r){
   const x0=Math.max(0,(x-r-12)|0), y0=Math.max(0,(y-r-12)|0), x1=Math.min(TK.W,(x+r+12)|0), y1=Math.min(TK.H,(y+r+12)|0);
   tk.miniDirty = true;
   if (x1<=x0||y1<=y0) return;
-  const data = t.getImageData(x0,y0,x1-x0,y1-y0).data, w=x1-x0;
-  for (let yy=y0;yy<y1;yy++) for (let xx=x0;xx<x1;xx++) tk.alpha[yy*TK.W+xx] = data[((yy-y0)*w+(xx-x0))*4+3];
+  const r2 = r*r, A = tk.alpha, W = TK.W, cx0 = Math.max(0, Math.floor(x-r)), cx1 = Math.min(W-1, Math.ceil(x+r)), cy0 = Math.max(0, Math.floor(y-r)), cy1 = Math.min(TK.H-1, Math.ceil(y+r));
+  for (let yy=cy0; yy<=cy1; yy++){ const dy = yy-y, row = yy*W; for (let xx=cx0; xx<=cx1; xx++){ const dx = xx-x; if (dx*dx+dy*dy <= r2) A[row+xx] = 0; } }
 }
 function surfaceAt(x, fromY){ for (let y=Math.max(0,fromY|0); y<TK.H; y++) if (tkSolid(x,y)) return y; return TK.H+50; }
 function spawnX(){
@@ -2123,7 +2124,7 @@ function explode(x,y,r,dmg,owner,kind,direct){
     for (let i=0;i<60;i++){ const a2=rnd(-Math.PI*.95,-Math.PI*.05), v=rnd(5,17); tk.parts.push({x,y,vx:Math.cos(a2)*v,vy:Math.sin(a2)*v,life:rnd(70,120),max:120,size:rnd(7,16),col:i%3? tk.S.dirt : "#3B3458",g:.3,chunk:true,rot:rnd(0,6)}); }
     for (let i=0;i<7;i++){ const ang = i/7*Math.PI*2, dd = rnd(r*.9, r*1.6), ex = x+Math.cos(ang)*dd, ey = y+Math.sin(ang)*dd*.55;
       later(10+i*7, ()=>{ carve(ex,ey,38); hitBuilding(ex,ey,60,owner); explosionFx(ex,ey,38); boom(40); tk.shake = Math.max(tk.shake, 14);
-        game.tanks.forEach(t=>{ if (t.alive && tankBoxDist(t, ex, ey) < 50) hurt(t, 12, owner); }); updateAlpha(ex-60,ey-60,ex+60,ey+60); tk.miniDirty = true; }); } }
+        game.tanks.forEach(t=>{ if (t.alive && tankBoxDist(t, ex, ey) < 50) hurt(t, 12, owner); }); tk.miniDirty = true; }); } }
   if (kind==="napalm"){ const list = tk.born || tk.shots; for (let i=0;i<16;i++) list.push({x, y:y-10, vx:rnd(-6.5,6.5), vy:rnd(-9,-3), r:18, dmg:10, owner, age:30, trail:[], kind:"fire", mini:true});
     tk.fires = tk.fires || []; for (let k=-6;k<=6;k++){ const fx = x + k*24 + rnd(-6,6); let fy = y-60; let g = 0; while (!tkSolid(fx, fy) && g < 260){ fy++; g++; } if (g < 260) tk.fires.push({x:fx, y:fy, life: Math.round(300 + rnd(0,120)), owner}); }
     tk.flash = Math.max(tk.flash, .6); float(x, y-110, "🔥 NAPALM! 🔥", "#FF5A1F");
@@ -2414,8 +2415,8 @@ function stepLater(){ if (!tk.later || !tk.later.length) return; const due = [];
 function stepFires(){
   if (!tk.fires || !tk.fires.length) return;
   tk.fires = tk.fires.filter(f=>{ f.life--;
-    if (tk.frame%2===0) tk.parts.push({x:f.x+rnd(-14,14), y:f.y-rnd(0,8), vx:rnd(-.4,.4)+game.wind*0.02, vy:rnd(-3.2,-1.4), life:rnd(18,34), max:34, size:rnd(7,15)*(f.life>40?1:Math.max(.05,f.life/40)), col:["#FF3D1F","#FF8A1F","#FFD21A"][Math.floor(rnd(0,3))], g:-.04, fire:true});
-    if (tk.frame%9===0) tk.parts.push({x:f.x+rnd(-10,10), y:f.y-20, vx:rnd(-.3,.3), vy:rnd(-1.2,-.5), life:60, max:60, size:rnd(10,18), col:"rgba(60,40,40,.35)", smoke:true, g:0});
+    if ((tk.frame + (f.x|0))%4===0) tk.parts.push({x:f.x+rnd(-14,14), y:f.y-rnd(0,8), vx:rnd(-.4,.4)+game.wind*0.02, vy:rnd(-3.2,-1.4), life:rnd(18,34), max:34, size:rnd(7,15)*(f.life>40?1:Math.max(.05,f.life/40)), col:["#FF3D1F","#FF8A1F","#FFD21A"][Math.floor(rnd(0,3))], g:-.04, fire:true});
+    if ((tk.frame + (f.x|0))%18===0) tk.parts.push({x:f.x+rnd(-10,10), y:f.y-20, vx:rnd(-.3,.3), vy:rnd(-1.2,-.5), life:60, max:60, size:rnd(10,18), col:"rgba(60,40,40,.35)", smoke:true, g:0});
     if (tk.frame%30===0) game.tanks.forEach(t=>{ if (t.alive && Math.abs(t.x-f.x) < 26*TS && Math.abs(t.y-f.y) < 40){ hurt(t, 4, f.owner); if (Math.random()<.4) float(t.x, t.y-90, "🔥 BURN!", "#FF5A1F"); } });
     return f.life > 0; });
 }
@@ -2458,9 +2459,9 @@ function stepShots(){
         if (s.kind==="bouncer" && (s.bounces||0)<5){ s.x -= s.vx/sub; s.y -= s.vy/sub; s.bounces=(s.bounces||0)+1;
           const nx = tkSolid(s.x+4,s.y)-tkSolid(s.x-4,s.y); s.vy = -Math.max(5, Math.abs(s.vy)*0.82) - 1.5; s.vx = (s.vx*0.95 - nx*0.8) || 1.5; s.squash = 10;
           dustFx(s.x,s.y); SFX.play("boing"); anim({type:"shock", x:s.x, y:s.y, max:16, col:"#FF9A2E"}); float(s.x, s.y-50, ["BOING!","BOING!!","BOINNNG!","BOING!!!","BOOOING!"][s.bounces-1], "#FF8A3D");
-          carve(s.x, s.y, 14); updateAlpha(s.x-20,s.y-20,s.x+20,s.y+20); tk.shake = Math.max(tk.shake, 6); break; }
+          carve(s.x, s.y, 14); tk.shake = Math.max(tk.shake, 6); break; }
         if (s.kind==="driller" && (s.drill||0)<150){ s.drill=(s.drill||0)+Math.hypot(s.vx,s.vy)/sub; if (!s.drillSnd){ s.drillSnd=1; SFX.play("drill"); }
-          if (s.age%2===0 && i===0){ carve(s.x,s.y,10); updateAlpha(s.x-14,s.y-14,s.x+14,s.y+14); tk.parts.push({x:s.x,y:s.y,vx:rnd(-2,2),vy:rnd(-3,-1),life:22,max:22,size:rnd(3,6),col:tk.S.dirt,g:.25,chunk:true,rot:0}); }
+          if (s.age%2===0 && i===0){ carve(s.x,s.y,10); tk.parts.push({x:s.x,y:s.y,vx:rnd(-2,2),vy:rnd(-3,-1),life:22,max:22,size:rnd(3,6),col:tk.S.dirt,g:.25,chunk:true,rot:0}); }
           continue; }
         explode(s.x,s.y,s.r,s.dmg,s.owner,s.kind); return false; }
       if (s.kind==="driller" && s.drill>0 && s.drill<150 && !tkSolid(s.x,s.y+6) && s.drill>30){ explode(s.x,s.y,s.r,s.dmg,s.owner,s.kind); return false; }
@@ -2474,7 +2475,8 @@ function stepShots(){
 function stepParts(){
   tk.parts = tk.parts.filter(p=>{ p.life--; if (p.ring||p.flash){ if (p.ring) p.r += (p.maxR-p.r)*.25; return p.life>0; }
     p.vy += p.g; if (p.smoke) p.vx += game.wind*0.003; p.x+=p.vx; p.y+=p.vy; if (p.chunk && p.vy>0 && tkSolid(p.x,p.y)){ p.y-=p.vy; p.vy*=-0.25; p.vx*=0.5; if (Math.abs(p.vy)<0.6){ p.vy=0; p.g=0; p.vx=0; } } if (p.smoke) p.size*=1.012; if (p.fire) p.size*=0.95; if (p.chunk) p.rot+=.2; return p.life>0; });
-  tk.floats = tk.floats.filter(f=>{ f.t++; f.y -= .6; return f.t<100; });
+  if (tk.parts.length > 420) tk.parts.splice(0, tk.parts.length - 420);   // particle budget keeps the frame rate smooth
+  tk.floats = tk.floats.filter(f=>{ f.t++; f.y -= .6; return f.t<100; }); if (tk.floats.length > 14) tk.floats.splice(0, tk.floats.length - 14);
   stepAnims();
   tk.clouds.forEach(c=>{ c.x += 0.2 + game.wind*0.05; if (c.x>TK.W+200) c.x=-200; if (c.x<-200) c.x=TK.W+200; });
   tk.snow.forEach(p=>{ p.a+=.03; p.y += p.v*0.0012*(tk.season==="summer"?-.3:1); p.x += (Math.sin(p.a)*.6 + game.wind*0.08)/1600;
@@ -2690,8 +2692,14 @@ function view2(){ // canvas px -> world
   if (vh < TK.H && tk && tk.cam && tk.cam.y!=null) camY = Math.max(0, Math.min(TK.H - vh, tk.cam.y - vh*0.55));
   return {zoom, vw, vh, camY};
 }
+// canvas size is read only when the screen size changes (reading it every frame forced a full page layout = stutter)
+let tkSize = null;
+if (window.ResizeObserver) new ResizeObserver(()=>{ tkSize = null; }).observe(tkCanvas); else addEventListener("resize", ()=>{ tkSize = null; });
 function sizeTk(){
-  const w = tkCanvas.clientWidth || 1000, h = tkCanvas.clientHeight || 600, dpr = Math.min(window.devicePixelRatio||1, 2);
+  if (tkSize && tk && tk.frame % 120) return;
+  tkSize = [tkCanvas.clientWidth, tkCanvas.clientHeight];
+  const w = tkSize[0] || 1000, h = tkSize[1] || 600; let dpr = Math.min(window.devicePixelRatio||1, 2);
+  if (w*h*dpr*dpr > 2200000) dpr = Math.max(1, Math.sqrt(2200000/(w*h)));
   const W = Math.round(w*dpr), H = Math.round(h*dpr);
   if (tkCanvas.width!==W || tkCanvas.height!==H){ tkCanvas.width=W; tkCanvas.height=H; }
 }
@@ -2886,7 +2894,7 @@ function drawTk(){
 }
 function drawMini(){
   const m = tkMiniCtx, W = tkMini.width, H = tkMini.height, sx = W/TK.W, sy = H/TK.H;
-  if (tk.frame%4!==0 && !tk.miniDirty) return;
+  if (tk.frame%12!==0) return;
   tk.miniDirty = false;
   m.clearRect(0,0,W,H);
   m.fillStyle = tk.S.sky[1]; m.fillRect(0,0,W,H);
