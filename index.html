@@ -1535,6 +1535,13 @@ body{color:var(--tinta)}
 .hcm-hoja.on{transform:none}
 .hcm-hoja h3{margin:0 0 4px;font-size:19px;color:var(--tinta)}
 .hcm-hoja p.sub{margin:0 0 16px;font-size:14px;color:var(--tinta-2,#463C2D)}
+.hcm-mins{display:flex;gap:8px;margin-bottom:12px}
+.hcm-min{flex:1;background:var(--papel-2,#FBF7EC);border:1.5px solid var(--linea,#D9CFB6);
+  border-radius:14px;padding:12px 4px;font:inherit;color:var(--tinta);cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:1px}
+.hcm-min b{font-size:21px;line-height:1}
+.hcm-min span{font-size:11px;opacity:.6;letter-spacing:.04em}
+.hcm-min.sel{border-color:var(--verde,#1D9E75);background:rgba(29,158,117,.10)}
 .hcm-op{display:block;width:100%;text-align:left;background:var(--papel-2,#FBF7EC);
   border:1.5px solid var(--linea,#D9CFB6);border-radius:14px;padding:13px 15px;
   margin-bottom:10px;font:inherit;color:var(--tinta);cursor:pointer}
@@ -5554,15 +5561,19 @@ function ejercicioNumeros(){
 // Al llegar a cero no se bloquea nada — se le ofrece cerrar. Practicar de más
 // cansado no sirve, y obligarlo a parar a media frase tampoco.
 var MINUTOS=20, RELOJ=null, AVISADO=false;
+// MINUTOS ya no es fijo: lo pone el cadete al entrar a cada lección
+// (ver hcmElegirSesion). Si escoge "sin reloj", MINUTOS queda en 0 y no
+// se pinta nada: hay quien se desespera con el cronómetro enfrente.
 function arrancarReloj(){
   pararReloj();AVISADO=false;
+  if(!MINUTOS)return;            // sin reloj: ni intervalo ni aviso
   RELOJ=setInterval(pintarReloj,1000);
   pintarReloj();
 }
 function pararReloj(){ if(RELOJ){clearInterval(RELOJ);RELOJ=null;} }
 function pintarReloj(){
   var caja=document.getElementById('reloj');
-  if(!caja)return;
+  if(!caja||!MINUTOS)return;
   var pasados=Math.floor((Date.now()-t0)/1000);
   var quedan=Math.max(0,MINUTOS*60-pasados);
   var m=Math.floor(quedan/60), sg=quedan%60;
@@ -5574,12 +5585,15 @@ function pintarReloj(){
     var b=document.getElementById('skip');
     if(b){
       b.classList.add('btn-cerrar');
-      b.textContent='Cerrar aquí · ya son 20 minutos';
+      b.textContent='Cerrar aquí · ya son tus '+MINUTOS+' minutos';
     }
-    say('Ya pasaron los veinte minutos. Puedes cerrar aquí o terminar lo que estás haciendo.','es-MX');
+    say('Ya pasaron los '+MINUTOS+' minutos que te pusiste. Puedes cerrar aquí o terminar lo que estás haciendo.','es-MX');
   }
 }
-function marcaReloj(){ return '<div class="reloj" id="reloj">'+MINUTOS+':00</div>'; }
+function marcaReloj(){
+  if(!MINUTOS)return '';         // el que escogió "sin reloj" no ve cronómetro
+  return '<div class="reloj" id="reloj">'+MINUTOS+':00</div>';
+}
 
 /* ═══════════ el camino ═══════════ */
 // Sesenta paradas, iguales para todos. Lo que cambia es dónde entra cada
@@ -12315,9 +12329,14 @@ function armarSesionHCM(n){
     return carril.tipos.indexOf(x.k)>=0;
   });
   if(!items.length)items=raw.slice();
-  // sesion corta: la regla y tres ejercicios, para el que agarra el
-  // telefono entre clases.
-  if(HCM_SESION==='corta'&&items.length>4)items=items.slice(0,4);
+  // El largo de la sesión lo decide el cadete al entrar (HCM_MIN).
+  // La lección completa está pensada para veinte minutos, así que los
+  // ejercicios se recortan en esa proporción, nunca por debajo de tres:
+  // menos de tres no alcanza ni para agarrar el ritmo.
+  if(HCM_MIN && HCM_MIN < 20 && items.length > 3){
+    var cuantos = Math.max(3, Math.round(items.length * HCM_MIN / 20));
+    if(cuantos < items.length) items = items.slice(0, cuantos);
+  }
   items=items.map(function(x){
     var y=JSON.parse(JSON.stringify(x));
     if(!carril.espanol)delete y.es;
@@ -12718,6 +12737,7 @@ document.addEventListener('DOMContentLoaded',function(){
    ══════════════════════════════════════════════════════════════════ */
 
 var HCM_SESION = 'completa';   // corta | completa | larga
+var HCM_MIN = 20;              // minutos que escogió el cadete; 0 = sin reloj
 var HCM_RITMOS = {
   diario:  {nom:'Todos los dias',     det:'Una leccion por semana, en ratos de 20 minutos.', porSem:1},
   algunos: {nom:'Unos dias a la semana', det:'Dos o tres ratos por semana, como te toque.', porSem:1},
@@ -12822,22 +12842,68 @@ function hcmElegirCarril(){
   });
 }
 
-/* ── cuanto tiempo traen hoy ── */
+/* ── cuanto tiempo traen hoy ──
+   Antes había tres botones fijos: 5 minutos, la lección completa, o fin de
+   semana. Ahora el cadete pone los minutos que de verdad trae, lección por
+   lección, y la app se acomoda a eso: recorta los ejercicios en proporción
+   y el reloj cuenta SU tiempo, no veinte minutos para todos.
+   La elección se guarda por lección: la próxima vez que entre a esa misma
+   aparece marcada la que escogió la vez pasada.                           */
+var HCM_TIEMPOS = [5, 10, 15, 20, 30];
+function hcmTiempoDe(n){
+  try{
+    var t = (hcmLoad().perfil || {}).tiempos || {};
+    var v = t[n];
+    return (v === 0 || v) ? v : null;
+  }catch(e){ return null; }
+}
+function hcmGuardarTiempo(n, min){
+  try{
+    var D = hcmLoad(); var P = D.perfil || {};
+    P.tiempos = P.tiempos || {};
+    P.tiempos[n] = min;
+    D.perfil = P; hcmSave(D);
+    if(typeof P !== 'undefined') {}
+  }catch(e){}
+}
+
 function hcmElegirSesion(n){
-  var lec=LECCIONES_HCM[n]||{};
-  var html='<h3>'+esc(lec.titulo||('Lección '+n))+'</h3>'+
-    '<p class="sub">¿Cuánto tiempo traes ahora?</p>'+
-    '<button class="hcm-op" data-s="corta"><b>Un rato · 5 minutos</b>'+
-      '<span>La regla y tres ejercicios. Para entre clases.</span></button>'+
-    '<button class="hcm-op" data-s="completa"><b>La lección completa · 20 minutos</b>'+
-      '<span>Todo: la regla, escuchar, hablar y transformar.</span></button>'+
-    '<button class="hcm-op" data-s="larga"><b>Sesión de fin de semana</b>'+
-      '<span>Esta lección y sigues con la que viene, sin volver al mapa.</span></button>';
-  var h=hcmHoja(html);
-  h.querySelectorAll('[data-s]').forEach(function(b){
-    b.onclick=function(){
-      HCM_SESION=b.dataset.s;
+  var lec = LECCIONES_HCM[n] || {};
+  var previo = hcmTiempoDe(n);
+  var chips = '';
+  for(var i=0;i<HCM_TIEMPOS.length;i++){
+    var m = HCM_TIEMPOS[i];
+    chips += '<button class="hcm-min'+(previo===m?' sel':'')+'" data-min="'+m+'">'+
+             '<b>'+m+'</b><span>min</span></button>';
+  }
+  var html = '<h3>'+esc(lec.titulo||('Lección '+n))+'</h3>'+
+    '<p class="sub">¿Cuánto tiempo le vas a dar hoy? Tú decides. La app te acomoda los '+
+    'ejercicios a ese tiempo, y cuando se cumpla te aviso — nada se cierra solo.</p>'+
+    '<div class="hcm-mins">'+chips+'</div>'+
+    '<button class="hcm-op'+(previo===0?' sel':'')+'" data-min="0" style="margin-top:4px">'+
+      '<b>Sin reloj</b><span>Sigo hasta que acabe la lección, sin cronómetro.</span></button>'+
+    '<button class="hcm-op" data-s="larga" style="margin-top:10px">'+
+      '<b>Sesión larga · fin de semana</b>'+
+      '<span>Esta lección y sigues con las que vienen, sin volver al mapa.</span></button>';
+  var h = hcmHoja(html);
+  h.querySelectorAll('[data-min]').forEach(function(b){
+    b.onclick = function(){
+      var min = parseInt(b.dataset.min, 10);
+      HCM_MIN = min;
+      MINUTOS = min;
+      HCM_SESION = (min && min <= 10) ? 'corta' : 'completa';
+      hcmGuardarTiempo(n, min);
       hcmGuardarPerfil('largo_pref', HCM_SESION);
+      hcmCerrarHoja();
+      setTimeout(function(){ hcmEntrar(n); }, 240);
+    };
+  });
+  h.querySelectorAll('[data-s]').forEach(function(b){
+    b.onclick = function(){
+      HCM_SESION = 'larga';
+      HCM_MIN = previo || 20;        // la larga también respeta su tiempo
+      MINUTOS = HCM_MIN;
+      hcmGuardarPerfil('largo_pref', 'larga');
       hcmCerrarHoja();
       setTimeout(function(){ hcmEntrar(n); }, 240);
     };
@@ -13007,6 +13073,11 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   var D=hcmLoad(); var P=D.perfil||{};
   if(P.largo_pref)HCM_SESION=P.largo_pref;
+  try{
+    var tn = P.parada_actual || P.viendo;
+    var tm = tn ? hcmTiempoDe(tn) : null;
+    if(tm === 0 || tm){ HCM_MIN = tm; MINUTOS = tm; }
+  }catch(e){}
 });
 
 
