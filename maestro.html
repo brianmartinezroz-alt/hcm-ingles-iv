@@ -158,6 +158,43 @@
   .cstf{border:1.5px solid var(--oro);border-radius:10px;padding:10px 12px;margin-bottom:8px;display:flex;flex-direction:column;gap:2px}
   .cstf span{font-family:var(--mono);font-size:12px;color:var(--tinta-2)} .cstf em{font-style:normal;font-size:12px;color:var(--verde);font-weight:600}
   .cstf.mala{border-color:var(--rojo)} .cstf.mala em{color:var(--rojo)}
+  /* ── el detalle de cada sesión ── */
+  /* ── en vivo ── */
+  .vivo-cab{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .punto{width:10px;height:10px;border-radius:50%;background:var(--verde);
+         box-shadow:0 0 0 0 rgba(29,158,117,.6);animation:late 1.8s infinite}
+  @keyframes late{70%{box-shadow:0 0 0 9px rgba(29,158,117,0)}100%{box-shadow:0 0 0 0 rgba(29,158,117,0)}}
+  .vcard{border:1.5px solid var(--linea);border-left:4px solid var(--verde);border-radius:12px;
+         padding:13px 15px;margin-bottom:10px;background:var(--tarjeta);cursor:pointer}
+  .vcard:hover{border-color:var(--oro)}
+  .vcard.nuevo{border-left-color:var(--oro);background:var(--oro-s)}
+  .vcard .n{font-weight:700;font-size:16px}
+  .vcard .g{font-family:var(--mono);font-size:11px;color:var(--tinta-2);margin-left:8px}
+  .vcard .l{font-size:13.5px;color:var(--tinta-2);margin-top:3px}
+  .vcard .r{font-size:14px;margin-top:7px;font-style:italic;
+            border-left:2px solid var(--linea);padding-left:10px}
+  .vcard .t{font-family:var(--mono);font-size:11px;color:var(--tinta-2);margin-top:7px}
+  .ses-fila{cursor:pointer}
+  .ses-fila:hover{background:var(--oro-s)}
+  .ses-fila td:first-child::before{content:'▸ ';color:var(--oro);font-weight:700}
+  .ses-fila.abierta td:first-child::before{content:'▾ '}
+  .det td{background:var(--oro-s);padding:0}
+  .det-in{padding:14px 16px}
+  .det-r{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .det-r b{font-family:var(--mono);font-size:11px;border:1px solid var(--linea);
+           border-radius:20px;padding:3px 10px;font-weight:600;background:var(--tarjeta)}
+  .det-in h5{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+             color:var(--oro);margin:14px 0 6px}
+  table.mini{width:100%;border-collapse:collapse;font-size:13px}
+  table.mini th{text-align:left;font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+                text-transform:uppercase;color:var(--tinta-2);padding:4px 6px;border-bottom:1px solid var(--linea)}
+  table.mini td{padding:5px 6px;border-bottom:1px solid var(--linea);vertical-align:top}
+  table.mini td.dijo{font-style:italic}
+  .pc{font-family:var(--mono);font-weight:700}
+  .pc.b{color:var(--verde)} .pc.m{color:var(--rojo)} .pc.r{color:var(--oro-h)}
+  .bit{font-family:var(--mono);font-size:11.5px;line-height:1.7;color:var(--tinta-2);
+       max-height:220px;overflow:auto}
+  .bit i{font-style:normal;color:var(--oro-h)}
   .lchip{display:inline-block;font-family:var(--mono);font-size:11px;border-radius:20px;padding:2px 8px;margin:2px;border:1px solid var(--linea)}
   .lchip.lB{background:#FBF3D9} .lchip.lI{background:#FBEBD9} .lchip.lA{background:#FBE0E0}
   .nota{background:var(--oro-s);border:1.5px solid var(--oro);border-radius:12px;padding:13px 16px;
@@ -418,7 +455,10 @@ var DATOS   = '';                      // se toma del index.html
 
 var RAIZ = document.getElementById('raiz');
 var LEC = null, MAT = null, CARR = null, PARADAS = 19, EXAM = [];
-var vista = 'lecciones', leccionAbierta = null, carrilVista = 'todos';
+// Si llegó desde el aviso de Telegram, la liga trae #vivo=Nombre: se abre
+// directo la pestaña En vivo en vez de la de siempre.
+var vista = /[#&]vivo=/.test(location.hash || '') ? 'vivo' : 'lecciones',
+    leccionAbierta = null, carrilVista = 'todos';
 var EFA_URL = 'https://brianmartinezroz-alt.github.io/English-for-all/?jefe';
 var escuela = 'hcm';
 try{ escuela = localStorage.getItem('maestro_escuela') === 'efa' ? 'efa' : 'hcm'; }catch(e){}
@@ -526,7 +566,7 @@ function pintarEntrada(msg){
 
 /* ── armazón ── */
 function pintar(){
-  var tabs = [['lecciones','Lecciones'],['grupos','Grupos'],['juegos','Material'],['ayuda','Cómo se usa']];
+  var tabs = [['lecciones','Lecciones'],['vivo','En vivo'],['grupos','Grupos'],['juegos','Material'],['ayuda','Cómo se usa']];
   var esEFA = escuela === 'efa';
   var selector =
     '<div class="escuelas"><div class="in">' +
@@ -563,6 +603,7 @@ function pintar(){
 
   var c = document.getElementById('cuerpo');
   if(vista === 'lecciones') leccionAbierta ? pintarLeccion(c) : pintarLecciones(c);
+  else if(vista === 'vivo') pintarVivo(c);
   else if(vista === 'grupos') pintarGrupos(c);
   else if(vista === 'juegos') pintarJuegos(c);
   else pintarAyuda(c);
@@ -742,6 +783,238 @@ function pintarLeccion(c){
 }
 
 /* ── grupos ── */
+/* ── el detalle de una sesión ──
+   El servidor ya guardaba todo esto en la columna "Detalle (no editar)" de la
+   pestaña Sesiones, y detalleCadete ya lo devolvía. El panel simplemente no lo
+   pintaba: por eso se veía solo el resumen de cinco columnas. Aquí se abre.
+
+   Lo que trae: n = cuántos reactivos tenía la lección · a = segundos activos ·
+   i = cada intento {t tipo, d lo que dijo, m la frase meta, p el parecido} ·
+   b = la bitácora de la sesión.                                              */
+var TIPOS_EJ = {
+  model:'Repetir', drill:'Drill', ask:'Pregunta', hueco:'Hueco', ordenar:'Ordenar',
+  transf:'Transformar', idea:'Idea general', detalle:'Detalle', dosc:'Dos cosas',
+  segm:'Segmentos', regla:'Regla', leer:'Leer', ritmo:'Ritmo', acento:'Acento',
+  roleplay:'Rol', recuento:'Recuento', free:'Libre', pista:'Pidió pista',
+  trabalenguas:'Trabalenguas'
+};
+function min_(seg){
+  var m = Math.round((Number(seg) || 0) / 60);
+  return m ? (m + ' min') : '<span class="es">—</span>';
+}
+function clasePct_(p){
+  p = Number(p);
+  return p >= 85 ? 'b' : (p >= 70 ? 'r' : 'm');
+}
+function detalleSesion_(s){
+  var d = s.detalle;
+  if(!d) return '<div class="det-in"><p class="vacio">Esta sesión es de antes de que se '+
+    'guardara el detalle, así que solo quedó el resumen.</p></div>';
+
+  var ints = d.i || [], bit = d.b || [];
+  var conPct = ints.filter(function(x){ return x.p !== null && x.p !== undefined && x.p !== ''; });
+  var buenos = conPct.filter(function(x){ return Number(x.p) >= 70; }).length;
+  var pistas = ints.filter(function(x){ return x.t === 'pista'; }).length;
+
+  var h = '<div class="det-in"><div class="det-r">' +
+    (d.n ? '<b>' + esc(d.n) + ' reactivos en la lección</b>' : '') +
+    '<b>' + ints.length + ' intentos</b>' +
+    (conPct.length ? '<b>' + buenos + ' de ' + conPct.length + ' arriba de 70%</b>' : '') +
+    (pistas ? '<b>' + pistas + ' veces pidió pista</b>' : '') +
+    (d.a ? '<b>' + Math.round(Number(d.a) / 60) + ' min de voz activa</b>' : '') +
+    '</div>';
+
+  if(ints.length){
+    h += '<h5>Ejercicio por ejercicio</h5><table class="mini"><thead><tr>' +
+      '<th style="width:28px">#</th><th style="width:96px">Tipo</th>' +
+      '<th>Lo que dijo</th><th>La frase que tocaba</th><th style="width:56px">Parecido</th>' +
+      '</tr></thead><tbody>' +
+      ints.map(function(x, i){
+        var p = (x.p === null || x.p === undefined || x.p === '');
+        return '<tr><td class="es">' + (i + 1) + '</td>' +
+          '<td>' + esc(TIPOS_EJ[x.t] || x.t || '—') + '</td>' +
+          '<td class="dijo">' + (x.d ? esc(x.d) : '<span class="es">no habló</span>') + '</td>' +
+          '<td>' + (x.m ? esc(x.m) : '<span class="es">—</span>') + '</td>' +
+          '<td class="num">' + (p ? '<span class="es">—</span>'
+            : '<span class="pc ' + clasePct_(x.p) + '">' + esc(x.p) + '%</span>') + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  if(bit.length){
+    h += '<h5>Bitácora de la sesión</h5><div class="bit">' +
+      bit.map(function(e){
+        if(typeof e === 'string') return esc(e);
+        var hora = e.t || e.hora || '';
+        var que  = e.ev || e.e || '';
+        var mas  = e.d || e.dato || e.v || '';
+        return '<i>' + esc(hora) + '</i> ' + esc(que) + (mas ? ' · ' + esc(String(mas).slice(0, 90)) : '');
+      }).join('<br>') + '</div>';
+  }
+  return h + '</div>';
+}
+
+/* Todo lo demás que el cadete contestó al darse de alta y que vive en la
+   pestaña Perfiles. Antes no se veía ni una línea de esto. */
+var PERFIL_YA_VISTO = {
+  'Cadete':1, 'Grupo':1, 'Actualizado':1, 'constancias':1, 'lecciones_hechas':1,
+  'nombre':1, 'carril':1
+};
+function otrosDatosPerfil_(pf){
+  if(!pf) return '';
+  var ks = Object.keys(pf).filter(function(k){
+    return !PERFIL_YA_VISTO[k] && String(pf[k]).trim() !== '';
+  });
+  if(!ks.length) return '';
+  return '<h4>Lo que contestó al darse de alta</h4><table class="mini"><tbody>' +
+    ks.map(function(k){
+      return '<tr><td style="width:190px"><b>' + esc(k.replace(/_/g, ' ')) + '</b></td>' +
+             '<td>' + esc(String(pf[k]).slice(0, 400)) + '</td></tr>';
+    }).join('') + '</tbody></table>';
+}
+
+/* ── EN VIVO ──
+   Pregunta al servidor cada quince segundos quién está practicando ahorita.
+   El renglón de cada cadete lo escribe su propia app con un latido cada veinte
+   segundos (acción 'latido' en Vivo.gs). Si alguien deja de latir diez minutos,
+   se cae solo de la lista.
+   Si llegaste aquí desde el aviso de Telegram, la liga trae #vivo=Nombre y la
+   tarjeta de ese cadete sale hasta arriba, marcada.                          */
+var VIVO_T = null, VIVO_VISTOS = {};
+
+function paseHCM_(){
+  try{
+    var p = JSON.parse(sessionStorage.getItem('hcm_pase') || 'null');
+    if(p && p.v && p.hasta > Date.now()) return p.v;
+  }catch(e){}
+  return '';
+}
+function pedirHCM_(cuerpo){
+  return fetch(DATOS, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify(cuerpo)}).then(function(r){ return r.ok ? r.json() : null; });
+}
+function hashVivo_(){
+  var m = String(location.hash || '').match(/vivo=([^&]+)/);
+  try{ return m ? decodeURIComponent(m[1]) : ''; }catch(e){ return m ? m[1] : ''; }
+}
+function haceTxt_(seg){
+  if(seg < 45) return 'ahora mismo';
+  if(seg < 120) return 'hace un minuto';
+  return 'hace ' + Math.round(seg / 60) + ' min';
+}
+
+function pintarVivo(c){
+  if(VIVO_T){ clearInterval(VIVO_T); VIVO_T = null; }
+  if(!DATOS){
+    c.innerHTML = '<p class="nota">La app no tiene la liga del servidor de datos.</p>';
+    return;
+  }
+  if(!paseHCM_()){
+    c.innerHTML = '<p class="nota">Primero entra a <b>Grupos</b> y pon la clave del servidor. ' +
+      'El mismo pase sirve para esta pestaña.</p>' +
+      '<button class="bt" id="airgrupos">Ir a Grupos</button>';
+    document.getElementById('airgrupos').onclick = function(){ vista = 'grupos'; pintar(); };
+    return;
+  }
+
+  c.innerHTML = '<div class="vivo-cab"><span class="punto"></span>' +
+    '<b id="vcuenta">Preguntando…</b>' +
+    '<span class="es" style="font-size:13px">se actualiza solo cada 15 segundos</span>' +
+    '<button class="bt claro" id="vavisos" style="margin-left:auto">Avisarme aquí también</button></div>' +
+    '<div id="vlista"></div>';
+
+  var bAv = document.getElementById('vavisos');
+  function pintaBotonAvisos(){
+    if(!('Notification' in window)){ bAv.style.display = 'none'; return; }
+    if(Notification.permission === 'granted'){ bAv.textContent = 'Avisos prendidos ✓'; bAv.disabled = true; }
+  }
+  pintaBotonAvisos();
+  bAv.onclick = function(){
+    if('Notification' in window) Notification.requestPermission().then(pintaBotonAvisos);
+  };
+
+  function avisar(x){
+    try{
+      if(!('Notification' in window) || Notification.permission !== 'granted') return;
+      var nt = new Notification('🎖️ ' + x.nombre + ' entró', {
+        body: 'Grupo ' + x.grupo + ' · Lección ' + x.leccion + (x.titulo ? ' · ' + x.titulo : ''),
+        tag: 'hcm-' + x.nombre
+      });
+      nt.onclick = function(){ window.focus(); nt.close(); };
+    }catch(e){}
+  }
+
+  var destacado = hashVivo_();
+
+  function refrescar(primera){
+    pedirHCM_({accion:'vivo', pase:paseHCM_()}).then(function(d){
+      var lista = document.getElementById('vlista');
+      if(!lista) return;                       // ya se cambió de pestaña
+      if(!d || !d.ok){
+        if(d && d.error === 'sin_permiso'){
+          lista.innerHTML = '<p class="nota">El pase venció. Vuelve a entrar por <b>Grupos</b>.</p>';
+          if(VIVO_T){ clearInterval(VIVO_T); VIVO_T = null; }
+          return;
+        }
+        if(d && /desconocida/.test(String(d.error || ''))){
+          lista.innerHTML = '<p class="nota"><b>Falta el archivo Vivo.gs en el servidor.</b> ' +
+            'Esta pestaña empieza a funcionar en cuanto lo pegues en Apps Script y publiques ' +
+            'una versión nueva.</p>';
+          if(VIVO_T){ clearInterval(VIVO_T); VIVO_T = null; }
+          return;
+        }
+        document.getElementById('vcuenta').textContent = 'El servidor no contestó';
+        return;
+      }
+
+      var dentro = d.dentro || [];
+      if(destacado){
+        dentro.sort(function(a, b){
+          var A = a.nombre === destacado ? 0 : 1, B = b.nombre === destacado ? 0 : 1;
+          return A - B || a.hace - b.hace;
+        });
+      }
+
+      document.getElementById('vcuenta').textContent = dentro.length
+        ? (dentro.length === 1 ? '1 cadete practicando' : dentro.length + ' cadetes practicando')
+        : 'Nadie adentro en este momento';
+
+      lista.innerHTML = dentro.length ? dentro.map(function(x){
+        return '<div class="vcard' + (x.nombre === destacado ? ' nuevo' : '') + '" data-n="' + esc(x.nombre) + '">' +
+          '<div><span class="n">' + esc(x.nombre) + '</span><span class="g">grupo ' + esc(x.grupo) + '</span></div>' +
+          '<div class="l">Lección ' + esc(x.leccion) + (x.titulo ? ' · ' + esc(x.titulo) : '') +
+            (x.paso ? ' — <b>' + esc(TIPOS_EJ[x.paso] || x.paso) + '</b>' : '') + '</div>' +
+          (x.reactivo ? '<div class="r">' + esc(x.reactivo) + '</div>' : '') +
+          '<div class="t">' + esc(haceTxt_(x.hace)) +
+            (x.desde ? ' · entró ' + esc(x.desde) : '') +
+            (x.seguidos ? ' · lleva ' + esc(x.seguidos) + ' min' : '') +
+            ' · toca para ver su ficha completa</div></div>';
+      }).join('') : '<p class="vacio">Ahorita nadie está practicando. Esta pantalla se actualiza sola.</p>';
+
+      lista.querySelectorAll('.vcard').forEach(function(el){
+        el.onclick = function(){
+          window.__verCadete = el.dataset.n;
+          vista = 'grupos'; pintar();
+        };
+      });
+
+      if(!primera) dentro.forEach(function(x){
+        if(!VIVO_VISTOS[x.nombre]) avisar(x);
+      });
+      VIVO_VISTOS = {};
+      dentro.forEach(function(x){ VIVO_VISTOS[x.nombre] = 1; });
+    }).catch(function(){
+      var e = document.getElementById('vcuenta');
+      if(e) e.textContent = 'Sin conexión con el servidor';
+    });
+  }
+
+  refrescar(true);
+  VIVO_T = setInterval(function(){
+    if(vista !== 'vivo'){ clearInterval(VIVO_T); VIVO_T = null; return; }
+    refrescar(false);
+  }, 15000);
+}
+
 function pintarGrupos(c){
   if(!DATOS){
     c.innerHTML = '<p class="nota">La app no tiene todavía la liga del servidor de datos, ' +
@@ -874,6 +1147,17 @@ function pintarGrupos(c){
     })();
   };
   tabla('');
+  // viene de tocar una tarjeta de En vivo: se le abre la ficha de una vez
+  if(window.__verCadete){
+    var quien = window.__verCadete; window.__verCadete = null;
+    var cad = todos.filter(function(x){ return x.nombre === quien; })[0];
+    if(cad){
+      if(cad.grupo && porGrupo[cad.grupo] && window.__grupoSel !== cad.grupo && window.__grupoSel !== '*'){
+        window.__grupoSel = cad.grupo;
+      }
+      setTimeout(function(){ ficha(cad); }, 60);
+    }
+  }
 
   function tabla(q){
     q = normNom(q);
@@ -938,13 +1222,28 @@ function pintarGrupos(c){
         }).join('') : '<p class="vacio">Todavía no gana ninguna. Se ganan terminando todas las lecciones de un parcial.</p>') +
         '<h4>Lecciones terminadas</h4><p>' + (hechas ? esc(hechas).replace(/(\d+)([BIA])/g, '<span class="lchip l$2">$1 $2</span>') : '<span class="es">—</span>') + '</p>' +
         '<p class="es" style="font-size:12px">B = Básico · I = Intermedio · A = Avanzado (el nivel más alto con el que la terminó)</p>' +
-        '<h4>Sesiones</h4>' + ((d.sesiones || []).length ? '<table><thead><tr><th>Fecha</th><th>Lección</th><th>Min</th><th>Frases</th><th>Parecido</th></tr></thead><tbody>' +
-          d.sesiones.slice().reverse().map(function(s){
-            return '<tr><td>' + esc(s.fecha) + ' ' + esc(s.hora || '') + '</td><td>' + esc(s.titulo || s.leccion || '') + '</td>' +
-              '<td class="num">' + esc(s.segundos) + '</td><td class="num">' + esc(s.frases || '') + '</td><td class="num">' + (s.promedio === null || s.promedio === undefined ? '—' : esc(s.promedio) + '%') + '</td></tr>';
-          }).join('') + '</tbody></table>' : '<p class="vacio">Sin sesiones registradas.</p>') + '</div>';
+        '<h4>Sesiones</h4><p class="es" style="font-size:12px;margin-bottom:6px">Toca cualquier renglón para abrir la sesión completa: cada ejercicio, qué dijo y cómo le fue.</p>' +
+        ((d.sesiones || []).length ? '<table><thead><tr><th>Fecha</th><th>Lección</th><th>Min</th><th>Activo</th><th>Frases</th><th>Parecido</th></tr></thead><tbody>' +
+          d.sesiones.slice().reverse().map(function(s, i){
+            return '<tr class="ses-fila" data-s="' + i + '"><td>' + esc(s.fecha) + ' ' + esc(s.hora || '') + '</td>' +
+              '<td>' + esc(s.titulo || s.leccion || '') + '</td>' +
+              '<td class="num">' + min_(s.segundos) + '</td>' +
+              '<td class="num">' + (s.activos === null || s.activos === undefined ? '<span class="es">—</span>' : min_(s.activos)) + '</td>' +
+              '<td class="num">' + esc(s.frases || '') + '</td>' +
+              '<td class="num">' + (s.promedio === null || s.promedio === undefined ? '—' : esc(s.promedio) + '%') + '</td></tr>' +
+              '<tr class="det" id="det' + i + '" style="display:none"><td colspan="6">' + detalleSesion_(s) + '</td></tr>';
+          }).join('') + '</tbody></table>' : '<p class="vacio">Sin sesiones registradas.</p>') +
+        otrosDatosPerfil_(pf) + '</div>';
       f.innerHTML = h;
       document.getElementById('cfcerrar').onclick = function(){ f.innerHTML = ''; };
+      f.querySelectorAll('tr.ses-fila').forEach(function(tr){
+        tr.onclick = function(){
+          var caja = document.getElementById('det' + tr.dataset.s);
+          var abierto = caja.style.display !== 'none';
+          caja.style.display = abierto ? 'none' : '';
+          tr.classList.toggle('abierta', !abierto);
+        };
+      });
       tabla(bus.value);
     }).catch(function(){ f.innerHTML = '<p class="nota">Sin conexión con el servidor.</p>'; });
   }

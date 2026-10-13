@@ -5566,11 +5566,57 @@ var MINUTOS=20, RELOJ=null, AVISADO=false;
 // se pinta nada: hay quien se desespera con el cronómetro enfrente.
 function arrancarReloj(){
   pararReloj();AVISADO=false;
+  arrancarLatido();              // desde aquí el maestro lo ve en vivo
   if(!MINUTOS)return;            // sin reloj: ni intervalo ni aviso
   RELOJ=setInterval(pintarReloj,1000);
   pintarReloj();
 }
-function pararReloj(){ if(RELOJ){clearInterval(RELOJ);RELOJ=null;} }
+function pararReloj(){ if(RELOJ){clearInterval(RELOJ);RELOJ=null;} pararLatido(); }
+
+/* ═══════════ el latido ═══════════
+   Mientras el cadete practica, la app avisa al servidor cada veinte segundos
+   en qué va. Antes solo se sabía de él cuando CERRABA la lección, y la hoja
+   guardaba la fecha sin hora: con eso se podía decir quién entró hoy, nunca
+   quién está adentro ahorita. Con esto el maestro lo ve en vivo y le llega
+   el aviso al entrar.
+   Es una petición chica y silenciosa: si no hay red no pasa nada y no se
+   guarda para después — un latido viejo no le sirve a nadie.               */
+var LATIDO=null;
+function datosDelLatido(){
+  var P2={}; try{ P2=hcmLoad().perfil||{}; }catch(e){}
+  var S=(MAT&&sIdx!=null&&MAT[sIdx])||null;
+  var x=(S&&S.items&&S.items[it])||null;
+  var frase='';
+  if(x) frase = x.en || x.q || x.origen || x.antes || x.titulo || '';
+  return {
+    accion:'latido',
+    nombre:P2.nombre||'', grupo:P2.grupo||'',
+    leccion:(P2.parada_actual||P2.viendo||''),
+    titulo:(S&&S.t)||'',
+    paso:(x&&x.k)||'',
+    reactivo:String(frase).slice(0,200)
+  };
+}
+function mandarLatido(){
+  if(!HCM_DATOS_ENDPOINT)return;
+  var d=datosDelLatido();
+  if(!d.nombre)return;
+  try{
+    fetch(HCM_DATOS_ENDPOINT,{method:'POST',keepalive:true,
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify(d)}).catch(function(){});
+  }catch(e){}
+}
+function arrancarLatido(){
+  pararLatido();
+  mandarLatido();
+  LATIDO=setInterval(function(){
+    // si dejó la app en segundo plano, no cuenta como "adentro"
+    if(document.hidden)return;
+    mandarLatido();
+  },20000);
+}
+function pararLatido(){ if(LATIDO){clearInterval(LATIDO);LATIDO=null;} }
 function pintarReloj(){
   var caja=document.getElementById('reloj');
   if(!caja||!MINUTOS)return;
