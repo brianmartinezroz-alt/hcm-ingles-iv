@@ -2227,16 +2227,16 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
   const TERRAINS = { hills: "Rolling hills", mountains: "Big mountains", canyon: "Canyon lake", islands: "Islands", plateaus: "Plateaus", caves: "Caves" };
   const WEAPONS = {
     shell: { name: "Shell", icon: "\u{1F4A3}", r: 38, dmg: 55, desc: "Normal shot." },
-    bigbomb: { name: "Big Bomb", icon: "\u{1F4A5}", r: 90, dmg: 80, desc: "Breaks EVERYTHING: crater, buildings and a chain of explosions." },
+    bigbomb: { name: "Big Bomb", icon: "\u{1F4A5}", r: 62, dmg: 80, desc: "Breaks EVERYTHING: crater, buildings and a chain of explosions." },
     grenade: { name: "Grenade Launcher", icon: "\u{1F9E8}", r: 26, dmg: 13, desc: "15 grenades in a crazy rain! They bounce once and BOOM." },
     organ: { name: "Stalin's Organ", icon: "\u{1F3B9}", r: 28, dmg: 11, desc: "Katyusha! 24 screaming rockets, one after another." },
-    nuke: { name: "Nuke", icon: "\u2622\uFE0F", r: 130, dmg: 95, desc: "Nuclear bomb! POV CAM: see it from inside your tank and ride it down. Giant mushroom cloud!" },
+    nuke: { name: "Nuke", icon: "\u2622\uFE0F", r: 92, dmg: 95, desc: "Nuclear bomb! POV CAM: see it from inside your tank and ride it down. Giant mushroom cloud!" },
     triple: { name: "Cluster Shot", icon: "\u{1F386}", r: 34, dmg: 32, desc: "Splits in the air into 6 bombs that explode one after another." },
     airstrike: { name: "Air Strike", icon: "\u2708\uFE0F", r: 34, dmg: 22, desc: "3 jets carpet-bomb the area: 15 bombs! Tap the spot." },
     sniper: { name: "Sniper Missile", icon: "\u{1F3AF}", r: 38, dmg: 80, desc: "Pick 1 tank. Laser lock + super-fast missile = HEADSHOT." },
     twin: { name: "Twin Strike", icon: "\u2694\uFE0F", r: 30, dmg: 50, desc: "Pick 2 tanks. Hit both at once." },
     barrage: { name: "Mega Barrage", icon: "\u{1F680}", r: 30, dmg: 40, desc: "Missiles hit every tank except yours." },
-    bouncer: { name: "Mega Basketball", icon: "\u{1F3C0}", r: 88, dmg: 62, desc: "A GIANT basketball! It bounces 4 times (BOING!) and where it lands... MASSIVE BOOM!" },
+    bouncer: { name: "Mega Basketball", icon: "\u{1F3C0}", r: 64, dmg: 62, desc: "A GIANT basketball! It bounces 4 times (BOING!) and where it lands... MASSIVE BOOM!" },
     napalm: { name: "Napalm", icon: "\u{1F525}", r: 40, dmg: 30, desc: "Fire missile! It explodes, throws fire everywhere and sets nearby tanks ON FIRE." },
     driller: { name: "Bunker Buster", icon: "\u26CF\uFE0F", r: 52, dmg: 65, desc: "Drills through the ground, then explodes." },
     mortar: { name: "Mortar Rain", icon: "\u{1F327}\uFE0F", r: 24, dmg: 25, desc: "Five small shells in a wide spread." },
@@ -4789,18 +4789,17 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       anim({ type: "shock", x, y, max: 36, col: "#FFF6C8", big: true });
       tk.flash = 0.9;
       float(x, y - 120, ALB_ON() ? "\xA1EL BIG DICK LLEG\xD3!" : "KA-BOOOOM!", "#FF4F6D");
-      hitBuilding(x, y, r * 3, owner);
-      hitBuilding(x, y, r * 3, owner);
+      hitBuilding(x, y, r * 1.6, owner);
       for (let i = 0; i < 60; i++) {
         const a2 = rnd(-Math.PI * 0.95, -Math.PI * 0.05), v = rnd(5, 17);
         tk.parts.push({ x, y, vx: Math.cos(a2) * v, vy: Math.sin(a2) * v, life: rnd(70, 120), max: 120, size: rnd(7, 16), col: i % 3 ? tk.S.dirt : "#3B3458", g: 0.3, chunk: true, rot: rnd(0, 6) });
       }
-      for (let i = 0; i < 7; i++) {
-        const ang = i / 7 * Math.PI * 2, dd = rnd(r * 0.9, r * 1.6), ex = x + Math.cos(ang) * dd, ey = y + Math.sin(ang) * dd * 0.55;
+      for (let i = 0; i < 4; i++) {
+        const ang = i / 4 * Math.PI * 2 + 0.4, dd = rnd(r * 0.8, r * 1.2), ex = x + Math.cos(ang) * dd, ey = y + Math.sin(ang) * dd * 0.55;
         later(10 + i * 7, () => {
-          carve(ex, ey, 38);
-          hitBuilding(ex, ey, 60, owner);
-          explosionFx(ex, ey, 38);
+          carve(ex, ey, 24);
+          hitBuilding(ex, ey, 30, owner);
+          explosionFx(ex, ey, 30);
           boom(40);
           tk.shake = Math.max(tk.shake, 14);
           game.tanks.forEach((t) => {
@@ -4876,12 +4875,12 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
         const a2 = rnd(-Math.PI, 0), v = rnd(3, 13);
         tk.parts.push({ x: x + rnd(-20, 20), y, vx: Math.cos(a2) * v, vy: Math.sin(a2) * v - 2, life: rnd(35, 70), max: 70, size: rnd(10, 24), col: ["#FF8A3D", "#FFD21A", "#E2601A", "#1A1A1A"][i % 4], g: i % 4 === 3 ? 0.2 : -0.02, fire: i % 4 !== 3, chunk: i % 4 === 3, rot: 0 });
       }
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 6; i++) {
         const a2 = rnd(-Math.PI * 0.9, -Math.PI * 0.1), v = rnd(4, 9);
         later(4 + i * 3, () => {
-          const ex = x + Math.cos(a2) * v * 12, ey = y + Math.sin(a2) * v * 6;
+          const ex = x + Math.cos(a2) * v * 10, ey = y + Math.sin(a2) * v * 5;
           if (ey < tk.water) {
-            carve(ex, ey, 22);
+            carve(ex, ey, 16);
             explosionFx(ex, ey, 30);
             game.tanks.forEach((t) => {
               if (t.alive && tankBoxDist(t, ex, ey) < 40) hurt(t, 6, owner);
