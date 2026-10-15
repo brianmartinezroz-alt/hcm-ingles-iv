@@ -2230,9 +2230,9 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     bigbomb: { name: "Big Bomb", icon: "\u{1F4A5}", r: 62, dmg: 80, desc: "Breaks EVERYTHING: crater, buildings and a chain of explosions." },
     grenade: { name: "Grenade Launcher", icon: "\u{1F9E8}", r: 26, dmg: 13, desc: "15 grenades in a crazy rain! They bounce once and BOOM." },
     organ: { name: "Stalin's Organ", icon: "\u{1F3B9}", r: 28, dmg: 11, desc: "Katyusha! 24 screaming rockets, one after another." },
-    nuke: { name: "Nuke", icon: "\u2622\uFE0F", r: 92, dmg: 95, desc: "Nuclear bomb! POV CAM: see it from inside your tank and ride it down. Giant mushroom cloud!" },
+    nuke: { name: "Nuke", icon: "\u2622\uFE0F", r: 92, dmg: 95, desc: "AUTO-AIM! Pick a tank: the nuke launches from a silo and lands right on it. Giant mushroom cloud!" },
     triple: { name: "Cluster Shot", icon: "\u{1F386}", r: 34, dmg: 32, desc: "Splits in the air into 6 bombs that explode one after another." },
-    airstrike: { name: "Air Strike", icon: "\u2708\uFE0F", r: 34, dmg: 22, desc: "3 jets carpet-bomb the area: 15 bombs! Tap the spot." },
+    airstrike: { name: "Air Strike", icon: "\u2708\uFE0F", r: 34, dmg: 22, desc: "AUTO-AIM! Pick a tank and 3 jets carpet-bomb it: 15 bombs!" },
     sniper: { name: "Sniper Missile", icon: "\u{1F3AF}", r: 38, dmg: 80, desc: "Pick 1 tank. Laser lock + super-fast missile = HEADSHOT." },
     twin: { name: "Twin Strike", icon: "\u2694\uFE0F", r: 30, dmg: 50, desc: "Pick 2 tanks. Hit both at once." },
     barrage: { name: "Mega Barrage", icon: "\u{1F680}", r: 30, dmg: 40, desc: "Missiles hit every tank except yours." },
@@ -5847,12 +5847,8 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       launchHoming(tg, "barrage");
       return;
     }
-    if (w === "sniper" || w === "twin" || w === "cruise") {
+    if (w === "sniper" || w === "twin" || w === "cruise" || w === "nuke" || w === "airstrike") {
       openTargetPick(w);
-      return;
-    }
-    if (w === "nuke") {
-      startPov("nuke");
       return;
     }
     game.shotsLeft = Math.max(0, game.shotsLeft - 1);
@@ -8224,6 +8220,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
   }
   function povPath(P, u) {
     const T = P.T3;
+    if (P.kind === "nuke") return [T[0] * u * u, 40 + P.Hpk * 1.5 * 4 * u * (1 - u) + 20 * u, T[2] * u * u];
     return [-40 + (T[0] + 40) * u, 46 + 14 * u + P.Hpk * 4 * u * (1 - u), T[2] * u];
   }
   function povDir(P, u) {
@@ -8415,6 +8412,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       (vh ? (o, p, cl, y, ch, ti) => truck3(o, p, cl, y, ch, ti, vh === "jeep") : tank3)(faces, X.tankPos || T, game.teams[P.foe.team].color, X.tankYaw != null ? X.tankYaw : Math.PI * 0.1, X.charred, X.tankTilt);
     }
     (P.debris || []).forEach((d) => box3(faces, d.p, d.s, d.s * 0.7, d.s, d.col, d.r, d.r * 0.7));
+    if (X.extra) X.extra(faces);
     (X.planes || []).forEach((p) => plane3(faces, p, P.ayaw));
     (X.bombs || []).forEach((p) => prism3(faces, p, 4, 10, 6, "x", "#3E4A2E", P.ayaw, -1.1));
     let tail = null;
@@ -8540,7 +8538,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     const t = curTank();
     if (!t || !t.alive) return;
     let imp;
-    if (kind === "cruise") {
+    if (tgt != null) {
       const tt = game.tanks[tgt];
       imp = { x: tt.x, y: tt.y - 18 * TS, tank: tt };
     } else imp = simShot(t, t.angle * Math.PI / 180, t.power * 0.19);
@@ -8981,10 +8979,10 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     const off = j === 0 ? [0, 0, 0] : V3.add(V3.mul(d, -80), V3.add(V3.mul(side, j === 1 ? 70 : -70), [0, 8, 0]));
     return V3.add(fwd, off);
   }
-  function startAirPov(x) {
+  function startAirPov(x, target) {
     const t = curTank(), owner = game.turn;
     x = Math.max(160, Math.min(TK.W - 160, x));
-    const foe = nearestFoe(x, owner, 210);
+    const foe = target || nearestFoe(x, owner, 210);
     const P0 = { f: 0, kind: "airstrike", shooter: t, team: owner, imp: { x, y: surfaceY(x | 0) }, foe, elev: 30, angle: 0, power: 0, wind: game.wind, shake: 0, bombs: [], booms: [] };
     P0.boomTxt = boomText(foe);
     povScene(P0);
@@ -9095,6 +9093,66 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       c.restore();
     } else if (f > P.rel + 40 && !P.foe) povText(c, P.boomTxt, W / 2, H * 0.22, 44, "#FFD21A", "center", U);
   }
+  function drawPovSilo(c, W, H, U, P, f, S, now) {
+    const open = Math.max(0, Math.min(1, (f - 6) / 34)), lift = f >= POV_FIRE ? Math.pow(f - POV_FIRE, 2) * 0.75 : 0;
+    const mPos = [0, 46 - (1 - open) * 30 + lift, 0];
+    const cp = [-165, 34, 125], look = [0, 62 + lift * 0.92, 0];
+    const C = cam3(cp, V3.sub(look, cp), W, H);
+    const blink = Math.floor(f / 6) % 2 === 0, X = { bill: [], noFlare: true, noRing: true };
+    X.extra = (faces) => {
+      box3(faces, [0, 0.6, 0], 42, 0.6, 42, "#141018");
+      [[0, 0, -50], [0, 0, 50], [-50, 0, 0], [50, 0, 0]].forEach(([x, y, z]) => box3(faces, [x, 4, z], Math.abs(x) ? 8 : 58, 4, Math.abs(z) ? 8 : 42, "#9C9AB0"));
+      [-1, 1].forEach((sd) => {
+        const zz = sd * (21 + open * 44);
+        box3(faces, [0, 7, zz], 40, 2.2, 21, "#5B6170");
+        box3(faces, [0, 9.4, zz], 40, 0.3, 4, "#FFD21A");
+      });
+      [[-70, -70], [70, -70], [-70, 70], [70, 70]].forEach(([x, z]) => {
+        box3(faces, [x, 22, z], 2.5, 22, 2.5, "#3B3458");
+        box3(faces, [x, 46, z], 5, 3, 5, blink ? "#FF2D2D" : "#7A1A1A");
+      });
+      if (f >= 14) missile3(faces, mPos, [0, 1, 0], "nuke", game.teams[P.team].color);
+    };
+    [[-70, -70], [70, -70], [-70, 70], [70, 70]].forEach(([x, z], i) => {
+      if ((Math.floor(f / 6) + i) % 2 === 0) X.bill.push({ p: [x, 48, z], r: 34, a: 0.8, c: "255,40,40" });
+    });
+    if (open > 0 && f < POV_FIRE) for (let i = 0; i < 6; i++) X.bill.push({ p: [rnd(-30, 30), 10 + (f * 2 + i * 17) % 70, rnd(-30, 30)], r: 26 + i * 4, a: 0.45, c: "235,235,240" });
+    if (f >= POV_FIRE) {
+      const t = f - POV_FIRE;
+      X.bill.push({ p: [0, mPos[1] - 40, 0], r: 28 + Math.random() * 10, a: 1, fire: true });
+      for (let i = 0; i < 14; i++) {
+        const a = i / 14 * Math.PI * 2, d = 20 + t * 6;
+        X.bill.push({ p: [Math.cos(a) * d, 18 + i % 3 * 14, Math.sin(a) * d], r: 40 + t * 2.2, a: Math.max(0, 0.85 - t / 60), c: "225,222,230" });
+      }
+      for (let i = 0; i < Math.min(16, t); i++) X.bill.push({ p: [rnd(-8, 8), mPos[1] - 50 - i * 22, rnd(-8, 8)], r: 20 + i * 3, a: 0.6, c: "240,240,245" });
+    }
+    render3D(c, C, P, W, H, S, now, X);
+    const pulse = 0.25 + 0.25 * Math.sin(f * 0.35);
+    c.strokeStyle = `rgba(255,30,30,${pulse + 0.25})`;
+    c.lineWidth = 14 * U;
+    c.strokeRect(0, 0, W, H);
+    const pad = 40 * U, red = "#FF5A5A", tm = game.teams[P.team];
+    if (blink) {
+      c.beginPath();
+      c.arc(pad + 6 * U, pad + 2 * U, 7 * U, 0, 7);
+      c.fillStyle = "#FF2D55";
+      c.fill();
+    }
+    povText(c, `\u2622 SILO \xB7 ${tm.name} \xB7 LAUNCH SEQUENCE`, pad + 20 * U, pad + 8 * U, 16, red, "left", U);
+    povText(c, f < POV_FIRE ? `DOORS ${Math.round(open * 100)}%` : `ALT ${Math.round(lift * 4)} m`, W - pad, pad + 8 * U, 16, red, "right", U);
+    povText(c, "\u{1F3AF} AUTO-AIM \xB7 TARGET LOCKED", pad, H - pad, 15, red, "left", U);
+    if (P.foe) povText(c, `TARGET: ${game.teams[P.foe.team].name}`, W - pad, H - pad, 15, "#FFD21A", "right", U);
+    if (f < POV_FIRE && blink) povText(c, "\u26A0 NUCLEAR LAUNCH DETECTED \u26A0", W / 2, H * 0.26, 26, "#FFD21A", "center", U);
+    const cd = f < 18 ? null : f < 32 ? "3" : f < 46 ? "2" : f < POV_FIRE ? "1" : f < POV_FIRE + 22 ? "LAUNCH!" : null;
+    if (cd) {
+      const local = cd === "LAUNCH!" ? f - POV_FIRE : (f - 18) % 14, sc = 1 + Math.max(0, 0.6 - local * 0.06);
+      c.save();
+      c.translate(W / 2, H * 0.42);
+      c.scale(sc, sc);
+      povText(c, cd, 0, 0, cd === "LAUNCH!" ? 60 : 72, cd === "LAUNCH!" ? "#FFD21A" : "#fff", "center", U);
+      c.restore();
+    }
+  }
   function drawPov() {
     const c = tkCtx, W = tkCanvas.width, H = tkCanvas.height, P = tk.pov, f = P.f, S = tk.S, U = Math.min(W, H) / 620, now = performance.now();
     c.setTransform(1, 0, 0, 1, 0, 0);
@@ -9113,6 +9171,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     c.save();
     c.translate(sx, sy);
     if (P.kind === "airstrike") drawPovAir(c, W, H, U, P, f, S, now);
+    else if (f < POV_SWITCH && P.kind === "nuke") drawPovSilo(c, W, H, U, P, f, S, now);
     else if (f < POV_SWITCH) drawPovTank(c, W, H, U, P, f, S, now);
     else drawPovMissile(c, W, H, U, P, f, S, now);
     c.restore();
@@ -9190,7 +9249,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
         game.weapon = b.dataset.w;
         renderTkUI();
       });
-      $("#tkFire").textContent = game.weapon === "sniper" || game.weapon === "twin" || game.weapon === "cruise" ? "LOCK ON" : "FIRE!";
+      $("#tkFire").textContent = ["sniper", "twin", "cruise", "nuke", "airstrike"].includes(game.weapon) ? "LOCK ON" : "FIRE!";
       $("#tkLeft").disabled = game.moved;
       $("#tkRight").disabled = game.moved;
       $("#tkMoveNote").textContent = game.moved ? "Move used" : "1 move per turn";
@@ -9232,7 +9291,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       const k = b.dataset.k;
       if (WPN_KEYS.includes(k)) {
         game.weapon = k;
-        if (["sniper", "twin", "barrage", "cruise"].includes(k)) fire();
+        if (["sniper", "twin", "barrage", "cruise", "nuke", "airstrike"].includes(k)) fire();
         else renderTkUI();
       } else usePU(k);
     });
@@ -9310,8 +9369,21 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
   $("#tgGo").onclick = () => {
     if (tgPick.length !== tgNeed) return;
     $("#tgSheet").hidden = true;
-    if (tgKind === "cruise") {
-      startPov("cruise", tgPick[0]);
+    if (tgKind === "cruise" || tgKind === "nuke") {
+      startPov(tgKind, tgPick[0]);
+      return;
+    }
+    if (tgKind === "airstrike") {
+      const tt = game.tanks[tgPick[0]], t = curTank();
+      game.shotsLeft = Math.max(0, game.shotsLeft - 1);
+      useItem("airstrike");
+      puBanner("airstrike");
+      game.weapon = baseW();
+      game.phase = "busy";
+      tk.busyFrames = 0;
+      renderTkUI();
+      if (t) sayFx(t, pickLine(TAUNT_L()));
+      startAirPov(tt.x, tt);
       return;
     }
     useItem(tgKind);
