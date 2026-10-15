@@ -2238,7 +2238,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     barrage: { name: "Mega Barrage", icon: "\u{1F680}", r: 30, dmg: 40, desc: "Missiles hit every tank except yours." },
     bouncer: { name: "Mega Basketball", icon: "\u{1F3C0}", r: 64, dmg: 62, desc: "A GIANT basketball! It bounces 4 times (BOING!) and where it lands... MASSIVE BOOM!" },
     napalm: { name: "Napalm", icon: "\u{1F525}", r: 40, dmg: 30, desc: "Fire missile! It explodes, throws fire everywhere and sets nearby tanks ON FIRE." },
-    driller: { name: "Bunker Buster", icon: "\u26CF\uFE0F", r: 52, dmg: 65, desc: "Drills through the ground, then explodes." },
+    driller: { name: "Mole Bomb", icon: "\u26CF\uFE0F", r: 62, dmg: 60, desc: "A MOLE! It digs under the ground and wrecks everything in its way until it hits the wall\u2026 then BOOM." },
     mortar: { name: "Mortar Rain", icon: "\u{1F327}\uFE0F", r: 24, dmg: 25, desc: "Five small shells in a wide spread." },
     cruise: { name: "Guided Missile", icon: "\u{1F3A5}", r: 60, dmg: 75, desc: "POV CAM! Pick 1 tank, watch from inside your tank, then ride the missile down. Direct hit!" },
     double: { name: "Double Shot", icon: "\u{1F501}", desc: "Your next FIRE shoots 2 shells super fast, one after the other." },
@@ -5202,7 +5202,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     barrage: "Chiles para todos menos para ti.",
     bouncer: "Bolotas que rebotan 4 veces y al final\u2026 \xA1PUM!",
     napalm: "Escupe lechita bien caliente y deja a todos ardiendo.",
-    driller: "Entra, sale, entra\u2026 y explota adentro.",
+    driller: "Se mete y no para: rompe todo por dentro hasta que topa con pared\u2026 y ah\xED truena.",
     mortar: "Cinco chorritos repartidos.",
     cruise: "Lo gu\xEDas t\xFA, de principio a fin, hasta adentro del tanque.",
     double: "Te echas dos seguiditos.",
@@ -6148,6 +6148,57 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
         tk.parts.push({ x: s.x, y: s.y, vx: rnd(-0.3, 0.3), vy: rnd(-0.3, 0.3), life: 34, max: 34, size: rnd(6, 10), col: "rgba(235,230,240,.6)", smoke: true, g: 0 });
         tk.parts.push({ x: s.x, y: s.y, vx: -s.vx * 0.2, vy: -s.vy * 0.2, life: 8, max: 8, size: rnd(4, 7), col: "#FFB400", g: 0, fire: true });
       }
+      if (s.mole) {
+        s.mage++;
+        const sp = 10;
+        s.x += s.dir * sp;
+        const sy = surfaceY(Math.max(0, Math.min(TK.W - 1, s.x | 0)));
+        const ty = Math.min(sy + 36, TK.H - 30);
+        s.vy = (ty - s.y) * 0.35;
+        s.y += s.vy;
+        s.vx = s.dir * sp;
+        carve(s.x, s.y, 26);
+        if (sy < TK.H - 5) for (let i = 0; i < 3; i++) tk.parts.push({ x: s.x + rnd(-14, 14), y: sy, vx: rnd(-2, 2) - s.dir * 1.5, vy: rnd(-7, -3), life: rnd(26, 42), max: 42, size: rnd(4, 9), col: i % 2 ? tk.S.dirt : tk.S.top, g: 0.3, chunk: true, rot: rnd(0, 6) });
+        if (s.mage % 3 === 0) tk.parts.push({ x: s.x, y: sy - 4, vx: rnd(-0.4, 0.4), vy: rnd(-1, -0.3), life: 50, max: 50, size: rnd(12, 20), col: "rgba(160,130,100,.4)", smoke: true, g: 0 });
+        tk.shake = Math.max(tk.shake, 5);
+        if (s.mage % 5 === 0) {
+          hitBuilding(s.x, s.y - 60, 46, s.owner);
+          boom(14);
+        }
+        if (s.mage % 28 === 0) SFX.play("drill");
+        game.tanks.forEach((t) => {
+          if (!t.alive || s.hit.has(t) || t.team === s.owner) return;
+          if (Math.abs(t.x - s.x) < 26 * TS && s.y > t.y - 40 && s.y < t.y + 110) {
+            s.hit.add(t);
+            hurt(t, 22, s.owner);
+            t.vy -= 7;
+            t.vx += s.dir * 2;
+            t.onGround = false;
+            t.chute = false;
+            explosionFx(t.x, t.y - 10, 26);
+            boom(40);
+            float(t.x, t.y - 120, ALB_ON() ? "\xA1SE LA METI\xD3 POR ABAJO!" : "\u{1F43E} FROM BELOW!", "#C9A27A");
+          }
+        });
+        (tk.hazards || []).forEach((h) => {
+          if (h.alive && !h.armed && Math.abs(h.x - s.x) < 30 && Math.abs(h.y - s.y) < 70) {
+            h.armed = true;
+            later(4, () => hazardBoom(h, s.owner));
+          }
+        });
+        tk.miniDirty = true;
+        s.trail.push({ x: s.x, y: s.y });
+        if (s.trail.length > 16) s.trail.shift();
+        if (s.x < 24 || s.x > TK.W - 24) {
+          const ex = Math.max(30, Math.min(TK.W - 30, s.x));
+          explode(ex, s.y, s.r, s.dmg, s.owner, "driller");
+          carve(ex, s.y - 30, 50);
+          float(ex, s.y - 150, ALB_ON() ? "\xA1TOP\xD3 CON PARED! \u{1F4A5}" : "\u{1F4A5} HIT THE WALL!", "#FFD21A");
+          tk.shake = Math.max(tk.shake, 26);
+          return false;
+        }
+        return true;
+      }
       const sub = 4;
       if (s.bcd) s.bcd--;
       for (let i = 0; i < sub; i++) {
@@ -6191,6 +6242,18 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
             carve(s.x, s.y + 20, 20);
             tk.shake = Math.max(tk.shake, 10);
             break;
+          }
+          if (s.kind === "driller") {
+            s.x -= s.vx / sub;
+            s.y -= s.vy / sub;
+            s.mole = true;
+            s.dir = s.vx < 0 ? -1 : 1;
+            s.hit = /* @__PURE__ */ new Set();
+            s.mage = 0;
+            SFX.play("drill");
+            tk.shake = Math.max(tk.shake, 12);
+            float(s.x, s.y - 80, ALB_ON() ? "\xA1AH\xCD VA EL METE-SACA!" : "\u{1F43E} MOLE ATTACK!", "#C9A27A");
+            return true;
           }
           if (s.kind === "driller" && (s.drill || 0) < 150) {
             s.drill = (s.drill || 0) + Math.hypot(s.vx, s.vy) / sub;
@@ -7796,25 +7859,49 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       c.fill();
       c.stroke();
     } else if (k === "driller") {
+      if (Math.cos(Math.atan2(s.vy, s.vx)) < 0) c.scale(1, -1);
       c.beginPath();
-      c.moveTo(-12, -7);
-      c.lineTo(6, -7);
-      c.lineTo(18, 0);
-      c.lineTo(6, 7);
-      c.lineTo(-12, 7);
-      c.closePath();
-      c.fillStyle = "#9C9AB0";
+      c.ellipse(-4, 0, 15, 10, 0, 0, 7);
+      c.fillStyle = "#6B4A2E";
       c.fill();
       c.lineWidth = 2.5;
       c.strokeStyle = INK;
       c.stroke();
-      c.strokeStyle = "#3B3458";
+      c.fillStyle = "#8A6342";
+      c.beginPath();
+      c.ellipse(-6, 3, 9, 5, 0, 0, 7);
+      c.fill();
+      c.fillStyle = "#F2A0B0";
+      [[-10, 9], [0, 9]].forEach(([x, y]) => {
+        c.beginPath();
+        c.ellipse(x + Math.sin(s.age * 0.8) * 2, y, 4, 2.5, 0, 0, 7);
+        c.fill();
+        c.lineWidth = 1.5;
+        c.stroke();
+      });
+      c.fillStyle = "#1A1A1A";
+      c.fillRect(0, -6, 9, 3.5);
+      c.beginPath();
+      c.arc(2, -4.5, 2.6, 0, 7);
+      c.arc(7, -4.5, 2.6, 0, 7);
+      c.fill();
+      c.beginPath();
+      c.moveTo(10, -7);
+      c.lineTo(24, 0);
+      c.lineTo(10, 7);
+      c.closePath();
+      c.fillStyle = "#C9CDD8";
+      c.fill();
+      c.lineWidth = 2;
+      c.strokeStyle = INK;
+      c.stroke();
+      c.strokeStyle = "#5B6170";
       c.lineWidth = 1.5;
       for (let q = 0; q < 3; q++) {
-        const xx = 4 + q * 4 + s.age * 2 % 4;
+        const xx = 12 + q * 4 + s.age * 3 % 4;
         c.beginPath();
-        c.moveTo(xx, -5 + q * 1.4);
-        c.lineTo(xx + 3, 5 - q * 1.4);
+        c.moveTo(xx, -5 + q * 1.6);
+        c.lineTo(xx + 3, 5 - q * 1.6);
         c.stroke();
       }
     } else if (k === "fire") {
