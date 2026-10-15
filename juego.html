@@ -2251,7 +2251,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     armor: { name: "Iron Armor", icon: "\u{1F9BE}", desc: "The next 2 hits do half damage." }
   };
   const WPN_KEYS = ["nuke", "grenade", "organ", "bigbomb", "triple", "airstrike", "sniper", "twin", "barrage", "bouncer", "napalm", "driller", "mortar", "cruise"];
-  const PU_KEYS = ["double", "repair", "medic", "shield", "teleport", "calm", "fuel", "armor"];
+  const PU_KEYS = ["double", "repair", "medic", "shield", "teleport", "fuel", "armor"];
   const ITEM_KEYS = WPN_KEYS.concat(PU_KEYS);
   const MOVE_STEP = 240;
   const TS = 2;
@@ -3830,9 +3830,12 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     { id: "gold", name: "Golden", base: "#F5C542", pat: ["#FFF1B0", "#C99A1E"], kind: "shine", turret: "dome" },
     { id: "candy", name: "Candy", base: "#FF9CC8", pat: ["#FFFFFF"], kind: "dots", turret: "low" },
     { id: "lava", name: "Lava", base: "#3B3458", pat: ["#FF5A1F", "#FFB400"], kind: "cracks", turret: "box", barrel: 34 },
-    { id: "navy", name: "Navy", base: "#2E4A7D", pat: ["#FFFFFF"], kind: "star", turret: "dome" }
+    { id: "navy", name: "Navy", base: "#2E4A7D", pat: ["#FFFFFF"], kind: "star", turret: "dome" },
+    { id: "truck", name: "Army Truck", base: "#5E6B3A", pat: ["#4A5530"], kind: "none", turret: "dome", veh: "truck", barrel: 28 },
+    { id: "camotruck", name: "Camo Truck", base: "#5E7B3A", pat: ["#3E5426", "#8A6B3E", "#2B2F1E"], kind: "blobs", turret: "dome", veh: "truck", barrel: 28 },
+    { id: "humvee", name: "Humvee", base: "#C9AE7A", pat: ["#B8935A", "#E9D3A0", "#9C7444"], kind: "blobs", turret: "dome", veh: "jeep", barrel: 24 }
   ];
-  const DEFAULT_SKINS = ["woodland", "desert", "arctic", "tiger", "digital", "heavy"];
+  const DEFAULT_SKINS = ["woodland", "truck", "desert", "humvee", "digital", "camotruck"];
   const skinById = (id) => SKINS.find((s) => s.id === id) || SKINS[0];
   function makeSprite(color, skinId, seedN) {
     const sk = skinById(skinId), base = sk.base || color;
@@ -3844,6 +3847,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     };
     c.translate(60, 80);
     c.scale(2, 2);
+    if (sk.veh) return makeTruckSprite(c, cv, sk, base, color, sr);
     const hull = () => {
       c.beginPath();
       c.moveTo(-23, -8);
@@ -4010,7 +4014,194 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     c.stroke();
     return cv;
   }
+  function makeTruckSprite(c, cv, sk, base, color, sr) {
+    const jeep = sk.veh === "jeep", P = sk.pat;
+    const body = () => {
+      c.beginPath();
+      if (jeep) {
+        c.moveTo(-25, -9);
+        c.lineTo(25, -9);
+        c.lineTo(25, -17);
+        c.lineTo(17, -19);
+        c.lineTo(11, -27);
+        c.lineTo(-9, -27);
+        c.lineTo(-13, -19);
+        c.lineTo(-25, -18);
+        c.closePath();
+      } else {
+        c.moveTo(-25, -9);
+        c.lineTo(24, -9);
+        c.lineTo(24, -19);
+        c.lineTo(20, -28);
+        c.lineTo(8, -28);
+        c.lineTo(8, -12);
+        c.lineTo(6, -12);
+        c.lineTo(6, -26);
+        c.quadraticCurveTo(6, -32, 0, -32);
+        c.lineTo(-19, -32);
+        c.quadraticCurveTo(-25, -32, -25, -26);
+        c.closePath();
+      }
+    };
+    c.fillStyle = base;
+    body();
+    c.fill();
+    c.save();
+    body();
+    c.clip();
+    if (sk.kind === "blobs") for (let i = 0; i < 18; i++) {
+      c.fillStyle = P[i % P.length];
+      c.beginPath();
+      c.ellipse(-25 + sr() * 50, -33 + sr() * 26, 3 + sr() * 6, 2 + sr() * 4, sr() * 3, 0, 7);
+      c.fill();
+    }
+    if (!jeep) {
+      c.strokeStyle = "rgba(0,0,0,.22)";
+      c.lineWidth = 1.2;
+      for (let x = -20; x <= 2; x += 5.5) {
+        c.beginPath();
+        c.moveTo(x, -31);
+        c.lineTo(x, -13);
+        c.stroke();
+      }
+      c.fillStyle = color;
+      c.fillRect(-25, -20, 31, 3.5);
+    } else {
+      c.fillStyle = color;
+      c.fillRect(-25, -15, 50, 3);
+    }
+    c.fillStyle = "rgba(255,255,255,.25)";
+    c.fillRect(-23, -30, 26, 2);
+    c.restore();
+    c.fillStyle = "#BFE3FF";
+    c.beginPath();
+    if (jeep) {
+      c.moveTo(-6, -25);
+      c.lineTo(9, -25);
+      c.lineTo(14, -19);
+      c.lineTo(-6, -19);
+    } else {
+      c.moveTo(11, -26);
+      c.lineTo(19, -26);
+      c.lineTo(22, -19);
+      c.lineTo(11, -19);
+    }
+    c.closePath();
+    c.fill();
+    c.fillStyle = "rgba(255,255,255,.6)";
+    c.fillRect(jeep ? -4 : 12, -24, 3, 4);
+    c.fillStyle = "#fff";
+    c.beginPath();
+    const sx = jeep ? 4 : 15;
+    for (let i = 0; i < 5; i++) {
+      const an = -Math.PI / 2 + i * Math.PI * 0.8;
+      c.lineTo(sx + Math.cos(an) * 3, -14 + Math.sin(an) * 3);
+    }
+    c.closePath();
+    c.fill();
+    c.lineWidth = 2.2;
+    c.strokeStyle = INK;
+    c.lineJoin = "round";
+    body();
+    c.stroke();
+    c.lineWidth = 1.4;
+    c.beginPath();
+    if (jeep) {
+      c.moveTo(-6, -25);
+      c.lineTo(9, -25);
+      c.lineTo(14, -19);
+      c.lineTo(-6, -19);
+    } else {
+      c.moveTo(11, -26);
+      c.lineTo(19, -26);
+      c.lineTo(22, -19);
+      c.lineTo(11, -19);
+    }
+    c.closePath();
+    c.stroke();
+    c.fillStyle = "#FFD21A";
+    c.fillRect(22.5, -15, 2.5, 3);
+    c.strokeRect(22.5, -15, 2.5, 3);
+    return cv;
+  }
+  function paintTruck(c, sprite, color, sk, angleDeg, recoil, tread, now) {
+    const jeep = sk.veh === "jeep", flip = angleDeg > 90 ? -1 : 1, a = angleDeg * Math.PI / 180, len = (sk.barrel || 28) - recoil;
+    const px = (jeep ? 0 : -9) * flip, py = jeep ? -29 : -33;
+    c.fillStyle = "#3B3458";
+    c.strokeStyle = INK;
+    c.lineWidth = 1.8;
+    c.beginPath();
+    c.arc(px, py + 2, jeep ? 4 : 5, Math.PI, 0);
+    c.fill();
+    c.stroke();
+    c.lineCap = "round";
+    c.lineWidth = jeep ? 6 : 9;
+    c.strokeStyle = INK;
+    c.beginPath();
+    c.moveTo(px, py);
+    c.lineTo(px + Math.cos(a) * len, py - Math.sin(a) * len);
+    c.stroke();
+    c.lineWidth = jeep ? 3 : 5.5;
+    c.strokeStyle = shade(sk.base, 0.75);
+    c.stroke();
+    if (!jeep) {
+      c.lineWidth = 1.2;
+      c.strokeStyle = INK;
+      for (let k = 1; k < 4; k++) {
+        const q = len * k / 4;
+        c.beginPath();
+        c.moveTo(px + Math.cos(a) * q - Math.sin(a) * 4, py - Math.sin(a) * q - Math.cos(a) * 4);
+        c.lineTo(px + Math.cos(a) * q + Math.sin(a) * 4, py - Math.sin(a) * q + Math.cos(a) * 4);
+        c.stroke();
+      }
+    }
+    const ax = (jeep ? -10 : 18) * flip, ay = jeep ? -27 : -28;
+    c.lineWidth = 1.8;
+    c.strokeStyle = INK;
+    c.beginPath();
+    c.moveTo(ax, ay);
+    c.lineTo(ax - 4 * flip, ay - 22);
+    c.stroke();
+    const wv = Math.sin(now / 180) * 2;
+    c.beginPath();
+    c.moveTo(ax - 4 * flip, ay - 22);
+    c.lineTo(ax + (9 - 4) * flip, ay - 18 + wv);
+    c.lineTo(ax - 4 * flip, ay - 13);
+    c.closePath();
+    c.fillStyle = color;
+    c.fill();
+    c.lineWidth = 1.5;
+    c.stroke();
+    c.save();
+    c.scale(flip, 1);
+    c.drawImage(sprite, -30, -40, 60, 44);
+    const wx = jeep ? [-15, 15] : [-17, -7, 15];
+    wx.forEach((x) => {
+      c.beginPath();
+      c.arc(x, -5, 6, 0, 7);
+      c.fillStyle = "#2B2838";
+      c.fill();
+      c.lineWidth = 2;
+      c.strokeStyle = INK;
+      c.stroke();
+      c.beginPath();
+      c.arc(x, -5, 2.8, 0, 7);
+      c.fillStyle = "#9C9AB0";
+      c.fill();
+      c.strokeStyle = "rgba(255,255,255,.35)";
+      c.lineWidth = 1.3;
+      for (let k = 0; k < 3; k++) {
+        const an = tread * 0.25 * flip + k * Math.PI * 2 / 3;
+        c.beginPath();
+        c.moveTo(x + Math.cos(an) * 3, -5 + Math.sin(an) * 3);
+        c.lineTo(x + Math.cos(an) * 5.4, -5 + Math.sin(an) * 5.4);
+        c.stroke();
+      }
+    });
+    c.restore();
+  }
   function paintTank(c, sprite, color, skinId, angleDeg, recoil, tread, now) {
+    if (skinById(skinId).veh) return paintTruck(c, sprite, color, skinById(skinId), angleDeg, recoil, tread, now);
     const sk = skinById(skinId), a = angleDeg * Math.PI / 180, len = (sk.barrel || 30) - recoil, py = sk.turret === "box" ? -28 : -22;
     c.lineCap = "round";
     c.lineWidth = 8;
@@ -7841,6 +8032,24 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     if (!charred) P(box3, S(19.5, 48.5, 9), 3.5 * s, 2.6 * s, 0.25 * s, col, yaw, tilt);
     P(box3, S(5, 28, 14.2), 4 * s, 2.2 * s, 0.3 * s, "#FFFFFF", yaw, tilt);
   }
+  function truck3(out, pos, col, yaw, charred, tilt, jeep) {
+    const s = 1.6, at = tf3(pos, yaw, tilt || 0), S = (x, y, z) => at(x * s, y * s, z * s), dk = charred ? "#1E1A22" : "#2B2838", body = charred ? "#3A3238" : col, lo = charred ? "#2A2428" : shade(col, 0.72), glass = charred ? "#2A2428" : "#BFE3FF";
+    [-1, 1].forEach((sd) => (jeep ? [-26, 26] : [-28, -12, 26]).forEach((x) => prism3(out, S(x, 8, 17 * sd), 8 * s, 3.5 * s, 10, "z", dk, yaw, tilt)));
+    box3(out, S(0, 14, 0), 42 * s, 3 * s, 15 * s, lo, yaw, tilt);
+    if (jeep) {
+      box3(out, S(2, 23, 0), 40 * s, 7 * s, 17 * s, body, yaw, tilt);
+      box3(out, S(-8, 34, 0), 18 * s, 6 * s, 15 * s, body, yaw, tilt);
+      box3(out, S(-27, 33, 0), 1 * s, 4 * s, 13 * s, glass, yaw, tilt);
+      prism3(out, S(4, 42, 0), 5 * s, 3 * s, 8, "y", lo, yaw, tilt);
+    } else {
+      box3(out, S(-30, 28, 0), 12 * s, 13 * s, 16 * s, body, yaw, tilt);
+      box3(out, S(-42.5, 31, 0), 0.6 * s, 6 * s, 13 * s, glass, yaw, tilt);
+      box3(out, S(14, 32, 0), 28 * s, 15 * s, 17 * s, charred ? "#3A3238" : shade(col, 1.08), yaw, tilt);
+      box3(out, S(10, 50, 0), 14 * s, 4 * s, 10 * s, lo, yaw, tilt, null);
+    }
+    prism3(out, S(jeep ? -14 : -4, jeep ? 46 : 54, 0), (jeep ? 2.2 : 4) * s, (jeep ? 16 : 22) * s, 8, "x", charred ? "#2A2428" : shade(col, 0.6), yaw, (tilt || 0) - 0.12);
+    box3(out, S(jeep ? 6 : -30, jeep ? 44 : 47, 9), 0.5 * s, 9 * s, 0.5 * s, dk, yaw, tilt);
+  }
   function missile3(out, m, v, kind, teamCol) {
     const yaw = Math.atan2(-v[2], v[0]), pitch = Math.asin(Math.max(-1, Math.min(1, v[1]))), at = tf3(m, yaw, pitch);
     const nuke = kind === "nuke", body = nuke ? "#F5C542" : "#D4D8E2", band = nuke ? "#1A1A1A" : teamCol;
@@ -8114,7 +8323,10 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
         }
       } else box3(faces, [o.x, o.w * 0.35, o.z], o.w * 0.6, o.w * 0.35, o.w * 0.5, "#9C9AB0", o.r, 0.15);
     });
-    if (P.foe && !X.tankGone) tank3(faces, X.tankPos || T, game.teams[P.foe.team].color, X.tankYaw != null ? X.tankYaw : Math.PI * 0.1, X.charred, X.tankTilt);
+    if (P.foe && !X.tankGone) {
+      const vh = skinById(game.teams[P.foe.team].skin).veh;
+      (vh ? (o, p, cl, y, ch, ti) => truck3(o, p, cl, y, ch, ti, vh === "jeep") : tank3)(faces, X.tankPos || T, game.teams[P.foe.team].color, X.tankYaw != null ? X.tankYaw : Math.PI * 0.1, X.charred, X.tankTilt);
+    }
     (P.debris || []).forEach((d) => box3(faces, d.p, d.s, d.s * 0.7, d.s, d.col, d.r, d.r * 0.7));
     let tail = null;
     if (X.missile) tail = missile3(faces, X.missile.pos, X.missile.dir, P.kind, game.teams[P.team].color);
