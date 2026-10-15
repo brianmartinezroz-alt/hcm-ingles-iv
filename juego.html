@@ -8618,8 +8618,25 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     tkSize = null;
     if (!P) return;
     if (P.kind === "airstrike") {
-      airStrikeAt(P.imp.x);
-      if (P.foe && P.foe.alive) float(P.foe.x, P.foe.y - 170, P.boomTxt, "#FFD21A");
+      const x = P.imp.x, { vw: vw2 } = view2(), sp = WEAPONS.airstrike, foe = P.foe;
+      tk.cam.follow = "point";
+      tk.cam.target = x - vw2 / 2;
+      tk.cam.x = Math.max(0, Math.min(Math.max(0, TK.W - vw2), x - vw2 / 2));
+      tk.cam.y = tk.cam.ty = Math.min(P.imp.y, TK.H);
+      const pts = [];
+      for (let j = 0; j < 3; j++) for (let i = 0; i < 5; i++) pts.push(x - 150 + j * 20 + i * 70 + rnd(-10, 10));
+      pts.sort((a, b) => a - b).forEach((bx2, k) => later(1 + k * 2, () => {
+        if (!tk) return;
+        const by = surfaceY(Math.max(0, Math.min(TK.W - 1, bx2 | 0)));
+        if (by >= TK.H - 2) return;
+        explode(bx2, by, sp.r, sp.dmg, P.team, "airstrike");
+      }));
+      tk.flash = Math.max(tk.flash, 0.6);
+      tk.shake = Math.max(tk.shake, 24);
+      boom(120);
+      if (foe) later(8, () => {
+        if (tk) float(foe.x, foe.y - 175, P.boomTxt, "#FFD21A");
+      });
       return;
     }
     const imp = P.imp, spec = WEAPONS[P.kind], { vw } = view2();
