@@ -14308,6 +14308,320 @@ function hcmTutorial(){
   }
 })();
 
+/* ═══════════ PPP_HCM ═══════════════════════════════════════════════
+   Brian pidió que la lección se le presente al cadete como un PPP:
+   primero el tema, luego práctica repartida en speaking / grammar /
+   listening, y al final una producción donde lo usa él. La lección
+   completa ya traía todo eso revuelto; aquí se ordena, se le pone
+   nombre a cada bloque y se recorta por bloque según los minutos que
+   el cadete escogió al entrar (5 a 30), para que una sesión de 15
+   minutos siga teniendo las tres fases y no se quede sin producción.
+   ═════════════════════════════════════════════════════════════════ */
+(function(){
+  if(typeof armarSesionHCM!=='function') return;
+
+  var FASES_PPP=[
+    {n:1,fase:'Presentación',area:'',         ico:'📘',et:'te presento el tema'},
+    {n:2,fase:'Práctica',    area:'Speaking', ico:'🎙️',et:'lo dices tú'},
+    {n:3,fase:'Práctica',    area:'Grammar',  ico:'🔧',et:'la forma correcta'},
+    {n:4,fase:'Práctica',    area:'Listening',ico:'🎧',et:'lo oyes'},
+    {n:5,fase:'Producción',  area:'',         ico:'🚀',et:'ahora úsalo tú'}
+  ];
+  var BLOQUE_DE={
+    regla:1,
+    model:2, ask:2, palabra:2, phrasal:2, idiom:2, leer:2, ritmo:2, trabalenguas:2,
+    hueco:3, ordenar:3, transf:3, drill:3, cazar:3,
+    idea:4, detalle:4, dosc:4, segm:4, acento:4, dicto:4, pares:4, num:4, sit:4, deletreo:4,
+    free:5, roleplay:5, recuento:5, charla:5
+  };
+  /* cupos por minutos: [presentación, speaking, grammar, listening, producción] */
+  var CUPO_PPP={5:[1,1,1,1,1],10:[1,2,1,1,1],15:[1,2,2,2,1],20:[1,3,2,2,1],30:[1,4,3,3,1]};
+  function cupoPPP(){
+    var m=(typeof HCM_MIN!=='undefined')?HCM_MIN:20;
+    if(!m) return null;                 // "sin reloj": va la lección completa
+    return CUPO_PPP[m]||CUPO_PPP[20];
+  }
+
+  /* ── la producción de cada lección: lo que el cadete tiene que
+        producir él solo con el tema del día ── */
+  var PROD_PPP={
+   1:{ctx:'Estás en la ventanilla del banco.',q:'Good morning. What would you like to do today?',
+      es:'Di 3 o 4 frases: qué cuenta quieres abrir, cuánto vas a depositar y qué vas a hacer mañana. Usa: I\'d like to… / I need to… / I\'m meeting…'},
+   2:{ctx:'Un compañero te pregunta por la comida del comedor.',q:'How was the food today, and why?',
+      es:'Di 3 frases con because y con taste / look / smell / feel. Ej: The soup tasted salty because…'},
+   3:{ctx:'Reportas un accidente que viste ayer.',q:'What happened? What were you doing when it happened?',
+      es:'Cuenta el accidente en 3 o 4 frases. Usa: I was …ing when… / He was …ing when…'},
+   4:{ctx:'Un cadete nuevo no conoce las reglas de tránsito.',q:'What must a driver do, and what must he never do?',
+      es:'Dile 3 reglas. Usa: You must… / You must not… / Tell him to… / Ask him to…'},
+   5:{ctx:'Tu sargento pregunta quién puede arreglar el vehículo.',q:'Who can repair the car, and what exactly can he do?',
+      es:'Di 3 o 4 frases con can y can\'t, usando el vocabulario de las lecciones 1 a 4.'},
+   6:{ctx:'Un compañero no sabe si pedirle ayuda al Tte. Clark.',q:'What should he do? Why?',
+      es:'Dale 3 consejos. Usa: He should… / He could… y un adverbio en -ly (quickly, carefully, politely).'},
+   7:{ctx:'El vehículo se quedó sin gasolina a medio camino.',q:'What happened, and what did the driver realize?',
+      es:'Di 3 frases con: He realized that… / I think that… / He said that…'},
+   8:{ctx:'Rompiste la ventana del vecino con un balón.',q:'What do you say to him?',
+      es:'Discúlpate en 3 frases. Usa: I apologize for …ing / I\'m sorry for …ing / I\'ll pay for…'},
+   10:{ctx:'Un compañero no sabe usar el aparato.',q:'Can you tell me how to use it?',
+      es:'Explícale en 3 o 4 pasos. Usa: Tell me how to… / First you… / Then you… / After that you…'},
+   11:{ctx:'Te preguntan por tu rutina del día.',q:'What do you do before you come to school, and after you get home?',
+      es:'Di 4 frases con before y after, y una con be supposed to.'},
+   12:{ctx:'Vas al centro comercial el sábado.',q:'What do you like doing at the mall, and where is everything?',
+      es:'Di 3 o 4 frases con I like …ing y con in front of / next to / across from / behind.'},
+   13:{ctx:'Presentas a un compañero nuevo con tu grupo.',q:'Can you introduce him to us?',
+      es:'Preséntalo en 3 frases. Usa: Let me introduce… / It\'s nice to meet… / He\'s happy to be here.'},
+   14:{ctx:'Se ponchó una llanta y llega un compañero.',q:'Can you change a flat tire? And when do we leave?',
+      es:'Di 3 frases. Usa el presente simple para el futuro: The bus leaves at six. / We start at…'},
+   15:{ctx:'Le pides un favor a un oficial, y luego el mismo favor a un amigo.',q:'How do you ask an officer, and how do you ask a friend?',
+      es:'Haz 4 peticiones. Usa: Would you… / Could you… / Can you… / May I…'},
+   16:{ctx:'Entrevista de trabajo.',q:'What kind of work can you do? What are you able to do well?',
+      es:'Di 4 frases con can y con be able to, nombrando oficios.'},
+   17:{ctx:'Planeas un viaje de El Paso a Houston.',q:'How far is it, and how long does it take?',
+      es:'Di 3 o 4 frases con: It\'s … miles from … to … / It takes … hours.'}
+  };
+  var PROD_EXAMEN={ctx:'Es el repaso de tu evaluación: aquí se habla.',
+    q:'Tell me about your work and your week. Three or four sentences.',
+    es:'Habla medio minuto sin parar, usando lo que viste en este bloque. No te detengas a corregirte.'};
+
+  function prodPPP(n){
+    var base=PROD_PPP[n];
+    if(!base && typeof esEvaluacionHCM==='function' && esEvaluacionHCM(n)) base=PROD_EXAMEN;
+    if(!base) base=PROD_EXAMEN;
+    return {k:'free',ctx:base.ctx,q:base.q,es:base.es,_ppp:5,_prod:true};
+  }
+  /* la tarjeta del tema: la regla de la lección. Si la sesión es de
+     repaso de bloque, se toma la regla de la primera lección del bloque. */
+  function temaPPP(n){
+    var pool=[];
+    try{
+      if(typeof esEvaluacionHCM==='function' && esEvaluacionHCM(n) &&
+         typeof BLOQUES_HCM!=='undefined' && BLOQUES_HCM[n]){
+        var bl=BLOQUES_HCM[n];
+        for(var i=0;i<bl.length;i++) pool=pool.concat(MATERIAL_HCM[bl[i]]||[]);
+      }else{
+        pool=MATERIAL_HCM[n]||[];
+      }
+    }catch(e){}
+    for(var j=0;j<pool.length;j++) if(pool[j].k==='regla'){
+      var c=JSON.parse(JSON.stringify(pool[j])); c._ppp=1; return c;
+    }
+    return null;
+  }
+
+  /* ── el orden PPP y el recorte por bloque ── */
+  function pppArmar(S,n){
+    if(!S||!S.items||!S.items.length) return S;
+    /* el calentamiento de boca (leer / ritmo / trabalenguas) se agregaba
+       al final de la leccion, o sea despues de la produccion y sin bloque.
+       Se pide aqui, antes de clasificar, para que caiga en Speaking. */
+    try{ if(typeof agregarBoca==='function') agregarBoca(S,(n||1)); }catch(e){}
+    var caj=[[],[],[],[],[]];
+    S.items.forEach(function(x){
+      var b=BLOQUE_DE[x.k]||3; x._ppp=b; caj[b-1].push(x);
+    });
+    if(!caj[0].length){ var t=temaPPP(n); if(t) caj[0].push(t); }
+    if(!caj[4].length){ caj[4].push(prodPPP(n)); }
+    var cupo=cupoPPP(), fuera=[], out=[];
+    for(var i=0;i<5;i++){
+      var g=caj[i];
+      if(cupo && g.length>cupo[i]){ fuera=fuera.concat(g.slice(cupo[i])); g=g.slice(0,cupo[i]); }
+      out=out.concat(g);
+    }
+    /* si un bloque venía vacío, el tiempo que sobra se le devuelve a los
+       ejercicios que se habían quedado fuera: nunca una sesión de 3 pasos */
+    var minimo = cupo ? Math.min(S.items.length+1, cupo.reduce(function(a,b){return a+b;},0)) : out.length;
+    while(out.length<minimo && fuera.length){
+      var extra=fuera.shift();
+      var pos=out.length;
+      for(var p=0;p<out.length;p++) if(out[p]._ppp>extra._ppp){ pos=p; break; }
+      out.splice(pos,0,extra);
+    }
+    S.items=out;
+    S._ppp=true;
+    return S;
+  }
+
+  var armarPPPbase=armarSesionHCM;
+  armarSesionHCM=function(n){
+    var guarda=(typeof HCM_MIN!=='undefined')?HCM_MIN:20;
+    var S;
+    try{ HCM_MIN=0; S=armarPPPbase(n); }         // el recorte lo hace el PPP
+    finally{ HCM_MIN=guarda; }
+    try{ S=pppArmar(S,n); }catch(e){ console.error('ppp',e); }
+    return S;
+  };
+
+  /* ── lo que se le dice al cadete de cada bloque ── */
+  function faseDe(b){ return FASES_PPP[(b||1)-1]||FASES_PPP[0]; }
+  function cuentaPPP(items){
+    var c=[0,0,0,0,0];
+    (items||[]).forEach(function(x){ c[(x._ppp||3)-1]++; });
+    return c;
+  }
+  function etiquetaFase(f){ return f.area?(f.fase+' · '+f.area):f.fase; }
+
+  /* ═══ la portada: antes traía seis cajas de texto. Ahora trae el
+        tema, la ruta de hoy en cinco pasos y el botón. ═══ */
+  function portadaPPP(){
+    try{ soltarMapa(); }catch(e){}
+    try{ mostrarAyudaSiToca('leccion'); }catch(e){}
+    try{ YA_AVISE_FINAL=false; }catch(e){}
+    if(!MAT||!MAT.length){ if(typeof mapa==='function')mapa(); return; }
+    if(sIdx==null||sIdx<0||sIdx>=MAT.length)sIdx=0;
+    var S=MAT[sIdx];
+    if(!S||!S.items||!S.items.length){ if(typeof mapa==='function')mapa(); return; }
+    try{ agregarBoca(S,sIdx); }catch(e){}
+
+    var tema=S.items.filter(function(x){return x.k==='regla';})[0]||null;
+    var prod=S.items.filter(function(x){return x._ppp===5;})[0]||null;
+    var c=cuentaPPP(S.items);
+    var min=(typeof HCM_MIN!=='undefined'&&HCM_MIN)?HCM_MIN:0;
+    var nom='';
+    try{ nom=((P&&P.nombre)||'').split(' ')[0]||''; }catch(e){}
+
+    var ruta=FASES_PPP.map(function(f,i){
+      var k=c[i];
+      return '<div class="ppp-paso'+(k?'':' off')+'">'+
+        '<span class="ppp-ico">'+f.ico+'</span>'+
+        '<div class="ppp-tx"><b>'+etiquetaFase(f)+'</b><span>'+f.et+'</span></div>'+
+        '<span class="ppp-n">'+(k?k:'—')+'</span></div>';
+    }).join('');
+
+    var h='<div class="qcard">'+
+      '<div class="qlbl">'+esc(S.enc||'')+'</div>'+
+      '<div class="qtxt" style="font-size:25px">'+esc(S.t||'')+'</div>'+
+      '<div class="qsub">'+(nom?('Hola '+esc(nom)+'. '):'')+esc(S.hoy||'')+'</div>'+
+      (tema?'<div class="ppp-tema"><span class="ppp-et">El tema de hoy</span>'+
+        '<b>'+esc(tema.titulo||'')+'</b>'+
+        '<p>'+esc(tema.regla||'')+'</p>'+
+        (tema.bien?'<div class="ppp-ej">'+esc(tema.bien)+
+          '<button class="ppp-oir" data-oirppp="'+esc(tema.bien)+'">▶</button></div>':'')+
+        '</div>':'')+
+      '<div class="ppp-ruta"><span class="ppp-et">Así va la clase de hoy</span>'+ruta+'</div>'+
+      (prod?'<div class="ppp-meta"><span class="ppp-et">Y al final, tú solo</span>'+
+        esc(prod.q||'')+'</div>':'')+
+      '<button class="btn" id="go" style="margin-top:14px">Empezar · '+S.items.length+
+        ' ejercicios'+(min?(' · '+min+' min'):'')+'</button>'+
+      '<button class="btn ghost" id="atras" style="margin-top:8px">Ver las otras lecciones</button>'+
+      '</div>';
+
+    APP.innerHTML=h;
+    try{ ligarAyuda('Hoy son tres partes: te presento el tema, practicas, y al final lo usas tú. Toca Empezar.'); }catch(e){}
+    APP.querySelectorAll('[data-oirppp]').forEach(function(b){
+      b.onclick=function(){ try{ say(b.getAttribute('data-oirppp'),'en-US'); }catch(e){} };
+    });
+    setTimeout(function(){
+      try{
+        var m=(typeof modoIdioma==='function')?modoIdioma():'es';
+        say(m==='es'
+          ? 'Hoy: primero te presento el tema, luego practicas hablando, la gramática y el oído, y al final lo usas tú solo.'
+          : 'Today: first the topic, then speaking, grammar and listening, and at the end you use it yourself.',
+          m==='es'?'es-MX':'en-US');
+      }catch(e){}
+    },250);
+    (function(){
+      var todo=[];
+      (S.items||[]).forEach(function(y){
+        var t=y.audio||y.en||y.origen||y.bien||y.q;
+        if(t)todo.push(t);
+      });
+      try{ precargarLista(todo); }catch(e){}
+    })();
+    document.getElementById('go').onclick=function(){
+      t0=Date.now(); vistos={};
+      try{ arrancarReloj(); }catch(e){}
+      paso();
+    };
+    document.getElementById('atras').onclick=function(){
+      try{ speechSynthesis&&speechSynthesis.cancel(); }catch(e){}
+      sIdx=null; try{ router(); }catch(e){ try{ mostrarMapa(); }catch(x){} }
+    };
+  }
+  portadaSesion=portadaPPP;
+
+  /* ═══ en cada ejercicio: en qué fase va, y la barra por bloques ═══ */
+  var pasoPPPbase=paso;
+  paso=function(){
+    var r=pasoPPPbase.apply(this,arguments);
+    try{ marcarFasePPP(); }catch(e){}
+    return r;
+  };
+  function marcarFasePPP(){
+    if(!MAT||sIdx==null||!MAT[sIdx])return;
+    var S=MAT[sIdx]; if(!S.items||it<0||it>=S.items.length)return;
+    var x=S.items[it]; var b=x._ppp||0; if(!b)return;
+    var f=faseDe(b);
+    var c=cuentaPPP(S.items);
+    var enBloque=0, cual=0;
+    for(var i=0;i<S.items.length;i++){
+      if((S.items[i]._ppp||0)===b){ enBloque++; if(i<=it) cual++; }
+    }
+    /* la barra: una ranura por ejercicio, agrupada por bloque */
+    var seg='', prev=null;
+    for(var j=0;j<S.items.length;j++){
+      var bj=S.items[j]._ppp||0;
+      if(prev!==null&&bj!==prev) seg+='<i class="corte"></i>';
+      seg+='<i class="b'+bj+(j<it?' hecho':(j===it?' aqui':''))+'"></i>';
+      prev=bj;
+    }
+    var pr=APP.querySelector('.prog');
+    if(pr){ pr.className='ppp-prog'; pr.innerHTML=seg; }
+    var card=APP.querySelector('.qcard');
+    if(card && !APP.querySelector('.ppp-ban')){
+      var ban=document.createElement('div');
+      ban.className='ppp-ban f'+b;
+      ban.innerHTML='<span class="ppp-ico">'+f.ico+'</span>'+
+        '<div class="ppp-tx"><b>'+etiquetaFase(f)+'</b>'+
+        '<span>'+f.et+' · '+cual+' de '+enBloque+'</span></div>'+
+        '<span class="ppp-fn">'+b+'<i>/5</i></span>';
+      card.parentNode.insertBefore(ban,card);
+    }
+  }
+
+  /* ── estilos ── */
+  try{
+    var st=document.createElement('style');
+    st.textContent=
+    '.ppp-et{display:block;font-size:11px;letter-spacing:.09em;text-transform:uppercase;'+
+      'color:var(--tenue);margin-bottom:6px;font-weight:700}'+
+    '.ppp-tema{background:var(--verde-suave);border:1px solid var(--linea);border-left:4px solid var(--verde);'+
+      'border-radius:12px;padding:12px 14px;margin:14px 0;text-align:left}'+
+    '.ppp-tema b{display:block;font-family:var(--display);font-size:17px;color:var(--tinta);margin-bottom:4px}'+
+    '.ppp-tema p{margin:0;font-size:14px;line-height:1.45;color:var(--tinta-2)}'+
+    '.ppp-ej{display:flex;align-items:center;gap:8px;margin-top:9px;font-size:14px;'+
+      'font-weight:600;color:var(--tinta)}'+
+    '.ppp-oir{border:0;background:var(--verde);color:#fff;width:28px;height:28px;border-radius:50%;'+
+      'flex:0 0 28px;cursor:pointer;font-size:12px}'+
+    '.ppp-ruta{margin:14px 0;text-align:left}'+
+    '.ppp-paso{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--linea);'+
+      'border-radius:11px;background:var(--papel);margin-bottom:6px}'+
+    '.ppp-paso.off{opacity:.38}'+
+    '.ppp-paso .ppp-ico{font-size:18px;flex:0 0 22px;text-align:center}'+
+    '.ppp-tx{flex:1;min-width:0}'+
+    '.ppp-tx b{display:block;font-size:14px;color:var(--tinta);line-height:1.2}'+
+    '.ppp-tx span{display:block;font-size:12px;color:var(--tenue)}'+
+    '.ppp-n{font-size:13px;font-weight:700;color:var(--verde);flex:0 0 auto}'+
+    '.ppp-meta{background:var(--papel);border:1px dashed var(--linea);border-radius:11px;'+
+      'padding:11px 13px;text-align:left;font-size:14px;color:var(--tinta);margin-bottom:4px}'+
+    '.ppp-ban{display:flex;align-items:center;gap:10px;max-width:620px;margin:0 auto 8px;'+
+      'padding:8px 12px;border-radius:11px;background:var(--verde-suave);'+
+      'border:1px solid var(--linea);border-left:4px solid var(--verde)}'+
+    '.ppp-ban .ppp-ico{font-size:17px}'+
+    '.ppp-ban .ppp-tx b{font-size:13px}'+
+    '.ppp-ban .ppp-tx span{font-size:11px}'+
+    '.ppp-ban .ppp-fn{font-size:15px;font-weight:800;color:var(--verde)}'+
+    '.ppp-ban .ppp-fn i{font-size:11px;font-style:normal;color:var(--tenue)}'+
+    '.ppp-prog{display:flex;align-items:center;gap:3px;justify-content:center;'+
+      'max-width:620px;margin:0 auto 10px;padding:0}'+
+    '.ppp-prog i{width:14px;height:5px;border-radius:3px;background:var(--linea);display:block}'+
+    '.ppp-prog i.hecho{background:var(--verde)}'+
+    '.ppp-prog i.aqui{background:var(--verde);box-shadow:0 0 0 3px var(--verde-suave);width:20px}'+
+    '.ppp-prog i.corte{width:1px;height:11px;border-radius:0;background:var(--tenue);opacity:.5}';
+    document.head.appendChild(st);
+  }catch(e){}
+
+  try{ window.__hcmPPP={armar:pppArmar,portada:portadaPPP,fases:FASES_PPP}; }catch(e){}
+})();
+
 })();
 
 </script>
