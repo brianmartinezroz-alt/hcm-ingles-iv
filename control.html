@@ -4311,15 +4311,19 @@ function camClose() {
 function camCount() {
   const o = CAM.opts;
   if (!o) return;
-  const nos = Object.keys(CAM.seen), got = nos.length, hasCor = o.cor != null && o.cor >= 0;
+  const list = o.roster ? o.roster.slice() : o.dynamic ? Object.keys(CAM.seen).map(Number).sort((a, b) => a - b) : Array.from({ length: o.n }, (_, k) => k + 1);
+  if (o.roster) Object.keys(CAM.seen).forEach((k) => {
+    if (o.roster.indexOf(+k) < 0) delete CAM.seen[k];
+  });
+  const nos = Object.keys(CAM.seen), got = nos.length, hasCor = o.cor != null && o.cor >= 0, tot = o.dynamic ? got : list.length;
   let ok = 0;
   nos.forEach((k) => {
     if (CAM.seen[k] === o.cor) ok++;
   });
-  document.getElementById("camCount").textContent = `${got} / ${o.n}`;
-  document.getElementById("camHint").innerHTML = hasCor ? `<span class="camok">\u2714 ${ok}</span> <span class="camno">\u2718 ${got - ok}</span> <span class="camwait">Faltan ${o.n - got}</span>` : `Faltan ${o.n - got}`;
+  document.getElementById("camCount").textContent = o.dynamic ? `\u{1F9D1}\u200D\u2708\uFE0F ${got}` : `${got} / ${tot}`;
+  document.getElementById("camHint").innerHTML = hasCor ? `<span class="camok">\u2714 ${ok}</span> <span class="camno">\u2718 ${got - ok}</span> <span class="camwait">Faltan ${tot - got}</span>` : o.dynamic ? "Registrados" : `Faltan ${tot - got}`;
   let h = "";
-  for (let k = 1; k <= o.n; k++) {
+  for (const k of list) {
     const a = CAM.seen[k];
     const cls = a == null ? "" : !hasCor ? "on" : a === o.cor ? "ok" : "no";
     h += `<span class="${cls}">${k}</span>`;
@@ -4336,7 +4340,7 @@ function camResults(out, w, h) {
   if (!o) return;
   let changed = false;
   out.forEach((m) => {
-    if (m.no > o.n) return;
+    if (m.no > o.n || o.roster && o.roster.indexOf(m.no) < 0) return;
     if (CAM.seen[m.no] == null) fresh++;
     if (CAM.seen[m.no] !== m.a) {
       CAM.seen[m.no] = m.a;
@@ -4400,7 +4404,7 @@ function camTick() {
   c.globalAlpha = Math.max(0, 1 - age / 700);
   const cor = CAM.opts.cor, hasCor = cor != null && cor >= 0;
   CAM.res.forEach((m) => {
-    if (m.no > CAM.opts.n) return;
+    if (m.no > CAM.opts.n || CAM.opts.roster && CAM.opts.roster.indexOf(m.no) < 0) return;
     const col = !hasCor ? "#3FBF4F" : m.a === cor ? "#3FBF4F" : "#FF3B5C";
     const pts = m.c.map((p) => [ox + p[0] * k, oy + p[1] * k]);
     c.beginPath();
@@ -4681,9 +4685,9 @@ function onMsg(m) {
     if (!RM.st || RM.st.qi !== m.qi || m.phase !== "q") {
       if (!RM.st || RM.st.qi !== m.qi) RM.ans = {};
     }
-    const changed = !RM.st || RM.st.phase !== m.phase || RM.st.qi !== m.qi || RM.st.total !== m.total;
+    const changed = !RM.st || RM.st.phase !== m.phase || RM.st.qi !== m.qi || RM.st.total !== m.total || m.phase === "pick" && RM.st.reg !== m.reg;
     RM.st = m;
-    if (m.phase !== "q" && CAM.on) camClose();
+    if (m.phase !== "q" && m.phase !== "pick" && CAM.on) camClose();
     if (changed) render();
     else status();
     return;
@@ -4709,7 +4713,7 @@ function status() {
     el.textContent = "";
     return;
   }
-  el.innerHTML = s.phase === "q" || s.phase === "reveal" ? `<b>Pregunta ${s.qi + 1} / ${s.total}</b><span>\u{1F4CB} ${gotCount()} / ${s.n}</span>${s.phase === "q" && s.cor != null ? `<span class="cx-okno"><em class="ok">\u2714 ${Object.values(merged()).filter((a) => a === s.cor).length}</em> <em class="no">\u2718 ${Object.values(merged()).filter((a) => a !== s.cor).length}</em></span>` : ""}` : `<b>${esc(s.title || "")}</b>`;
+  el.innerHTML = s.phase === "q" || s.phase === "reveal" ? `<b>Pregunta ${s.qi + 1} / ${s.total}</b><span>\u{1F4CB} ${gotCount()} / ${s.reg}</span>${s.phase === "q" && s.cor != null ? `<span class="cx-okno"><em class="ok">\u2714 ${Object.values(merged()).filter((a) => a === s.cor).length}</em> <em class="no">\u2718 ${Object.values(merged()).filter((a) => a !== s.cor).length}</em></span>` : ""}` : `<b>${esc(s.title || "")}</b>`;
 }
 function render() {
   const s = RM.st;
@@ -4718,6 +4722,10 @@ function render() {
   else if (s.phase === "none") body = `<div class="cx-card">\u2705 Pantalla encontrada. Ah\xED elige <b>\u{1F4F7} Scan Race</b> y un set.</div>`;
   else if (s.phase === "lobby") body = `<button class="cb go huge" data-c="start">\u{1F3C1} Arrancar carrera</button>`;
   else if (s.phase === "end") body = `<div class="cx-card"><h2>\u{1F3C6} \xA1Termin\xF3!</h2>${(s.top || []).map((t, i) => `<p class="cx-top">${["\u{1F947}", "\u{1F948}", "\u{1F949}"][i]} ${esc(t)}</p>`).join("")}</div>`;
+  else if (s.phase === "pick") body = `<div class="cx-card"><b>\u{1F3C3} Registro de corredores</b><br>Escanea a todos (cualquier letra). Despu\xE9s personal\xEDzalos en la pantalla.<br><b>${s.reg || 0}</b> registrados</div>
+      <button class="cb scan huge" data-c="scan">\u{1F4F7} Escanear para registrar</button>
+      <div class="cx-grid"><button class="cb" data-c="rand">\u{1F3B2} Todos al azar</button><button class="cb" data-c="pop">\u{1FA9F} Ventana</button></div>
+      <button class="cb go big" data-c="go">\u{1F3C1} \xA1Arrancar la carrera!</button>`;
   else if (s.phase === "q") body = `<button class="cb scan huge" data-c="scan">\u{1F4F7} Escanear</button>
       <button class="cb chk big" data-c="reveal">\u2714 Checar respuestas</button>
       <div class="cx-grid">${s.audio ? `<button class="cb" data-c="audio">\u{1F50A} Audio</button><button class="cb" data-c="slow">\u{1F422} Lento</button>` : ""}
@@ -4763,21 +4771,24 @@ function showList(items) {
 }
 function sendAns(now) {
   const s = RM.st;
-  if (!s || s.phase !== "q" || !Object.keys(RM.ans).length) return;
+  if (!s || s.phase !== "q" && s.phase !== "pick" || !Object.keys(RM.ans).length) return;
   RM.dirty = false;
   RM.sendT = performance.now();
   rtSend({ t: "ans", qi: s.qi, a: RM.ans }, now ? null : "ans");
 }
 function scan() {
   const s = RM.st;
-  if (!s || s.phase !== "q") return;
+  if (!s || s.phase !== "q" && s.phase !== "pick") return;
   rtSend({ t: "scan" });
+  const pick = s.phase === "pick";
   const got = Object.assign({}, s.ga || {}, RM.ans);
   camOpen({
     kind: s.kind,
     n: s.n,
-    cor: s.cor,
+    cor: pick ? null : s.cor,
     got,
+    dynamic: pick,
+    roster: pick ? null : s.roster,
     onCard: (no, a) => {
       if (RM.ans[no] !== a) {
         RM.ans[no] = a;
@@ -4792,7 +4803,7 @@ function scan() {
     },
     onCheck: () => {
       sendAns(true);
-      setTimeout(() => cmd("reveal"), 450);
+      setTimeout(() => cmd(pick ? "go" : "reveal"), 450);
       render();
     }
   });
