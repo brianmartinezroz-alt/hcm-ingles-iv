@@ -366,6 +366,23 @@ body.scfull{overflow:hidden}
 .scs.c{bottom:22px;left:50%;transform:translateX(-50%) rotate(180deg)}
 .scs.d{left:0;top:50%;transform:translateY(-50%) rotate(-90deg)}
 .scno{position:absolute;bottom:0;right:4px;font:700 13px Arial,sans-serif;color:#444;font-style:normal}
+.scvehs{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:10px 0}
+.scveh{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;background:#F4F1FF;border:var(--stroke);border-top:12px solid var(--oc);border-radius:18px;padding:10px 6px;box-shadow:0 5px 0 var(--ink)}
+.scveh .scl{position:absolute;top:6px;left:8px;width:42px;height:42px;border-radius:12px;background:var(--oc);color:#fff;display:grid;place-items:center;font:900 26px Nunito,sans-serif;border:var(--stroke)}
+.scveh canvas{width:120px;height:140px}.scveh b{font-size:clamp(15px,1.5vw,22px)}
+.scpicktxt{font-weight:900;font-size:clamp(18px,2vw,26px);margin:8px 0}
+.scroster2{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;max-height:48vh;overflow:auto;padding:4px}
+.scrun{display:flex;flex-direction:column;align-items:center;background:#F4F1FF;border:var(--stroke);border-radius:14px;padding:4px 2px 6px;cursor:pointer;font:inherit}
+.scrun canvas{width:90px;height:104px}.scrun b{font-size:18px}
+.sceditin{width:min(980px,100%)}
+.scehead{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.scehead canvas{width:220px;height:250px;background:linear-gradient(#DDF3FF,#C9B48E);border-radius:18px;border:var(--stroke)}
+.scebig{font:900 54px Nunito,sans-serif;margin-bottom:10px}
+.scerow{margin-top:10px}.scerow b{display:block;margin-bottom:4px}
+.scechips{display:flex;flex-wrap:wrap;gap:6px}
+.scechip{font:800 16px Nunito,sans-serif;background:#fff;border:var(--stroke);border-radius:12px;padding:6px 10px;cursor:pointer;min-height:40px}
+.scechip.on{background:#FFD21A;box-shadow:0 0 0 3px #7B4DFF}
+.scechip i{display:inline-block;width:26px;height:26px;border-radius:50%;border:2px solid #1A1530;vertical-align:middle}
 #camUI{position:fixed;top:0;left:0;right:0;bottom:0;z-index:200;background:#000;overflow:hidden}
 #camUI[hidden]{display:none}
 #camV{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
@@ -895,17 +912,16 @@ body.qopen .tkscreen .tktop{display:none!important}
           <div class="scbigcode-l">Código para tu celular</div>
           <div class="scbigcode" id="scLobbyCode">----</div>
           <div class="sclconn" id="scLobbyConn">⏳ Esperando al celular…</div>
-          <ol class="scsteps"><li>Escanea el QR con tu celular (la primera vez) o abre tu app <b>Scan Race</b>.</li><li>Escribe el código de 4 números.</li><li>Desde el celular: <b>🏁 Arrancar</b>, <b>📷 Escanear</b>, <b>✔ Checar</b>.</li></ol>
+          <ol class="scsteps"><li>Escanea el QR con tu celular (la primera vez) o abre tu app <b>Scan Race</b>.</li><li>Escribe el código de 4 números.</li><li><b>🏁 Arrancar</b> → escanea a todos para registrarlos → personalízalos → ¡carrera!</li></ol>
           <div class="hint" id="scLobbyUrl" style="word-break:break-all"></div>
         </div>
       </div>
       <div class="row" style="gap:24px;flex-wrap:wrap;align-items:flex-end">
         <label>Tarjetas <select id="scKind" class="scsel"><option value="wg">Wayground Q-cards (P1–P60)</option><option value="tr">Tarjetas Tile Rush (#1–#80)</option></select></label>
-        <label>Alumnos <input type="number" id="scN" min="1" max="80" value="30"></label>
         <label>Preguntas <select id="scQn" class="scsel"></select></label>
       </div>
       <span class="hint" id="scKindNote"></span>
-      <div class="scbtns"><button class="btn" id="scPrintB">🖨 Imprimir tarjetas</button><button class="btn primary big" id="scStart">🏁 ¡Arrancar la carrera!</button></div>
+      <div class="scbtns"><button class="btn" id="scPrintB">🖨 Imprimir tarjetas</button><button class="btn primary big" id="scStart">🏁 ¡Empezar: registrar corredores!</button></div>
       <span class="hint">Solo entran las preguntas de opción múltiple y verdadero/falso. El audio de los listenings suena en esta pantalla.</span>
     </div>
     <div id="scStage" class="scstage" hidden>
@@ -916,12 +932,13 @@ body.qopen .tkscreen .tktop{display:none!important}
       <div id="scToast" class="sctoast"></div>
     </div>
     <div id="scEnd" class="scend" hidden>
-      <h2 style="text-align:center;margin:0">🏆 ¡Llegaron a la cima!</h2>
+      <h2 style="text-align:center;margin:0">🏆 ¡Llegaron a la meta!</h2>
       <div class="scpodium" id="scPodium"></div>
       <div class="scbtns" style="justify-content:center"><button class="btn primary" id="scCSV">⬇ Descargar calificaciones (CSV)</button><button class="btn" id="scAgain">🏠 Volver al inicio</button></div>
       <table class="sctable" id="scTable"></table>
     </div>
   </section>
+  <div id="scEdit" class="scmodal" hidden><div class="scmodal-in sceditin"><div id="scEditBody"></div></div></div>
   <div id="scPick" class="scmodal" hidden><div class="scmodal-in"><div class="scmodal-h"><b>📋 Elige la pregunta que sigue</b><button class="btn small" id="scPickClose">Cerrar</button></div><div id="scPickList" class="scpicklist"></div></div></div>
   <div id="scLink" class="scmodal" hidden><div class="scmodal-in"><div class="scmodal-h"><b>📱 Conecta tu celular</b><button class="btn small" id="scLinkClose">Cerrar</button></div>
     <div class="sclinkgrid"><div id="scLinkQR" class="scqr"></div><div><p>Código:</p><div class="scbigcode" id="scLinkCode"></div><p id="scLinkState" class="sclinkst"></p><p class="hint" id="scLinkUrl" style="word-break:break-all"></p></div></div></div></div>
@@ -20711,15 +20728,19 @@ onmessage = function(e){ var m = e.data, out = [];
   function camCount() {
     const o = CAM.opts;
     if (!o) return;
-    const nos = Object.keys(CAM.seen), got = nos.length, hasCor = o.cor != null && o.cor >= 0;
+    const list = o.roster ? o.roster.slice() : o.dynamic ? Object.keys(CAM.seen).map(Number).sort((a, b) => a - b) : Array.from({ length: o.n }, (_, k) => k + 1);
+    if (o.roster) Object.keys(CAM.seen).forEach((k) => {
+      if (o.roster.indexOf(+k) < 0) delete CAM.seen[k];
+    });
+    const nos = Object.keys(CAM.seen), got = nos.length, hasCor = o.cor != null && o.cor >= 0, tot = o.dynamic ? got : list.length;
     let ok = 0;
     nos.forEach((k) => {
       if (CAM.seen[k] === o.cor) ok++;
     });
-    document.getElementById("camCount").textContent = `${got} / ${o.n}`;
-    document.getElementById("camHint").innerHTML = hasCor ? `<span class="camok">\u2714 ${ok}</span> <span class="camno">\u2718 ${got - ok}</span> <span class="camwait">Faltan ${o.n - got}</span>` : `Faltan ${o.n - got}`;
+    document.getElementById("camCount").textContent = o.dynamic ? `\u{1F9D1}\u200D\u2708\uFE0F ${got}` : `${got} / ${tot}`;
+    document.getElementById("camHint").innerHTML = hasCor ? `<span class="camok">\u2714 ${ok}</span> <span class="camno">\u2718 ${got - ok}</span> <span class="camwait">Faltan ${tot - got}</span>` : o.dynamic ? "Registrados" : `Faltan ${tot - got}`;
     let h = "";
-    for (let k = 1; k <= o.n; k++) {
+    for (const k of list) {
       const a = CAM.seen[k];
       const cls = a == null ? "" : !hasCor ? "on" : a === o.cor ? "ok" : "no";
       h += `<span class="${cls}">${k}</span>`;
@@ -20736,7 +20757,7 @@ onmessage = function(e){ var m = e.data, out = [];
     if (!o) return;
     let changed = false;
     out.forEach((m) => {
-      if (m.no > o.n) return;
+      if (m.no > o.n || o.roster && o.roster.indexOf(m.no) < 0) return;
       if (CAM.seen[m.no] == null) fresh++;
       if (CAM.seen[m.no] !== m.a) {
         CAM.seen[m.no] = m.a;
@@ -20800,7 +20821,7 @@ onmessage = function(e){ var m = e.data, out = [];
     c.globalAlpha = Math.max(0, 1 - age / 700);
     const cor = CAM.opts.cor, hasCor = cor != null && cor >= 0;
     CAM.res.forEach((m) => {
-      if (m.no > CAM.opts.n) return;
+      if (m.no > CAM.opts.n || CAM.opts.roster && CAM.opts.roster.indexOf(m.no) < 0) return;
       const col = !hasCor ? "#3FBF4F" : m.a === cor ? "#3FBF4F" : "#FF3B5C";
       const pts = m.c.map((p) => [ox + p[0] * k, oy + p[1] * k]);
       c.beginPath();
@@ -21042,7 +21063,7 @@ onmessage = function(e){ var m = e.data, out = [];
     }
     const ok = scQuestions(base.set).map((o) => o.i), ord = order.filter((i) => ok.includes(i));
     game = __spreadProps(__spreadValues({}, base), { mode: "scan", order: ord, qPtr: 0, phase: "lobby", over: false });
-    sc = { n: cfg.scanN || 30, kind: cfg.scanCards || "wg", qi: -1, answers: {}, students: [], msg: "", secs: 0, pool: [], done: 0, pop: "big", popT: 0, toastT: 0 };
+    sc = { n: 0, kind: cfg.scanCards || "wg", qi: -1, pickv: {}, vpage: 0, cam: null, answers: {}, students: [], msg: "", secs: 0, pool: [], done: 0, pop: "big", popT: 0, toastT: 0 };
   }
   function scBuildStudents() {
     sc.students = Array.from({ length: sc.n }, (_, k) => ({ no: k + 1, pts: 0, shown: 0, y: null, streak: 0, spin: 0, boost: 0, hue: k * 137.5 % 360, ans: [] }));
@@ -21053,7 +21074,7 @@ onmessage = function(e){ var m = e.data, out = [];
   function renderScan() {
     const v = $("#vScan");
     if (!v || !game || game.mode !== "scan") return;
-    const ph = game.phase, play = ph === "q" || ph === "reveal";
+    const ph = game.phase, play = ph === "q" || ph === "reveal" || ph === "pick";
     $("#scLobby").hidden = ph !== "lobby";
     $("#scStage").hidden = !play;
     $("#scEnd").hidden = ph !== "end";
@@ -21070,7 +21091,6 @@ onmessage = function(e){ var m = e.data, out = [];
   }
   function scRenderLobby() {
     $("#scSetTitle").textContent = `${game.set.title} \xB7 ${game.order.length} preguntas de opci\xF3n m\xFAltiple`;
-    $("#scN").value = sc.n;
     $("#scKind").value = sc.kind;
     scKindNote();
     const all = game.order.length;
@@ -21096,8 +21116,6 @@ onmessage = function(e){ var m = e.data, out = [];
   function scStart() {
     sc.kind = $("#scKind").value;
     cfg.scanCards = sc.kind;
-    sc.n = Math.max(1, Math.min(scMaxCards(sc.kind), parseInt($("#scN").value) || 30));
-    cfg.scanN = sc.n;
     if (!game.order.length) {
       alert("Este set no tiene preguntas de opci\xF3n m\xFAltiple.");
       return;
@@ -21109,9 +21127,16 @@ onmessage = function(e){ var m = e.data, out = [];
       game.order = game.order.slice(0, qn);
     } else sc.pool = [];
     scPrefs(true);
-    scBuildStudents();
+    sc.students = [];
+    sc.n = 0;
     sc.done = 0;
-    scNext();
+    sc.cam = null;
+    game.phase = "pick";
+    sc.qi = -1;
+    sc.answers = {};
+    sc.vpage = 0;
+    sc.pop = "big";
+    renderScan();
   }
   function scGoQ(msg) {
     sc.answers = {};
@@ -21190,6 +21215,479 @@ onmessage = function(e){ var m = e.data, out = [];
     if (game.phase === "reveal") sc.qi++;
     scGoQ();
   }
+  function scRR(c, x, y, w, h, r) {
+    c.beginPath();
+    if (c.roundRect) c.roundRect(x, y, w, h, r);
+    else c.rect(x, y, w, h);
+  }
+  const SC_SP = [
+    // [id, label, fur, fur2]
+    ["cadete", "\u{1F9D1} Cadete", "#E0AC7E", "#C68B59"],
+    ["perro", "\u{1F436} Perro", "#C8925A", "#8A5A30"],
+    ["gato", "\u{1F431} Gato", "#F2A65A", "#FFE3C2"],
+    ["oso", "\u{1F43B} Oso", "#8B5A3C", "#C99A72"],
+    ["conejo", "\u{1F430} Conejo", "#EDEDED", "#FFC4D6"],
+    ["zorro", "\u{1F98A} Zorro", "#F07A2A", "#FFFFFF"],
+    ["panda", "\u{1F43C} Panda", "#FFFFFF", "#1A1530"],
+    ["rana", "\u{1F438} Rana", "#6CC24A", "#E9F7C7"],
+    ["pinguino", "\u{1F427} Ping\xFCino", "#2B2D42", "#FFFFFF"],
+    ["leon", "\u{1F981} Le\xF3n", "#E8B04A", "#B9651E"],
+    ["mono", "\u{1F435} Mono", "#8A5A3C", "#F2C9A0"],
+    ["tigre", "\u{1F42F} Tigre", "#FF8C2A", "#1A1530"]
+  ];
+  const SC_HAT = [["none", "Nada"], ["gorra", "\u{1F9E2} Gorra"], ["quepi", "\u{1F396}\uFE0F Quep\xED"], ["casco", "\u{1FA96} Casco"], ["corona", "\u{1F451} Corona"], ["sombrero", "\u{1F920} Sombrero"], ["banda", "\u{1F94B} Banda"], ["gorro", "\u{1F385} Gorro"]];
+  const SC_GL = [["none", "Nada"], ["sol", "\u{1F576}\uFE0F De sol"], ["redondos", "\u{1F453} Redondos"], ["estrella", "\u2B50 Estrellas"], ["visor", "\u{1F97D} Visor"]];
+  const SC_SHOE = ["#FF4F6D", "#4DA8FF", "#FFD21A", "#22C55E", "#FFFFFF", "#1A1530", "#B06BFF", "#FF8A3D"];
+  const SC_SHIRT = [350, 210, 45, 130, 280, 20, 180, 0];
+  function scRandLook() {
+    const R = (n) => Math.floor(Math.random() * n);
+    return { sp: R(SC_SP.length), hat: R(SC_HAT.length), gl: Math.random() < 0.45 ? 0 : 1 + R(SC_GL.length - 1), shoe: R(SC_SHOE.length), shirt: SC_SHIRT[R(SC_SHIRT.length)], skin: R(3) };
+  }
+  function scDrawRunner(c, L, size, t, run) {
+    const u = size / 10.5, sp = SC_SP[L.sp] ? SC_SP[L.sp][0] : "cadete", dk = "#1A1530";
+    let fur = SC_SP[L.sp] ? SC_SP[L.sp][2] : "#E0AC7E", fur2 = SC_SP[L.sp] ? SC_SP[L.sp][3] : "#C68B59";
+    if (sp === "cadete") fur = ["#F1C9A0", "#E0AC7E", "#A86B45"][L.skin || 0];
+    const shirt = `hsl(${L.shirt},75%,52%)`, shorts = sp === "cadete" ? "#2E3B2A" : "#2B2366", shoe = SC_SHOE[L.shoe] || "#fff";
+    const ph = run ? t * 11 : 0, a = Math.sin(ph) * 0.85, bob = run ? Math.abs(Math.sin(ph)) * u * 0.5 : 0;
+    c.save();
+    c.translate(0, -bob);
+    c.lineCap = "round";
+    c.lineJoin = "round";
+    const leg = (ang, back) => {
+      const hx2 = 0, hy2 = u * 1.6, kx = hx2 + Math.sin(ang) * u * 2.1, ky = hy2 + Math.cos(ang) * u * 2.1, bend = Math.max(0, -ang) * 1.2 + 0.25, fx = kx + Math.sin(ang - bend) * u * 2.1, fy = ky + Math.cos(ang - bend) * u * 2.1;
+      c.strokeStyle = back ? shade3c(fur, 0.8) : fur;
+      c.lineWidth = u * 1.05;
+      c.beginPath();
+      c.moveTo(hx2, hy2);
+      c.lineTo(kx, ky);
+      c.lineTo(fx, fy);
+      c.stroke();
+      c.fillStyle = back ? shade3c(shoe, 0.8) : shoe;
+      c.strokeStyle = dk;
+      c.lineWidth = Math.max(1, u * 0.25);
+      scRR(c, fx - u * 0.55, fy - u * 0.45, u * 1.7, u * 0.9, u * 0.4);
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#fff";
+      c.fillRect(fx - u * 0.5, fy + u * 0.2, u * 1.6, u * 0.2);
+    };
+    const arm = (ang, back) => {
+      const sx = u * 0.2, sy = -u * 1.2, ex = sx + Math.sin(ang) * u * 1.7, ey = sy + Math.cos(ang) * u * 1.7, hx2 = ex + Math.sin(ang + 1.3) * u * 1.4, hy2 = ey + Math.cos(ang + 1.3) * u * 1.4;
+      c.strokeStyle = back ? shade3c(shirt, 0.8) : shirt;
+      c.lineWidth = u * 0.95;
+      c.beginPath();
+      c.moveTo(sx, sy);
+      c.lineTo(ex, ey);
+      c.stroke();
+      c.strokeStyle = back ? shade3c(fur, 0.8) : fur;
+      c.lineWidth = u * 0.8;
+      c.beginPath();
+      c.moveTo(ex, ey);
+      c.lineTo(hx2, hy2);
+      c.stroke();
+    };
+    if (sp !== "cadete" && sp !== "rana" && sp !== "pinguino") {
+      c.strokeStyle = sp === "zorro" ? "#F07A2A" : sp === "tigre" ? "#FF8C2A" : fur;
+      c.lineWidth = sp === "zorro" ? u * 1.2 : u * 0.55;
+      c.beginPath();
+      c.moveTo(-u * 1.3, u * 0.9);
+      c.quadraticCurveTo(-u * 3.2, u * 0.2 + Math.sin(ph) * u * 0.6, -u * 2.9, -u * 1.4);
+      c.stroke();
+      if (sp === "zorro") {
+        c.fillStyle = "#fff";
+        c.beginPath();
+        c.arc(-u * 2.9, -u * 1.4, u * 0.6, 0, 7);
+        c.fill();
+      }
+      if (sp === "leon") {
+        c.fillStyle = fur2;
+        c.beginPath();
+        c.arc(-u * 2.9, -u * 1.5, u * 0.55, 0, 7);
+        c.fill();
+      }
+    }
+    leg(-a, true);
+    arm(a, true);
+    c.fillStyle = shorts;
+    scRR(c, -u * 1.35, u * 0.6, u * 2.7, u * 1.4, u * 0.4);
+    c.fill();
+    c.fillStyle = shirt;
+    c.strokeStyle = dk;
+    c.lineWidth = Math.max(1, u * 0.25);
+    scRR(c, -u * 1.45, -u * 1.9, u * 2.9, u * 2.9, u * 0.7);
+    c.fill();
+    c.stroke();
+    if (sp === "pinguino") {
+      c.fillStyle = "#fff";
+      c.beginPath();
+      c.ellipse(u * 0.6, -u * 0.3, u * 0.7, u * 1.4, 0, 0, 7);
+      c.fill();
+    }
+    c.fillStyle = "rgba(255,255,255,.5)";
+    c.fillRect(-u * 1.45, -u * 0.4, u * 2.9, u * 0.35);
+    leg(a, false);
+    const hx = u * 0.45, hy = -u * 4, hr = u * 1.85;
+    if (sp === "leon") {
+      c.fillStyle = fur2;
+      for (let k = 0; k < 10; k++) {
+        const an = k / 10 * Math.PI * 2;
+        c.beginPath();
+        c.arc(hx + Math.cos(an) * hr * 0.95, hy + Math.sin(an) * hr * 0.95, hr * 0.5, 0, 7);
+        c.fill();
+      }
+    }
+    c.fillStyle = fur;
+    c.strokeStyle = dk;
+    c.lineWidth = Math.max(1, u * 0.22);
+    if (sp === "gato" || sp === "zorro" || sp === "tigre") {
+      [[-0.9, -1.2], [0.3, -1.6]].forEach(([ex, ey]) => {
+        c.beginPath();
+        c.moveTo(hx + ex * u, hy + ey * u);
+        c.lineTo(hx + (ex + 0.4) * u, hy + (ey - 1.6) * u);
+        c.lineTo(hx + (ex + 1.3) * u, hy + (ey + 0.1) * u);
+        c.closePath();
+        c.fill();
+        c.stroke();
+      });
+    } else if (sp === "conejo") {
+      [[-0.8, 0], [0.3, 0.2]].forEach(([ex, r]) => {
+        c.save();
+        c.translate(hx + ex * u, hy - hr * 0.8);
+        c.rotate(-0.25 + r);
+        c.fillStyle = fur;
+        scRR(c, -u * 0.45, -u * 3.2, u * 0.9, u * 3.2, u * 0.45);
+        c.fill();
+        c.stroke();
+        c.fillStyle = fur2;
+        scRR(c, -u * 0.2, -u * 2.8, u * 0.4, u * 2.4, u * 0.2);
+        c.fill();
+        c.restore();
+      });
+    } else if (sp === "oso" || sp === "panda" || sp === "mono") {
+      c.fillStyle = sp === "panda" ? dk : sp === "mono" ? fur2 : fur;
+      [[-0.9, -1.4], [0.9, -1.6]].forEach(([ex, ey]) => {
+        c.beginPath();
+        c.arc(hx + ex * u, hy + ey * u, u * 0.75, 0, 7);
+        c.fill();
+        c.stroke();
+      });
+    } else if (sp === "perro") {
+      c.fillStyle = fur2;
+      c.beginPath();
+      c.ellipse(hx - u * 1.1, hy - u * 0.2, u * 0.65, u * 1.4, 0.35, 0, 7);
+      c.fill();
+      c.stroke();
+    }
+    c.fillStyle = fur;
+    c.beginPath();
+    if (sp === "rana") c.ellipse(hx, hy + u * 0.3, hr * 1.1, hr * 0.85, 0, 0, 7);
+    else c.arc(hx, hy, hr, 0, 7);
+    c.fill();
+    c.stroke();
+    if (sp === "rana") {
+      [[-0.5], [0.9]].forEach(([ex]) => {
+        c.fillStyle = fur;
+        c.beginPath();
+        c.arc(hx + ex * u, hy - u * 1.2, u * 0.75, 0, 7);
+        c.fill();
+        c.stroke();
+        c.fillStyle = "#fff";
+        c.beginPath();
+        c.arc(hx + ex * u + u * 0.15, hy - u * 1.25, u * 0.45, 0, 7);
+        c.fill();
+        c.fillStyle = dk;
+        c.beginPath();
+        c.arc(hx + ex * u + u * 0.3, hy - u * 1.25, u * 0.22, 0, 7);
+        c.fill();
+      });
+    }
+    if (sp === "tigre") {
+      c.strokeStyle = dk;
+      c.lineWidth = u * 0.25;
+      [[-0.8, -1.2], [-0.2, -1.6], [0.5, -1.5]].forEach(([sx, sy]) => {
+        c.beginPath();
+        c.moveTo(hx + sx * u, hy + sy * u);
+        c.lineTo(hx + sx * u + u * 0.2, hy + sy * u + u * 0.7);
+        c.stroke();
+      });
+    }
+    if (sp === "panda") {
+      c.fillStyle = dk;
+      c.beginPath();
+      c.ellipse(hx + u * 0.8, hy - u * 0.2, u * 0.55, u * 0.75, 0.4, 0, 7);
+      c.fill();
+    }
+    if (sp === "pinguino") {
+      c.fillStyle = "#FFB400";
+      c.beginPath();
+      c.moveTo(hx + hr * 0.85, hy - u * 0.2);
+      c.lineTo(hx + hr + u * 1.1, hy + u * 0.2);
+      c.lineTo(hx + hr * 0.85, hy + u * 0.6);
+      c.fill();
+      c.fillStyle = "#fff";
+      c.beginPath();
+      c.arc(hx + u * 0.6, hy - u * 0.2, u * 0.9, 0, 7);
+      c.fill();
+    } else if (sp !== "cadete" && sp !== "rana") {
+      c.fillStyle = sp === "gato" || sp === "zorro" || sp === "oso" || sp === "mono" || sp === "tigre" ? fur2 : shade3c(fur, 0.9);
+      c.strokeStyle = dk;
+      c.beginPath();
+      c.ellipse(hx + hr * 0.75, hy + u * 0.5, u * 1.05, u * 0.8, 0, 0, 7);
+      c.fill();
+      c.stroke();
+      c.fillStyle = dk;
+      c.beginPath();
+      c.arc(hx + hr * 0.75 + u * 0.75, hy + u * 0.2, u * 0.32, 0, 7);
+      c.fill();
+    } else if (sp === "cadete") {
+      c.fillStyle = shade3c(fur, 0.85);
+      c.beginPath();
+      c.arc(hx + hr * 0.95, hy + u * 0.2, u * 0.35, 0, 7);
+      c.fill();
+      c.fillStyle = "#3B2A20";
+      c.beginPath();
+      c.arc(hx - u * 0.2, hy - u * 0.6, hr * 0.95, Math.PI * 1.05, Math.PI * 1.9);
+      c.lineTo(hx - u * 0.2, hy - u * 0.4);
+      c.fill();
+    }
+    if (sp !== "rana") {
+      c.fillStyle = "#fff";
+      c.beginPath();
+      c.arc(hx + u * 0.75, hy - u * 0.45, u * 0.5, 0, 7);
+      c.fill();
+      c.fillStyle = dk;
+      c.beginPath();
+      c.arc(hx + u * 0.92, hy - u * 0.42, u * 0.27, 0, 7);
+      c.fill();
+    }
+    c.strokeStyle = dk;
+    c.lineWidth = Math.max(1, u * 0.2);
+    c.beginPath();
+    c.arc(hx + u * 0.8, hy + u * 0.7, u * 0.55, 0.2, 1.4);
+    c.stroke();
+    const gl = SC_GL[L.gl] ? SC_GL[L.gl][0] : "none", gx = hx + u * 0.85, gy = hy - u * 0.45;
+    if (gl === "sol") {
+      c.fillStyle = dk;
+      scRR(c, gx - u * 0.75, gy - u * 0.45, u * 1.5, u * 0.85, u * 0.3);
+      c.fill();
+      c.fillRect(hx - hr * 0.7, gy - u * 0.15, gx - (hx - hr * 0.7), u * 0.2);
+      c.fillStyle = "rgba(255,255,255,.5)";
+      c.fillRect(gx - u * 0.4, gy - u * 0.3, u * 0.3, u * 0.15);
+    } else if (gl === "redondos") {
+      c.strokeStyle = dk;
+      c.lineWidth = u * 0.22;
+      c.beginPath();
+      c.arc(gx, gy, u * 0.62, 0, 7);
+      c.stroke();
+      c.beginPath();
+      c.moveTo(gx - u * 0.62, gy);
+      c.lineTo(hx - hr * 0.6, gy - u * 0.1);
+      c.stroke();
+    } else if (gl === "estrella") {
+      c.fillStyle = "#FF4FBF";
+      c.beginPath();
+      for (let k = 0; k < 10; k++) {
+        const r = k % 2 ? u * 0.42 : u * 0.95, an = -Math.PI / 2 + k * Math.PI / 5;
+        c.lineTo(gx + Math.cos(an) * r, gy + Math.sin(an) * r);
+      }
+      c.closePath();
+      c.fill();
+      c.strokeStyle = dk;
+      c.lineWidth = u * 0.15;
+      c.stroke();
+    } else if (gl === "visor") {
+      c.fillStyle = "rgba(77,168,255,.75)";
+      scRR(c, hx - u * 0.2, gy - u * 0.5, hr + u * 0.5, u * 1, u * 0.45);
+      c.fill();
+      c.strokeStyle = dk;
+      c.lineWidth = u * 0.18;
+      c.stroke();
+    }
+    const hat = SC_HAT[L.hat] ? SC_HAT[L.hat][0] : "none", top = hy - hr;
+    c.strokeStyle = dk;
+    c.lineWidth = Math.max(1, u * 0.22);
+    if (hat === "gorra") {
+      c.fillStyle = shirt;
+      c.beginPath();
+      c.arc(hx, top + u * 1.2, hr * 0.98, Math.PI, 0);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      scRR(c, hx + hr * 0.4, top + u * 0.95, u * 2, u * 0.45, u * 0.2);
+      c.fill();
+      c.stroke();
+    } else if (hat === "quepi") {
+      c.fillStyle = "#1F2A44";
+      scRR(c, hx - hr * 0.85, top - u * 1, hr * 1.7, u * 2, u * 0.3);
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#FFD21A";
+      c.fillRect(hx - hr * 0.85, top + u * 0.45, hr * 1.7, u * 0.35);
+      c.fillStyle = dk;
+      scRR(c, hx + hr * 0.3, top + u * 0.85, u * 1.7, u * 0.4, u * 0.2);
+      c.fill();
+      c.fillStyle = "#FFD21A";
+      c.beginPath();
+      c.arc(hx + u * 0.2, top - u * 0.1, u * 0.4, 0, 7);
+      c.fill();
+    } else if (hat === "casco") {
+      c.fillStyle = "#4B5D3A";
+      c.beginPath();
+      c.arc(hx, top + u * 1.5, hr * 1.08, Math.PI * 1.02, -0.02);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#3A4A2C";
+      c.fillRect(hx - hr * 1.1, top + u * 1.3, hr * 2.2, u * 0.4);
+    } else if (hat === "corona") {
+      c.fillStyle = "#FFD21A";
+      c.beginPath();
+      c.moveTo(hx - hr * 0.8, top + u * 0.6);
+      c.lineTo(hx - hr * 0.8, top - u * 1);
+      c.lineTo(hx - hr * 0.4, top - u * 0.2);
+      c.lineTo(hx, top - u * 1.3);
+      c.lineTo(hx + hr * 0.4, top - u * 0.2);
+      c.lineTo(hx + hr * 0.8, top - u * 1);
+      c.lineTo(hx + hr * 0.8, top + u * 0.6);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#FF4F6D";
+      c.beginPath();
+      c.arc(hx, top - u * 0.1, u * 0.3, 0, 7);
+      c.fill();
+    } else if (hat === "sombrero") {
+      c.fillStyle = "#C8954F";
+      c.beginPath();
+      c.ellipse(hx, top + u * 0.7, hr * 1.9, u * 0.55, 0, 0, 7);
+      c.fill();
+      c.stroke();
+      scRR(c, hx - hr * 0.65, top - u * 1.3, hr * 1.3, u * 2.1, u * 0.6);
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#8B3A2B";
+      c.fillRect(hx - hr * 0.65, top + u * 0.1, hr * 1.3, u * 0.35);
+    } else if (hat === "banda") {
+      c.fillStyle = "#E23B3B";
+      c.fillRect(hx - hr * 0.98, top + u * 0.9, hr * 1.96, u * 0.6);
+      c.beginPath();
+      c.moveTo(hx - hr * 0.95, top + u * 1.2);
+      c.lineTo(hx - hr - u * 1.4, top + u * 0.6 + Math.sin(ph) * u * 0.4);
+      c.lineTo(hx - hr - u * 1.1, top + u * 1.5);
+      c.fill();
+    } else if (hat === "gorro") {
+      c.fillStyle = "#E23B3B";
+      c.beginPath();
+      c.moveTo(hx - hr * 0.95, top + u * 1.1);
+      c.quadraticCurveTo(hx - u * 0.4, top - u * 2.6, hx - hr - u * 1, top - u * 0.6);
+      c.lineTo(hx + hr * 0.95, top + u * 1.1);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#fff";
+      c.fillRect(hx - hr, top + u * 0.8, hr * 2, u * 0.6);
+      c.beginPath();
+      c.arc(hx - hr - u * 1, top - u * 0.6, u * 0.5, 0, 7);
+      c.fill();
+    }
+    arm(-a, false);
+    c.restore();
+    return [-u * 2.6, -u * 1.2 - bob];
+  }
+  function shade3c(col, k) {
+    const m = /^#(..)(..)(..)$/.exec(col);
+    if (m) return `rgb(${[m[1], m[2], m[3]].map((h2) => Math.round(parseInt(h2, 16) * k)).join(",")})`;
+    const h = /hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/.exec(col);
+    if (h) return `hsl(${h[1]},${h[2]}%,${Math.round(h[3] * k)}%)`;
+    return col;
+  }
+  function scStu(no) {
+    return sc.students.find((s) => s.no === no);
+  }
+  function scRegister(no) {
+    if (scStu(no)) return false;
+    sc.students.push({ no, pts: 0, shown: 0, x: null, streak: 0, spin: 0, boost: 0, look: scRandLook(), ans: [] });
+    sc.students.sort((a, b) => a.no - b.no);
+    sc.n = sc.students.length;
+    return true;
+  }
+  function scGo() {
+    if (game.phase !== "pick") return;
+    if (!sc.students.length) {
+      scToast("Primero escanea las tarjetas \u{1F4F7}");
+      return;
+    }
+    try {
+      camClose();
+    } catch (e) {
+    }
+    $("#scEdit").hidden = true;
+    sc.answers = {};
+    scNext();
+  }
+  function scAllRandom() {
+    sc.students.forEach((s) => {
+      s.look = scRandLook();
+    });
+    jingle([500, 700, 900], 70, 0.08);
+    scRenderPop();
+  }
+  let scEditNo = null;
+  function scOpenEdit(no) {
+    const s = scStu(no);
+    if (!s) return;
+    scEditNo = no;
+    scRenderEdit();
+    $("#scEdit").hidden = false;
+    scEditAnim();
+  }
+  function scRenderEdit() {
+    const s = scStu(scEditNo);
+    if (!s) return;
+    const L = s.look;
+    const row = (title, key, items, render) => `<div class="scerow"><b>${title}</b><div class="scechips">${items.map((it, i) => `<button class="scechip${L[key] === (render ? it : i) ? " on" : ""}" data-k="${key}" data-v="${render ? it : i}">${render ? render(it) : it[1]}</button>`).join("")}</div></div>`;
+    $("#scEditBody").innerHTML = `<div class="scehead"><canvas id="scEditCv" width="220" height="250"></canvas><div><div class="scebig">${scLabel(s)}</div>
+      <div class="scbtns"><button class="btn" id="scERand">\u{1F3B2} Aleatorio</button><button class="btn" id="scEPrev">\u25C0</button><button class="btn" id="scENext">\u25B6</button><button class="btn primary" id="scEOk">\u2714 Listo</button></div></div></div>
+    ${row("Personaje", "sp", SC_SP)}${row("Gorra / sombrero", "hat", SC_HAT)}${row("Lentes", "gl", SC_GL)}
+    ${row("Playera", "shirt", SC_SHIRT, (h) => `<i style="background:hsl(${h},75%,52%)"></i>`)}${row("Tenis", "shoe", SC_SHOE.map((c, i) => i), (i) => `<i style="background:${SC_SHOE[i]}"></i>`)}
+    ${L.sp === 0 ? row("Piel", "skin", [0, 1, 2], (i) => `<i style="background:${["#F1C9A0", "#E0AC7E", "#A86B45"][i]}"></i>`) : ""}`;
+    $("#scEditBody").querySelectorAll(".scechip").forEach((b) => b.onclick = () => {
+      L[b.dataset.k] = +b.dataset.v;
+      beep(900, 0.03);
+      scRenderEdit();
+      scRenderPop();
+    });
+    $("#scERand").onclick = () => {
+      s.look = scRandLook();
+      scRenderEdit();
+      scRenderPop();
+    };
+    const idx = sc.students.indexOf(s);
+    $("#scEPrev").onclick = () => {
+      scEditNo = sc.students[(idx - 1 + sc.students.length) % sc.students.length].no;
+      scRenderEdit();
+    };
+    $("#scENext").onclick = () => {
+      scEditNo = sc.students[(idx + 1) % sc.students.length].no;
+      scRenderEdit();
+    };
+    $("#scEOk").onclick = () => {
+      $("#scEdit").hidden = true;
+      scRenderPop();
+    };
+  }
+  function scEditAnim() {
+    if ($("#scEdit").hidden) return;
+    const cv = $("#scEditCv"), s = scStu(scEditNo);
+    if (cv && s) {
+      const c = cv.getContext("2d");
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.clearRect(0, 0, 220, 250);
+      c.translate(110, 140);
+      scDrawRunner(c, s.look, 200, performance.now() / 1e3, true);
+    }
+    requestAnimationFrame(scEditAnim);
+  }
   function scQ() {
     return normQ(game.set.questions[game.order[sc.qi]]);
   }
@@ -21253,7 +21751,37 @@ onmessage = function(e){ var m = e.data, out = [];
   }
   function scRenderPop() {
     const el = $("#scPop");
-    if (!el || !(game.phase === "q" || game.phase === "reveal")) return;
+    if (!el) return;
+    if (game.phase === "pick") {
+      const got2 = sc.students.length, big2 = sc.pop === "big";
+      el.className = "scpop " + (big2 ? "big" : "mini") + " scpick";
+      el.innerHTML = `<div class="scph"><b>\u{1F3C3} \xA1Reg\xEDstrense y personalicen a su corredor!</b><span class="scgot">\u{1F9D1}\u200D\u2708\uFE0F ${got2} en la carrera</span></div>` + (big2 ? `
+      <div class="scpicktxt">${got2 ? "Toca a cualquiera para cambiar su personaje, gorra, lentes y tenis." : "\u{1F4F7} Escanea las tarjetas (cualquier letra) para entrar a la carrera."}</div>
+      <div class="scroster2">${sc.students.map((s) => `<button class="scrun" data-no="${s.no}"><canvas width="90" height="104"></canvas><b>${scLabel(s)}</b></button>`).join("")}</div>
+      <div class="scbtns" style="justify-content:center"><button class="btn" id="scRandAll">\u{1F3B2} Todos al azar</button><button class="btn primary big" id="scGoB">\u{1F3C1} \xA1Arrancar la carrera!</button></div>` : "");
+      el.querySelectorAll(".scrun").forEach((b) => {
+        const s = scStu(+b.dataset.no), c = b.querySelector("canvas").getContext("2d");
+        c.translate(45, 58);
+        scDrawRunner(c, s.look, 90, 0, false);
+        b.onclick = (e) => {
+          e.stopPropagation();
+          scOpenEdit(s.no);
+        };
+      });
+      if (big2) {
+        $("#scRandAll").onclick = (e) => {
+          e.stopPropagation();
+          scAllRandom();
+        };
+        $("#scGoB").onclick = (e) => {
+          e.stopPropagation();
+          scGo();
+        };
+        el.onclick = null;
+      } else el.onclick = () => scSetPop("big");
+      return;
+    }
+    if (!(game.phase === "q" || game.phase === "reveal")) return;
     const q = scQ(), opts = scOpts(q), cor = scCorrect(q), rev = game.phase === "reveal", got = Object.keys(sc.answers).length;
     const counts = [0, 0, 0, 0];
     Object.values(sc.answers).forEach((a) => {
@@ -21282,6 +21810,18 @@ onmessage = function(e){ var m = e.data, out = [];
     scTimeEl();
   }
   function scRenderDock() {
+    if (game.phase === "pick") {
+      $("#scDock").innerHTML = `<button class="scd go" data-d="go">\u{1F3C1}<i>Arrancar</i></button><button class="scd" data-d="cam">\u{1F4F7}<i>C\xE1mara</i></button><button class="scd" data-d="rand">\u{1F3B2}<i>Azar</i></button><button class="scd" data-d="pop">\u{1FA9F}<i>Ventana</i></button><button class="scd" data-d="home">\u{1F3E0}<i>Salir</i></button>`;
+      $("#scDock").querySelectorAll("button").forEach((b) => b.onclick = () => {
+        const d = b.dataset.d;
+        if (d === "go") scGo();
+        else if (d === "cam") scLocalCam();
+        else if (d === "rand") scAllRandom();
+        else if (d === "pop") scSetPop(sc.pop === "big" ? "mini" : "big");
+        else show("home");
+      });
+      return;
+    }
     const rev = game.phase === "reveal", last = sc.qi + 1 >= game.order.length, q = scQ(), aud = !!(q.audio || q.tts);
     $("#scDock").innerHTML = (rev ? `<button class="scd go" data-d="next">${last ? "\u{1F3C6}" : "\u25B6"}<i>${last ? "Final" : "Siguiente"}</i></button>` : `<button class="scd go" data-d="reveal">\u2714<i>Checar</i></button><button class="scd" data-d="cam">\u{1F4F7}<i>C\xE1mara</i></button><button class="scd" data-d="skip">\u23ED<i>Saltar</i></button>`) + (aud ? `<button class="scd" data-d="audio">\u{1F50A}<i>Audio</i></button>` : "") + `<button class="scd" data-d="mix">\u{1F500}<i>Mezclar</i></button><button class="scd" data-d="pick">\u{1F4CB}<i>Elegir</i></button><button class="scd" data-d="pop">\u{1FA9F}<i>Pregunta</i></button><button class="scd end" data-d="end">\u{1F3C1}<i>Terminar</i></button><button class="scd" data-d="home">\u{1F3E0}<i>Salir</i></button>`;
     $("#scDock").querySelectorAll("button").forEach((b) => b.onclick = () => {
@@ -21341,10 +21881,10 @@ onmessage = function(e){ var m = e.data, out = [];
       }
     });
     const lines = [];
-    if (hits.length) lines.push(`\u{1F680} \xA1${hits.length} suben la monta\xF1a!`);
+    if (hits.length) lines.push(hits.length > 1 ? `\u{1F680} \xA1${hits.length} avanzan!` : `\u{1F680} \xA1${scLabel(hits[0])} avanza!`);
     const hot = hits.find((s) => s.streak >= 3);
     if (hot) lines.push(`\u{1F525} ${scLabel(hot)} lleva ${hot.streak} seguidas`);
-    if (miss.length) lines.push(miss.length > 1 ? `\u{1F4A8} ${miss.length} se patinaron` : `\u{1F4A8} ${scLabel(miss[0])} se patin\xF3`);
+    if (miss.length) lines.push(miss.length > 1 ? `\u{1F4AB} ${miss.length} se tropezaron` : `\u{1F4AB} ${scLabel(miss[0])} se tropez\xF3`);
     sc.msg = lines.join("   ") || "Nadie respondi\xF3 \u{1F997}";
     sc.pop = "big";
     sc.popT = performance.now();
@@ -21365,11 +21905,26 @@ onmessage = function(e){ var m = e.data, out = [];
     }, 3800);
   }
   function scMergeAnswers(qi, a) {
+    if (sc && game.phase === "pick") {
+      let f = 0;
+      Object.keys(a).forEach((k) => {
+        const no = +k;
+        if (no >= 1 && no <= scMaxCards(sc.kind)) {
+          if (scRegister(no)) f++;
+        }
+      });
+      if (f) {
+        beep(1200, 0.04);
+        scRenderPop();
+      }
+      scSync();
+      return;
+    }
     if (!sc || game.phase !== "q" || qi !== sc.qi) return;
     let fresh = 0;
     Object.keys(a).forEach((k) => {
       const no = +k;
-      if (no >= 1 && no <= sc.n) {
+      if (scStu(no)) {
         if (sc.answers[no] == null) fresh++;
         sc.answers[no] = a[k];
       }
@@ -21381,15 +21936,27 @@ onmessage = function(e){ var m = e.data, out = [];
     scSync();
   }
   function scLocalCam() {
+    if (game.phase === "pick") {
+      scSetPop("mini");
+      camOpen({ kind: sc.kind, n: scMaxCards(sc.kind), dynamic: true, got: {}, cor: null, onCard: (no, a) => {
+        if (game.phase !== "pick") return;
+        if (scRegister(no)) {
+          scRenderPop();
+          scSync();
+        }
+      }, onFinish: () => scSetPop("big"), onCheck: () => scGo() });
+      return;
+    }
     if (game.phase !== "q") return;
     scSetPop("mini");
     camOpen({
       kind: sc.kind,
-      n: sc.n,
+      n: scMaxCards(sc.kind),
+      roster: sc.students.map((s) => s.no),
       got: Object.assign({}, sc.answers),
       cor: null,
       onCard: (no, a) => {
-        if (game.phase !== "q") return;
+        if (game.phase !== "q" || !scStu(no)) return;
         const f = sc.answers[no] == null;
         sc.answers[no] = a;
         if (f) {
@@ -21403,10 +21970,180 @@ onmessage = function(e){ var m = e.data, out = [];
       onCheck: () => scReveal()
     });
   }
-  const SC_CLOUDS = [[0.12, 0.1, 1], [0.55, 0.06, 0.8], [0.82, 0.14, 1.2], [0.33, 0.18, 0.7]];
+  const SC_BIOMES = [
+    { name: "\u{1F3DB}\uFE0F Colegio Militar", sky: ["#58B7FF", "#DDF3FF"], far: "#86A9C9", ground: "#C9B48E", line: "#FFFFFF", edge: "#5C9E45" },
+    { name: "\u{1F3D9}\uFE0F Ciudad", sky: ["#7EC8FF", "#D7F0FF"], far: "#8FA3C7", ground: "#5B5F6E", line: "#F2F2F2", edge: "#3A3D48" },
+    { name: "\u{1F333} Bosque", sky: ["#8ED6FF", "#E3F7FF"], far: "#5E9E5B", ground: "#6B4F2A", line: "#C9A86A", edge: "#3E7D2F" },
+    { name: "\u{1F335} Desierto", sky: ["#FFB86B", "#FFE7B3"], far: "#E0975A", ground: "#D9A55B", line: "#F5D9A6", edge: "#B97A3A" },
+    { name: "\u{1F3D6}\uFE0F Playa", sky: ["#5EC8FF", "#C8F1FF"], far: "#2E9BD6", ground: "#EED9A0", line: "#FFF6D8", edge: "#D9BE78" },
+    { name: "\u{1F3D4}\uFE0F Monta\xF1a", sky: ["#9EC9F0", "#EEF6FF"], far: "#8E9CC2", ground: "#E8F0FA", line: "#B8C6DA", edge: "#9FB0C8" },
+    { name: "\u{1F30B} Volc\xE1n", sky: ["#5A1F2E", "#E0663C"], far: "#3A2430", ground: "#3C2E2E", line: "#FF7A3D", edge: "#22181A" },
+    { name: "\u{1F30C} Espacio", sky: ["#0B0726", "#2B1B5A"], far: "#3A2C6E", ground: "#4A3E7A", line: "#C8B8FF", edge: "#2A2050" }
+  ];
+  function scHash(k) {
+    let x = Math.sin(k * 127.1 + 311.7) * 43758.5453;
+    return x - Math.floor(x);
+  }
+  function scMix(a, b, f) {
+    const p = (s) => [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)], A = p(a), B = p(b);
+    return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * f)).join(",")})`;
+  }
+  let scCampusCv = null;
+  function scCampus() {
+    if (scCampusCv) return scCampusCv;
+    const W = 1800, H = 420, y0 = 410, m = (scCampusCv = document.createElement("canvas")).getContext("2d");
+    scCampusCv.width = W;
+    scCampusCv.height = H;
+    try {
+      const S = SEASONS.summer;
+      stepPyramid(m, 110, y0, 200, S, false);
+      serpentBuilding(m, 230, y0, 360, S, false);
+      govBuilding(m, 870, y0, S, false);
+      m.font = "900 15px Nunito, sans-serif";
+      m.textAlign = "center";
+      m.fillStyle = "#2B2366";
+      m.fillText("HEROICO COLEGIO MILITAR", 870, y0 - 182);
+      const fx = 1150;
+      m.strokeStyle = "#2B2366";
+      m.lineWidth = 3;
+      m.fillStyle = "#9C9AB0";
+      m.beginPath();
+      m.rect(fx - 3, y0 - 330, 6, 330);
+      m.fill();
+      m.stroke();
+      m.fillStyle = "#006847";
+      m.fillRect(fx + 3, y0 - 326, 40, 70);
+      m.fillStyle = "#fff";
+      m.fillRect(fx + 43, y0 - 326, 40, 70);
+      m.fillStyle = "#CE1126";
+      m.fillRect(fx + 83, y0 - 326, 40, 70);
+      m.fillStyle = "#8B5A2B";
+      m.beginPath();
+      m.arc(fx + 63, y0 - 291, 9, 0, 7);
+      m.fill();
+      cadets(m, 1010, 1130, y0);
+      cadets(m, 1180, 1300, y0);
+      eagleDorm(m, 1430, y0, S, false);
+      stepPyramid(m, 1680, y0, 170, S, false);
+    } catch (e) {
+      m.fillStyle = "#DCD3C5";
+      m.fillRect(300, 200, 1200, 210);
+      m.fillStyle = "#2B2366";
+      m.font = "900 40px sans-serif";
+      m.fillText("HEROICO COLEGIO MILITAR", 450, 300);
+    }
+    return scCampusCv;
+  }
+  function scProp(c, b, x, yb, k, t) {
+    const r = scHash(k), dk = "#1A1530";
+    if (b === 1) {
+      const w = 50 + r * 50, h = 70 + scHash(k + 1) * 110;
+      c.fillStyle = ["#6C7A99", "#7E8CAB", "#59647F"][k % 3];
+      c.fillRect(x, yb - h, w, h);
+      c.fillStyle = "#FFE9A0";
+      for (let i = 8; i < h - 10; i += 18) for (let j = 6; j < w - 10; j += 14) if (scHash(k * 7 + i + j) > 0.45) c.fillRect(x + j, yb - h + i, 7, 9);
+    } else if (b === 2) {
+      const h = 60 + r * 70;
+      c.fillStyle = "#6B4423";
+      c.fillRect(x - 4, yb - h * 0.3, 8, h * 0.3);
+      c.fillStyle = ["#2F7D32", "#3E8E41", "#25692A"][k % 3];
+      for (let i = 0; i < 3; i++) {
+        c.beginPath();
+        c.moveTo(x, yb - h + i * h * 0.18);
+        c.lineTo(x - h * 0.32 + i * 4, yb - h * 0.28 - i * h * 0.06 + 0);
+        c.lineTo(x + h * 0.32 - i * 4, yb - h * 0.28 - i * h * 0.06);
+        c.fill();
+      }
+    } else if (b === 3) {
+      const h = 40 + r * 60;
+      c.fillStyle = "#3E8E41";
+      scRR(c, x - 7, yb - h, 14, h, 7);
+      c.fill();
+      scRR(c, x - 22, yb - h * 0.7, 10, h * 0.35, 5);
+      c.fill();
+      c.fillRect(x - 16, yb - h * 0.42, 12, 7);
+      scRR(c, x + 12, yb - h * 0.85, 10, h * 0.4, 5);
+      c.fill();
+      c.fillRect(x + 4, yb - h * 0.5, 12, 7);
+    } else if (b === 4) {
+      const h = 80 + r * 50;
+      c.strokeStyle = "#8B5A2B";
+      c.lineWidth = 7;
+      c.beginPath();
+      c.moveTo(x, yb);
+      c.quadraticCurveTo(x + 16, yb - h * 0.5, x + 8, yb - h);
+      c.stroke();
+      c.fillStyle = "#2E9E4F";
+      for (let i = 0; i < 5; i++) {
+        const a = -Math.PI * 0.9 + i * Math.PI * 0.45;
+        c.beginPath();
+        c.ellipse(x + 8 + Math.cos(a) * 22, yb - h + Math.sin(a) * 10 + 6, 26, 7, a, 0, 7);
+        c.fill();
+      }
+    } else if (b === 5) {
+      const h = 50 + r * 50;
+      c.fillStyle = "#2F6B4F";
+      c.beginPath();
+      c.moveTo(x, yb - h);
+      c.lineTo(x - h * 0.3, yb);
+      c.lineTo(x + h * 0.3, yb);
+      c.fill();
+      c.fillStyle = "#fff";
+      c.beginPath();
+      c.moveTo(x, yb - h);
+      c.lineTo(x - h * 0.12, yb - h * 0.6);
+      c.lineTo(x + h * 0.12, yb - h * 0.6);
+      c.fill();
+    } else if (b === 6) {
+      const h = 30 + r * 40;
+      c.fillStyle = "#2A1E22";
+      c.beginPath();
+      c.moveTo(x - h * 0.6, yb);
+      c.lineTo(x - h * 0.2, yb - h);
+      c.lineTo(x + h * 0.3, yb - h * 0.8);
+      c.lineTo(x + h * 0.6, yb);
+      c.fill();
+      c.fillStyle = "#FF7A3D";
+      c.fillRect(x - 2, yb - h * 0.8, 4, h * 0.8);
+    } else {
+      c.fillStyle = "#fff";
+      for (let i = 0; i < 5; i++) {
+        c.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(t * 2 + k + i));
+        c.fillRect(x + scHash(k + i * 3) * 120 - 60, yb - 20 - scHash(k * 5 + i) * 150, 2.5, 2.5);
+      }
+      c.globalAlpha = 1;
+      if (k % 4 === 0) {
+        c.fillStyle = ["#FFB400", "#B98AFF", "#7EC8FF"][k % 3];
+        c.beginPath();
+        c.arc(x, yb - 110 - r * 40, 16 + r * 12, 0, 7);
+        c.fill();
+      }
+    }
+  }
+  function scFar(c, b, W, top, base, off, col) {
+    c.fillStyle = col;
+    c.beginPath();
+    c.moveTo(0, base);
+    for (let x = 0; x <= W + 40; x += 40) {
+      const wx = x + off, k = Math.floor(wx / 40);
+      let y;
+      if (b === 1) y = base - 40 - scHash(k) * 90;
+      else if (b === 0 || b === 5) y = base - 60 - Math.abs(Math.sin(wx / 170)) * 140;
+      else if (b === 6) y = base - 30 - Math.max(0, 140 - Math.abs((wx % 900 + 900) % 900 - 450) * 0.6);
+      else if (b === 4) y = base - 18;
+      else y = base - 30 - (Math.sin(wx / 130) + 1) * 35;
+      if (b === 1) {
+        c.lineTo(x, y);
+        c.lineTo(x + 40, y);
+      } else c.lineTo(x, y);
+    }
+    c.lineTo(W, base);
+    c.closePath();
+    c.fill();
+  }
   function scRaceLoop() {
     scRaceRaf = null;
-    if (view !== "play" || !game || game.mode !== "scan" || !(game.phase === "q" || game.phase === "reveal")) return;
+    if (view !== "play" || !game || game.mode !== "scan" || !(game.phase === "q" || game.phase === "reveal" || game.phase === "pick")) return;
     const cv = $("#scRace"), dpr = Math.min(2, window.devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
     if (!W || !H) {
       scRaceRaf = requestAnimationFrame(scRaceLoop);
@@ -21419,174 +22156,179 @@ onmessage = function(e){ var m = e.data, out = [];
     const c = cv.getContext("2d");
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
     const t = performance.now() / 1e3;
-    const g = c.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, "#6EC3FF");
-    g.addColorStop(1, "#D9F1FF");
+    const viewW = W - 112, total = Math.max(1, game.order.length), U = Math.max(260, viewW * 0.27), start2 = U * 0.75;
+    const n = Math.max(1, sc.students.length), roadTop = Math.max(230, H * 0.33), roadBot = H - 14, laneH = (roadBot - roadTop) / n;
+    const lead = Math.max(0, ...sc.students.map((s) => s.shown)), tail = Math.min(lead, ...sc.students.map((s) => s.shown));
+    let target = start2 + lead * U - viewW * 0.62;
+    const tailX = start2 + tail * U - 60;
+    if (target > tailX && (lead - tail) * U < viewW * 0.75) target = tailX;
+    target = Math.max(0, Math.min(target, start2 + total * U + U * 0.9 - viewW));
+    if (sc.cam == null) sc.cam = target;
+    sc.cam += (target - sc.cam) * 0.04;
+    const cam = sc.cam;
+    const pos = (cam + viewW * 0.5 - start2) / U, bi = Math.max(0, Math.floor(pos)), f = Math.min(1, Math.max(0, pos - bi - 0.5) * 2);
+    const B0 = SC_BIOMES[bi % 8], B1 = SC_BIOMES[(bi + 1) % 8], fin = bi >= total;
+    const g = c.createLinearGradient(0, 0, 0, roadTop);
+    g.addColorStop(0, scMix(B0.sky[0], B1.sky[0], f));
+    g.addColorStop(1, scMix(B0.sky[1], B1.sky[1], f));
     c.fillStyle = g;
-    c.fillRect(0, 0, W, H);
-    c.fillStyle = "#FFE066";
-    c.beginPath();
-    c.arc(W * 0.08, H * 0.2, Math.min(W, H) * 0.06, 0, 7);
-    c.fill();
-    c.fillStyle = "rgba(255,255,255,.9)";
-    SC_CLOUDS.forEach(([x, y, s]) => {
-      const cx = (x * W + t * 14 * s) % (W + 200) - 100, cy = y * H + 70, r = 26 * s;
-      c.beginPath();
-      c.arc(cx, cy, r, 0, 7);
-      c.arc(cx + r, cy - r * 0.5, r * 1.1, 0, 7);
-      c.arc(cx + r * 2.1, cy, r * 0.9, 0, 7);
-      c.fill();
-    });
-    const dockW = 104, L = 34, R = W - dockW - 16, yTop = Math.max(120, H * 0.17), yBot = H - 46;
-    c.fillStyle = "#A99BD9";
-    c.beginPath();
-    c.moveTo(0, yBot);
-    [[0.1, 0.42], [0.22, 0.3], [0.34, 0.46], [0.7, 0.28], [0.86, 0.4], [1, 0.33]].forEach(([x, y]) => c.lineTo(x * W, y * H));
-    c.lineTo(W, yBot);
-    c.fill();
-    const peakX = (L + R) / 2, peakY = yTop - 70;
-    const mg = c.createLinearGradient(0, peakY, 0, H);
-    mg.addColorStop(0, "#8C6A4A");
-    mg.addColorStop(0.35, "#6E8F4A");
-    mg.addColorStop(1, "#4E7A36");
-    c.fillStyle = mg;
-    c.beginPath();
-    c.moveTo(L - 120, H);
-    c.lineTo(peakX - 60, peakY + 26);
-    c.lineTo(peakX, peakY);
-    c.lineTo(peakX + 70, peakY + 30);
-    c.lineTo(R + 140, H);
-    c.fill();
-    c.fillStyle = "#fff";
-    c.beginPath();
-    c.moveTo(peakX - 60, peakY + 26);
-    c.lineTo(peakX, peakY);
-    c.lineTo(peakX + 70, peakY + 30);
-    c.lineTo(peakX + 40, peakY + 48);
-    c.lineTo(peakX + 12, peakY + 34);
-    c.lineTo(peakX - 18, peakY + 50);
-    c.lineTo(peakX - 38, peakY + 38);
-    c.fill();
-    c.strokeStyle = "#2B2366";
-    c.lineWidth = 3;
-    c.beginPath();
-    c.moveTo(peakX, peakY);
-    c.lineTo(peakX, peakY - 44);
-    c.stroke();
-    c.fillStyle = "#FF4F6D";
-    c.beginPath();
-    c.moveTo(peakX, peakY - 44);
-    c.lineTo(peakX + 30, peakY - 36);
-    c.lineTo(peakX, peakY - 28);
-    c.fill();
-    c.fillStyle = "rgba(255,255,255,.12)";
-    c.fillRect(L, yTop, R - L, yBot - yTop);
-    const total = Math.max(1, game.order.length), n = sc.students.length, lw = (R - L) / Math.max(1, n);
-    for (let k = 1; k < total; k++) {
-      const y = yBot - (yBot - yTop) * k / total;
-      c.strokeStyle = "rgba(255,255,255,.35)";
-      c.setLineDash([10, 8]);
+    c.fillRect(0, 0, W, roadTop);
+    if (bi % 8 >= 6 || (bi + 1) % 8 >= 6 && f > 0.5) {
+      c.fillStyle = "#fff";
+      for (let i = 0; i < 60; i++) {
+        c.globalAlpha = 0.3 + 0.5 * Math.abs(Math.sin(t + i));
+        c.fillRect((scHash(i) * W * 1.3 - cam * 0.05) % W, scHash(i + 99) * roadTop * 0.8, 2, 2);
+      }
+      c.globalAlpha = 1;
+    } else {
+      c.fillStyle = "rgba(255,255,255,.85)";
+      for (let i = 0; i < 5; i++) {
+        const x = ((scHash(i) * W * 1.5 - cam * 0.15 + t * 8) % (W + 260) + W + 260) % (W + 260) - 130, y = 40 + scHash(i + 7) * roadTop * 0.35, r = 18 + scHash(i + 3) * 16;
+        c.beginPath();
+        c.arc(x, y, r, 0, 7);
+        c.arc(x + r, y - r * 0.5, r * 1.1, 0, 7);
+        c.arc(x + r * 2.1, y, r * 0.9, 0, 7);
+        c.fill();
+      }
+    }
+    c.globalAlpha = 1 - f;
+    scFar(c, bi % 8, W, 0, roadTop - 6, cam * 0.35, B0.far);
+    c.globalAlpha = f;
+    if (f > 0) scFar(c, (bi + 1) % 8, W, 0, roadTop - 6, cam * 0.35, B1.far);
+    c.globalAlpha = 1;
+    const k0 = Math.max(0, Math.floor((cam - start2) / U) - 1), k1 = Math.ceil((cam + W - start2) / U) + 1;
+    for (let k = k0; k <= k1; k++) {
+      const x0 = start2 + k * U - cam, b = k < 0 ? 0 : k >= total ? 7 : k % 8, Bk = SC_BIOMES[b];
+      if (k === 0) {
+        c.fillStyle = Bk.edge;
+        c.fillRect(x0 - start2, roadTop - 12, start2, 14);
+        c.fillStyle = Bk.ground;
+        c.fillRect(x0 - start2, roadTop, start2, roadBot - roadTop + 14);
+      }
+      c.fillStyle = Bk.edge;
+      c.fillRect(x0, roadTop - 12, U + 1, 14);
+      c.fillStyle = Bk.ground;
+      c.fillRect(x0, roadTop, U + 1, roadBot - roadTop + 14);
+      if (b === 0 && (k === 0 || k > 0 && k < total)) {
+        const cp = scCampus(), wp = (k === 0 ? start2 + U : U * 1) * 1, scl = Math.min((roadTop - 16) / cp.height, (k === 0 ? start2 + U : U) / cp.width * 1), dw = cp.width * scl, dh = cp.height * scl, dx = k === 0 ? x0 - start2 : x0;
+        c.drawImage(cp, dx, roadTop - 6 - dh, dw, dh);
+      } else if (k >= 0 && k < total) for (let p = 0; p < 3; p++) {
+        const px = x0 + U * (0.15 + p * 0.33) + scHash(k * 13 + p) * U * 0.1;
+        if (px > -150 && px < W + 150) scProp(c, b, px, roadTop - 10, k * 13 + p, t);
+      }
+    }
+    c.setLineDash([18, 16]);
+    for (let i = 1; i < n; i++) {
+      const y = roadTop + laneH * i;
+      c.strokeStyle = "rgba(255,255,255,.28)";
       c.lineWidth = 2;
       c.beginPath();
-      c.moveTo(L, y);
-      c.lineTo(R, y);
-      c.stroke();
-      c.setLineDash([]);
-      c.fillStyle = "rgba(43,35,102,.75)";
-      c.font = "900 13px Nunito, sans-serif";
-      c.textAlign = "left";
-      c.fillText(k, 6, y + 5);
-    }
-    for (let x = L, i = 0; x < R; x += 14, i++) {
-      c.fillStyle = i % 2 ? "#111" : "#fff";
-      c.fillRect(x, yTop - 14, 14, 7);
-      c.fillStyle = i % 2 ? "#fff" : "#111";
-      c.fillRect(x, yTop - 7, 14, 7);
-    }
-    c.font = "900 18px Nunito, sans-serif";
-    c.textAlign = "left";
-    c.fillStyle = "#2B2366";
-    c.fillText("\u{1F3C1} CIMA", L, yTop - 22);
-    c.fillStyle = "#fff";
-    c.fillRect(L, yBot + 2, R - L, 4);
-    c.setLineDash([4, 10]);
-    c.strokeStyle = "rgba(255,255,255,.28)";
-    c.lineWidth = 2;
-    for (let i = 0; i < n; i++) {
-      const x = L + lw * (i + 0.5);
-      c.beginPath();
-      c.moveTo(x, yBot);
-      c.lineTo(x, yTop);
+      c.moveTo(-(cam % 34), y);
+      c.lineTo(W, y);
       c.stroke();
     }
     c.setLineDash([]);
-    const maxShown = Math.max(0, ...sc.students.map((s) => s.shown)), cw = Math.max(16, Math.min(lw * 0.82, 66)), ch = cw * 1.3, qphase = game.phase === "q";
-    sc.students.forEach((s, i) => {
-      const x = L + lw * (i + 0.5), ty = yBot - (yBot - yTop) * Math.min(s.shown, total) / total - ch * 0.55;
-      if (s.y == null) s.y = ty;
-      s.y += (ty - s.y) * 0.05;
-      let y = s.y, rot = 0;
-      if (s.boost > 0) {
-        s.boost--;
-        y += Math.sin(t * 40) * 1.5;
+    for (let k = 0; k <= total; k++) {
+      const x = start2 + k * U - cam;
+      if (x < -60 || x > W + 60) continue;
+      if (k === 0 || k === total) {
+        for (let y = roadTop, i = 0; y < roadBot; y += 12, i++) {
+          c.fillStyle = i % 2 ? "#111" : "#fff";
+          c.fillRect(x - 12, y, 12, 12);
+          c.fillStyle = i % 2 ? "#fff" : "#111";
+          c.fillRect(x, y, 12, 12);
+        }
+      } else {
+        c.strokeStyle = "rgba(255,255,255,.7)";
+        c.lineWidth = 4;
+        c.setLineDash([10, 10]);
+        c.beginPath();
+        c.moveTo(x, roadTop);
+        c.lineTo(x, roadBot);
+        c.stroke();
+        c.setLineDash([]);
       }
+      const label = k === 0 ? "\u{1F6A6} SALIDA \xB7 " + SC_BIOMES[0].name : k === total ? "\u{1F3C1} META" : `${k} \xB7 ${SC_BIOMES[k % 8].name}`;
+      c.font = "900 16px Nunito, sans-serif";
+      const tw = c.measureText(label).width + 20;
+      c.fillStyle = "#6B4423";
+      c.fillRect(x - 3, roadTop - 70, 6, 60);
+      c.fillStyle = k === total ? "#FFD21A" : "#fff";
+      scRR(c, x - tw / 2, roadTop - 96, tw, 30, 10);
+      c.fill();
+      c.strokeStyle = "#2B2366";
+      c.lineWidth = 3;
+      c.stroke();
+      c.fillStyle = "#2B2366";
+      c.textAlign = "center";
+      c.textBaseline = "middle";
+      c.fillText(label, x, roadTop - 80);
+      c.textBaseline = "alphabetic";
+    }
+    const rs = Math.max(50, Math.min(laneH * 2.5, 180)), vw = rs * 0.62, qphase = game.phase === "q";
+    sc.students.forEach((s, i) => {
+      const tx = start2 + Math.min(s.shown, total) * U - vw * 0.62;
+      if (s.x == null) s.x = start2 - vw * 0.62;
+      s.x += (tx - s.x) * 0.045;
+      let sx = s.x - cam, cy = roadTop + laneH * (i + 0.5), off = sx < 6 + vw * 0.5;
+      if (off) sx = 6 + vw * 0.5;
+      let rot = 0, yy = cy + Math.sin(t * 9 + i) * (s.boost > 0 ? 2.5 : 0.8);
       if (s.spin > 0) {
-        rot = Math.sin((50 - s.spin) * 0.5) * 0.45 * (s.spin / 50);
+        rot = Math.sin((50 - s.spin) * 0.6) * 0.18 * (s.spin / 50);
         s.spin--;
       }
       c.save();
-      c.translate(x, y);
+      c.translate(sx, yy);
       c.rotate(rot);
+      if (off) c.globalAlpha = 0.55;
       if (s.boost > 0) {
-        const fl = ch * (0.35 + Math.random() * 0.35);
-        c.fillStyle = s.boost % 6 < 3 ? "#FFD21A" : "#FF5A1F";
-        c.beginPath();
-        c.moveTo(-cw * 0.22, ch * 0.48);
-        c.lineTo(0, ch * 0.48 + fl);
-        c.lineTo(cw * 0.22, ch * 0.48);
-        c.fill();
+        s.boost--;
+        c.strokeStyle = "rgba(255,255,255,.85)";
+        c.lineWidth = 3;
+        for (let j = 0; j < 3; j++) {
+          c.beginPath();
+          c.moveTo(-rs * 0.38 - j * 8, -rs * 0.3 + j * rs * 0.18);
+          c.lineTo(-rs * 0.7 - j * 12, -rs * 0.3 + j * rs * 0.18);
+          c.stroke();
+        }
+        c.fillStyle = "rgba(200,180,140,.6)";
+        for (let j = 0; j < 3; j++) {
+          c.beginPath();
+          c.arc(-rs * 0.3 - j * rs * 0.12 - Math.random() * 6, rs * 0.42, rs * 0.05 + Math.random() * rs * 0.04, 0, 7);
+          c.fill();
+        }
       }
-      c.fillStyle = "#1A1530";
-      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => {
-        c.beginPath();
-        c.roundRect ? c.roundRect(sx * cw * 0.5 - cw * 0.12, sy * ch * 0.3 - ch * 0.11, cw * 0.24, ch * 0.22, 3) : c.rect(sx * cw * 0.5 - cw * 0.12, sy * ch * 0.3 - ch * 0.11, cw * 0.24, ch * 0.22);
-        c.fill();
-      });
-      c.fillStyle = `hsl(${s.hue},78%,55%)`;
-      c.strokeStyle = "#1A1530";
-      c.lineWidth = 2;
+      const bp = scDrawRunner(c, s.look, rs, t + i * 0.37, true);
+      const answered = qphase && sc.answers[s.no] != null, br = Math.max(15, rs * 0.17);
       c.beginPath();
-      c.roundRect ? c.roundRect(-cw * 0.42, -ch * 0.5, cw * 0.84, ch, cw * 0.22) : c.rect(-cw * 0.42, -ch * 0.5, cw * 0.84, ch);
-      c.fill();
-      c.stroke();
-      c.fillStyle = "#BFE3FF";
-      c.beginPath();
-      c.roundRect ? c.roundRect(-cw * 0.3, -ch * 0.42, cw * 0.6, ch * 0.16, 4) : c.rect(-cw * 0.3, -ch * 0.42, cw * 0.6, ch * 0.16);
-      c.fill();
-      const answered = qphase && sc.answers[s.no] != null, br = cw * 0.36;
-      c.beginPath();
-      c.arc(0, ch * 0.08, br, 0, 7);
+      c.arc(bp[0], bp[1], br, 0, 7);
       c.fillStyle = "#fff";
       c.fill();
-      c.lineWidth = answered ? Math.max(3, br * 0.22) : 2;
+      c.lineWidth = answered ? Math.max(3, br * 0.28) : 2;
       c.strokeStyle = answered ? "#22C55E" : "#1A1530";
       c.stroke();
       c.fillStyle = "#1B1440";
-      c.font = `900 ${Math.round(br * (s.no >= 10 ? 1.05 : 1.3))}px Nunito, system-ui, sans-serif`;
+      c.font = `900 ${Math.round(br * (s.no >= 10 ? 1.12 : 1.4))}px Nunito, system-ui, sans-serif`;
       c.textAlign = "center";
       c.textBaseline = "middle";
-      c.fillText(s.no, 0, ch * 0.08 + 1);
-      c.restore();
+      c.fillText(s.no, bp[0], bp[1] + 1);
       c.textBaseline = "alphabetic";
-      if (s.spin > 20) {
-        c.font = `${Math.round(cw * 0.5)}px sans-serif`;
+      c.restore();
+      if (off) {
+        c.fillStyle = "#fff";
+        c.font = `900 ${Math.round(br)}px sans-serif`;
         c.textAlign = "center";
-        c.fillText("\u{1F4A8}", x + cw * 0.55, y + ch * 0.4);
+        c.fillText("\u25C0", 10, cy + br * 0.4);
       }
-      if (maxShown > 0 && s.shown === maxShown) {
-        c.font = `${Math.round(cw * 0.55)}px sans-serif`;
+      if (s.spin > 20) {
+        c.font = `${Math.round(rs * 0.25)}px sans-serif`;
         c.textAlign = "center";
-        c.fillText("\u{1F451}", x, y - ch * 0.58);
+        c.fillText("\u{1F4AB}", sx + rs * 0.05, yy - rs * 0.62);
+      }
+      if (lead > 0 && s.shown === lead) {
+        c.font = `${Math.round(Math.max(16, rs * 0.22))}px sans-serif`;
+        c.textAlign = "center";
+        c.fillText("\u{1F451}", sx + rs * 0.35, yy - rs * 0.45);
       }
     });
     scRaceRaf = requestAnimationFrame(scRaceLoop);
@@ -21611,15 +22353,24 @@ onmessage = function(e){ var m = e.data, out = [];
     a.remove();
   }
   function scPrintCards() {
-    const n = Math.max(1, Math.min(SC_IDS.length, parseInt($("#scN").value) || 30));
+    const n = SC_IDS.length;
     $("#scPrintCards").innerHTML = Array.from({ length: n }, (_, k) => {
       const no = k + 1;
       return `<div class="sccard"><div class="sccard-in"><span class="scs a">A</span><span class="scs b">B</span><span class="scs c">C</span><span class="scs d">D</span>${scMarkerSVG(no, 380)}<em class="scno">#${no}</em></div></div>`;
     }).join("");
     $("#scPrint").hidden = false;
   }
+  function scRaceTap(e) {
+    if (!sc || game.phase !== "pick") return;
+    const cv = $("#scRace"), r = cv.getBoundingClientRect(), y = e.clientY - r.top, H = cv.clientHeight, n = sc.students.length;
+    if (!n) return;
+    const roadTop = Math.max(230, H * 0.33), laneH = (H - 14 - roadTop) / n, i = Math.floor((y - roadTop) / laneH);
+    if (i < 0 || i >= n) return;
+    scOpenEdit(sc.students[i].no);
+  }
   function wireScan() {
-    ["#scPrint", "#scPick", "#scLink"].forEach((id) => document.body.appendChild($(id)));
+    $("#scRace").addEventListener("click", scRaceTap);
+    ["#scPrint", "#scPick", "#scLink", "#scEdit"].forEach((id) => document.body.appendChild($(id)));
     $("#scStart").onclick = scStart;
     $("#scKind").onchange = scKindNote;
     $("#scPrintB").onclick = scPrintCards;
@@ -21704,7 +22455,13 @@ onmessage = function(e){ var m = e.data, out = [];
   function scStatePayload() {
     const base = { t: "st" };
     if (!game || game.mode !== "scan" || !sc) return Object.assign(base, { phase: "none" });
-    const o = Object.assign(base, { phase: game.phase, kind: sc.kind, n: sc.n, title: (game.set.title || "").slice(0, 80), total: game.order.length, qi: sc.qi });
+    const o = Object.assign(base, { phase: game.phase, kind: sc.kind, n: scMaxCards(sc.kind), reg: sc.students.length, roster: sc.students.map((s) => s.no), title: (game.set.title || "").slice(0, 80), total: game.order.length, qi: sc.qi });
+    if (game.phase === "pick") {
+      o.ga = {};
+      sc.students.forEach((s) => {
+        o.ga[s.no] = 0;
+      });
+    }
     if (game.phase === "q" || game.phase === "reveal") {
       const q = scQ();
       o.audio = !!(q.audio || q.tts);
@@ -21749,6 +22506,8 @@ onmessage = function(e){ var m = e.data, out = [];
     if (m.t === "cmd") {
       const c = m.c, live = game.phase === "q" || game.phase === "reveal";
       if (c === "start" && game.phase === "lobby") scStart();
+      else if ((c === "go" || c === "reveal" || c === "next") && game.phase === "pick") scGo();
+      else if (c === "rand" && game.phase === "pick") scAllRandom();
       else if (c === "reveal") scReveal();
       else if (c === "next") {
         if (game.phase === "reveal") scNext();
