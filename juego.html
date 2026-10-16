@@ -277,6 +277,85 @@ body.qopen .tkpan{display:none}
 .nukefx.go{animation:nuke 2.6s ease-out both}
 @keyframes nuke{0%{opacity:0}4%{opacity:1;filter:brightness(2.2)}14%{opacity:1;filter:brightness(1.3)}45%{opacity:.55}100%{opacity:0}}
 @media (prefers-reduced-motion:reduce){.nukefx.go{animation-duration:.6s}}
+
+/* ---------- SCAN RACE ---------- */
+#vScan{padding:14px 16px 30px;max-width:1500px;margin:0 auto}
+.scbar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px}
+.scbar h2{margin:0;font-size:clamp(20px,3vw,30px)}
+.sclobby{background:var(--paper);border:var(--stroke);border-radius:24px;padding:20px;box-shadow:0 8px 0 var(--ink);max-width:820px;margin:0 auto;display:grid;gap:14px}
+.sclobby label{font-weight:800}
+.sclobby input[type=number]{width:110px;font:inherit;font-size:22px;font-weight:900;padding:6px 10px;border:var(--stroke);border-radius:12px}
+.sclobby textarea{width:100%;min-height:140px;font:inherit;padding:10px;border:var(--stroke);border-radius:14px;box-sizing:border-box}
+.schow{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center;background:var(--cream);border-radius:16px;padding:12px}
+.schow ol{margin:0;padding-left:20px;line-height:1.5}
+.scplay{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:900px){.scplay{grid-template-columns:1fr}}
+.scpanel{background:var(--paper);border:var(--stroke);border-radius:24px;padding:16px;box-shadow:0 8px 0 var(--ink)}
+.schead{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:16px}
+.schead .scgot{margin-left:auto;background:var(--cream);border-radius:999px;padding:4px 12px;font-weight:800}
+.sctime{background:var(--ink);color:#fff;border-radius:999px;padding:3px 12px;font-weight:900}
+.sctime:empty{display:none}.sctime.warn{background:#FF4F6D;animation:scpulse .5s infinite alternate}
+@keyframes scpulse{to{transform:scale(1.12)}}
+.scqt{font-size:clamp(22px,2.6vw,36px);font-weight:900;line-height:1.25;margin:12px 0}
+.scaud{display:flex;gap:8px;margin-bottom:8px}
+.scopts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.scopt{display:flex;align-items:center;gap:10px;background:var(--oc);color:#fff;border:var(--stroke);border-radius:18px;padding:12px;min-height:64px;position:relative;overflow:hidden;box-shadow:0 5px 0 var(--ink);transition:opacity .3s, transform .3s}
+.scopt .scl{flex:none;width:44px;height:44px;border-radius:12px;background:#fff;color:var(--ink);display:grid;place-items:center;font-weight:900;font-size:26px;border:var(--stroke)}
+.scopt .sct{font-weight:900;font-size:clamp(17px,1.8vw,24px);text-shadow:0 2px 0 rgba(0,0,0,.25);z-index:1}
+.scopt.no{opacity:.4;transform:scale(.97)}.scopt.ok{outline:6px solid #FFD21A;transform:scale(1.03)}
+.scopt .scc{position:absolute;left:0;right:0;bottom:0;height:8px;background:rgba(0,0,0,.25)}
+.scopt .scc i{display:block;height:100%;background:#fff}
+.scopt .scc b{position:absolute;right:10px;bottom:10px;background:#fff;color:var(--ink);border-radius:999px;padding:0 10px;font-size:18px}
+.scbtns{display:flex;gap:10px;flex-wrap:wrap}.scbtns .big{font-size:20px;padding:14px 22px}
+.scmsg{margin-top:10px;font-weight:900;font-size:18px;min-height:24px;color:var(--ink-soft)}
+.scracewrap{background:#2B2547;border:var(--stroke);border-radius:24px;box-shadow:0 8px 0 var(--ink);overflow:auto;max-height:84vh;padding:0}
+#scRace{display:block;width:100%}
+.sccam{position:fixed;top:0;right:0;bottom:0;left:0;z-index:60;background:#0D0A1E;display:flex;flex-direction:column}
+.sccam[hidden]{display:none}
+.sccamtop{display:flex;gap:10px;align-items:center;padding:10px 14px;color:#fff;flex-wrap:wrap}
+.sccamtop b{font-size:30px;background:#3FBF4F;border-radius:14px;padding:2px 14px;border:3px solid #fff}
+.sccamtop .sp{flex:1}
+.sccamview{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+#scCanvas{max-width:100%;max-height:100%;object-fit:contain}
+#scVideo{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.scroster{display:flex;flex-wrap:wrap;gap:5px;padding:10px 14px;justify-content:center}
+.scroster span{min-width:34px;height:34px;border-radius:9px;background:#3B3458;color:#BDB6E0;display:grid;place-items:center;font-weight:900;font-size:15px}
+.scroster span.on{background:#3FBF4F;color:#fff}
+#scCamMsg{color:#FFD21A;text-align:center;font-weight:800;padding:4px}
+.scend{display:grid;gap:16px;max-width:900px;margin:0 auto}
+.scpodium{display:flex;gap:12px;align-items:flex-end;justify-content:center;min-height:240px}
+.scpod{display:flex;flex-direction:column;align-items:center;gap:4px;width:min(30%,220px);text-align:center}
+.scpod .scmed{font-size:44px}.scpod b{font-size:18px}
+.scpod i{display:block;width:100%;border:var(--stroke);border-radius:14px 14px 0 0;background:#FFD21A}
+.scpod.p1 i{height:140px}.scpod.p2 i{height:100px;background:#C9CFE0}.scpod.p3 i{height:70px;background:#E59B5B}
+.sctable{width:100%;border-collapse:collapse;background:var(--paper);border:var(--stroke);border-radius:16px;overflow:hidden}
+.sctable th,.sctable td{padding:8px 10px;text-align:left;border-bottom:1px solid #E5E0F5}.sctable th{background:var(--cream)}
+.scprint{position:fixed;top:0;right:0;bottom:0;left:0;z-index:70;background:rgba(20,15,45,.85);overflow:auto;padding:20px}
+.scprint[hidden]{display:none}
+.scprintbar{position:sticky;top:0;display:flex;gap:10px;justify-content:center;padding-bottom:14px;z-index:2;flex-wrap:wrap}
+.scprintbar span{color:#fff;font-weight:800;align-self:center}
+#scPrintCards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.sccard{background:#fff;border-radius:10px;padding:10px;aspect-ratio:1/1.08;display:flex}
+.sccard-in{position:relative;flex:1;display:flex;align-items:center;justify-content:center}
+.sccard-in svg{width:76%;height:auto}
+.scs{position:absolute;font:900 34px/1 Nunito,Arial,sans-serif;color:#000}
+.scs.a{top:0;left:50%;transform:translateX(-50%)}
+.scs.b{right:0;top:50%;transform:translateY(-50%) rotate(90deg)}
+.scs.c{bottom:22px;left:50%;transform:translateX(-50%) rotate(180deg)}
+.scs.d{left:0;top:50%;transform:translateY(-50%) rotate(-90deg)}
+.scno{position:absolute;bottom:0;right:4px;font:700 13px Arial,sans-serif;color:#444;font-style:normal}
+@media print{
+  body.scprinting > *:not(#scPrint){display:none !important}
+  body.scprinting #scPrint{position:static;background:#fff;padding:0;overflow:visible}
+  body.scprinting .scprintbar{display:none}
+  body.scprinting #scPrintCards{display:block}
+  body.scprinting .sccard{width:17cm;height:12.6cm;margin:0 auto .6cm;padding:.3cm;box-sizing:border-box;page-break-inside:avoid;break-inside:avoid;aspect-ratio:auto}
+  body.scprinting .sccard:nth-child(2n){page-break-after:always;break-after:page}
+  body.scprinting .sccard-in svg{width:auto;height:10.4cm}
+  body.scprinting .scs{font-size:40px}
+  body.scprinting .scno{font-size:20px;font-weight:900;color:#000}
+  @page{size:letter portrait;margin:1cm}
+}
 </style>
 
 <style>
@@ -673,6 +752,20 @@ body.qopen .tkscreen .tktop{display:none!important}
           <b>Knockout Royale</b><span>Boxing battle royale! Answer right to punch, kick and use power-ups. Last boxer standing wins.</span>
           <em>Play</em>
         </button>
+        <button class="gcard" data-mode="scan" style="--gc:#3FBF4F">
+          <div class="gart"><svg viewBox="0 0 320 200" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect width="320" height="200" fill="#3B3458"/>
+            <g fill="#4F4772"><rect y="40" width="320" height="34"/><rect y="110" width="320" height="34"/></g>
+            <g><rect x="282" y="8" width="8" height="8" fill="#fff"/><rect x="290" y="8" width="8" height="8" fill="#111"/><rect x="282" y="16" width="8" height="8" fill="#111"/><rect x="290" y="16" width="8" height="8" fill="#fff"/><rect x="282" y="24" width="8" height="8" fill="#fff"/><rect x="290" y="24" width="8" height="8" fill="#111"/><rect x="282" y="32" width="8" height="8" fill="#111"/><rect x="290" y="32" width="8" height="8" fill="#fff"/><rect x="282" y="40" width="8" height="8" fill="#fff"/><rect x="290" y="40" width="8" height="8" fill="#111"/><rect x="282" y="48" width="8" height="8" fill="#111"/><rect x="290" y="48" width="8" height="8" fill="#fff"/><rect x="282" y="56" width="8" height="8" fill="#fff"/><rect x="290" y="56" width="8" height="8" fill="#111"/><rect x="282" y="64" width="8" height="8" fill="#111"/><rect x="290" y="64" width="8" height="8" fill="#fff"/><rect x="282" y="72" width="8" height="8" fill="#fff"/><rect x="290" y="72" width="8" height="8" fill="#111"/><rect x="282" y="80" width="8" height="8" fill="#111"/><rect x="290" y="80" width="8" height="8" fill="#fff"/><rect x="282" y="88" width="8" height="8" fill="#fff"/><rect x="290" y="88" width="8" height="8" fill="#111"/><rect x="282" y="96" width="8" height="8" fill="#111"/><rect x="290" y="96" width="8" height="8" fill="#fff"/><rect x="282" y="104" width="8" height="8" fill="#fff"/><rect x="290" y="104" width="8" height="8" fill="#111"/><rect x="282" y="112" width="8" height="8" fill="#111"/><rect x="290" y="112" width="8" height="8" fill="#fff"/><rect x="282" y="120" width="8" height="8" fill="#fff"/><rect x="290" y="120" width="8" height="8" fill="#111"/><rect x="282" y="128" width="8" height="8" fill="#111"/><rect x="290" y="128" width="8" height="8" fill="#fff"/><rect x="282" y="136" width="8" height="8" fill="#fff"/><rect x="290" y="136" width="8" height="8" fill="#111"/><rect x="282" y="144" width="8" height="8" fill="#111"/><rect x="290" y="144" width="8" height="8" fill="#fff"/><rect x="282" y="152" width="8" height="8" fill="#fff"/><rect x="290" y="152" width="8" height="8" fill="#111"/><rect x="282" y="160" width="8" height="8" fill="#111"/><rect x="290" y="160" width="8" height="8" fill="#fff"/><rect x="282" y="168" width="8" height="8" fill="#fff"/><rect x="290" y="168" width="8" height="8" fill="#111"/><rect x="282" y="176" width="8" height="8" fill="#111"/><rect x="290" y="176" width="8" height="8" fill="#fff"/><rect x="282" y="184" width="8" height="8" fill="#fff"/><rect x="290" y="184" width="8" height="8" fill="#111"/><rect x="282" y="192" width="8" height="8" fill="#111"/><rect x="290" y="192" width="8" height="8" fill="#fff"/></g>
+            <g transform="translate(205 57)"><path d="M-40 -6 L-70 0 L-40 6Z" fill="#FFB400"/><rect x="-38" y="-12" width="70" height="22" rx="7" fill="#FF4F6D" stroke="#1A1530" stroke-width="3"/><path d="M-14 -12 L-6 -26 L14 -26 L20 -12Z" fill="#FF4F6D" stroke="#1A1530" stroke-width="3"/><circle cx="-20" cy="12" r="8" fill="#1A1530"/><circle cx="20" cy="12" r="8" fill="#1A1530"/><text x="-8" y="6" font-size="14" font-weight="900" fill="#fff" font-family="Nunito,sans-serif">7</text></g>
+            <g transform="translate(120 93) rotate(-25)"><rect x="-35" y="-12" width="70" height="22" rx="7" fill="#4DA8FF" stroke="#1A1530" stroke-width="3"/><path d="M-12 -12 L-4 -26 L14 -26 L20 -12Z" fill="#4DA8FF" stroke="#1A1530" stroke-width="3"/><circle cx="-20" cy="12" r="8" fill="#1A1530"/><circle cx="20" cy="12" r="8" fill="#1A1530"/></g>
+            <text x="64" y="100" font-size="26">💨</text>
+            <g transform="translate(160 162)"><path d="M-30 -18 L30 -18 L30 22 L-30 22Z" fill="#fff" stroke="#1A1530" stroke-width="3"/><rect x="-22" y="-12" width="44" height="30" fill="#111"/><rect x="-14" y="-6" width="8" height="8" fill="#fff"/><rect x="2" y="-6" width="12" height="8" fill="#fff"/><rect x="-6" y="6" width="14" height="6" fill="#fff"/></g>
+            <text x="225" y="30" font-size="24">👑</text>
+          </svg></div>
+          <b>Scan Race 📷</b><span>Paper cards, no devices! Students raise their card (A/B/C/D), you scan the class with the camera and everyone races.</span>
+          <em>Play</em>
+        </button>
       </div>
       <div class="row" style="justify-content:center"><button class="btn" id="homeEdit">✏️ Create or edit questions</button><button class="btn" id="homeResume" hidden>↩ Back to current game</button></div>
       <div class="row" style="justify-content:center"><button class="btn primary savedbtn" id="homeSaved" hidden></button></div>
@@ -751,6 +844,49 @@ body.qopen .tkscreen .tktop{display:none!important}
       <button class="firebtn" id="tkFire" hidden>FIRE!</button><div class="tkclock" id="tkClock" hidden>40</div>
     </div>
   </section>
+
+  <!-- SCAN RACE (paper cards + camera) -->
+  <section id="vScan" hidden>
+    <div class="scbar"><h2>📷 Scan Race</h2><div class="row"><button class="btn small" id="scEndNow">🏁 Terminar</button><button class="btn small" id="scHomeB">🏠 Inicio</button></div></div>
+    <div id="scLobby" class="sclobby">
+      <div id="scSetTitle" style="font-weight:900;font-size:20px"></div>
+      <div class="schow"><div style="font-size:54px">🪪</div><ol>
+        <li>Imprime las tarjetas (2 por hoja). Cada alumno tiene un número fijo.</li>
+        <li>El alumno levanta su tarjeta con la letra de su respuesta <b>hacia arriba</b>.</li>
+        <li>Tú le das <b>📷 Escanear</b> y apuntas el celular / la cámara al salón.</li>
+        <li>Revelas la respuesta y los cochecitos avanzan 🏎️💨</li></ol></div>
+      <div class="row" style="gap:24px;flex-wrap:wrap"><label>Número de alumnos <input type="number" id="scN" min="1" max="80" value="30"></label><label>Preguntas (largo de la carrera) <select id="scQn" style="font:inherit;font-size:20px;font-weight:900;padding:6px 10px;border:var(--stroke);border-radius:12px"></select></label></div>
+      <label>Nombres (opcional, uno por renglón, en orden de tarjeta)<textarea id="scNames" placeholder="1. Ana&#10;2. Luis&#10;..."></textarea></label>
+      <div class="scbtns"><button class="btn" id="scPrintB">🖨 Imprimir tarjetas</button><button class="btn primary big" id="scStart">🏁 ¡Arrancar la carrera!</button></div>
+      <span class="hint">Solo se usan las preguntas de opción múltiple y verdadero/falso del set. Los audios (listening) se reproducen aquí.</span>
+    </div>
+    <div id="scPlay" class="scplay" hidden>
+      <div class="scpanel">
+        <div class="schead" id="scHead"></div>
+        <div id="scQ"></div>
+        <div class="scopts" id="scOpts"></div>
+        <div class="scbtns" id="scBtns"></div>
+        <div class="scmsg" id="scMsg"></div>
+      </div>
+      <div class="scracewrap"><canvas id="scRace" aria-label="Race"></canvas></div>
+    </div>
+    <div id="scEnd" class="scend" hidden>
+      <h2 style="text-align:center;margin:0">🏆 ¡Resultados de la carrera!</h2>
+      <div class="scpodium" id="scPodium"></div>
+      <div class="scbtns" style="justify-content:center"><button class="btn primary" id="scCSV">⬇ Descargar calificaciones (CSV)</button><button class="btn" id="scAgain">🏠 Volver al inicio</button></div>
+      <table class="sctable" id="scTable"></table>
+    </div>
+  </section>
+  <div id="scCam" class="sccam" hidden>
+    <div class="sccamtop"><b id="scCamCount">0 / 0</b><span>Apunta a las tarjetas. Las que ya se leyeron se ponen ✓ verdes.</span><span class="sp"></span><button class="btn" id="scCamDone">✔ Listo</button><button class="btn primary" id="scCamReveal">Revelar respuesta</button></div>
+    <div id="scCamMsg"></div>
+    <div class="sccamview"><video id="scVideo" playsinline muted></video><canvas id="scCanvas"></canvas></div>
+    <div class="scroster" id="scRoster"></div>
+  </div>
+  <div id="scPrint" class="scprint" hidden>
+    <div class="scprintbar"><button class="btn primary" id="scPrintGo">🖨 Imprimir</button><button class="btn" id="scPrintClose">Cerrar</button><span>2 tarjetas por hoja. Imprime en blanco y negro, sin escalar.</span></div>
+    <div id="scPrintCards"></div>
+  </div>
 
   <!-- KNOCKOUT ROYALE (boxing) -->
   <section id="vBox" class="tkscreen bxscreen" hidden>
@@ -849,6 +985,7 @@ body.qopen .tkscreen .tktop{display:none!important}
             <button class="mode" data-v="c4"><span class="mini c"><i style="background:#FF5FA2"></i><i style="background:#4DA8FF"></i><i style="background:#FF5FA2"></i></span><b>Four in a Row</b><span>Answer right to drop a disc. Line up 4 to win.</span></button>
             <button class="mode" data-v="plinko"><span class="mini c"><i style="background:#6FD64F"></i><i style="background:#FF8A3D"></i><i style="background:#7B4DFF"></i></span><b>Ball Drop</b><span>Answer right, drop a ball, win the points where it lands.</span></button>
             <button class="mode" data-v="tanks"><span class="mini"><i style="background:#FF8A3D"></i><i style="background:#6FD64F"></i><i style="background:#4DA8FF"></i></span><b>Tank Battle</b><span>Pick your tank skin, move, aim and fire. Buildings break!</span></button>
+            <button class="mode" data-v="scan"><span class="mini"><i style="background:#3FBF4F"></i><i style="background:#FFB400"></i><i style="background:#4DA8FF"></i></span><b>Scan Race</b><span>Printed cards + camera. The whole class answers, cars race.</span></button>
             <button class="mode" data-v="box"><span class="mini"><i style="background:#FF4F6D"></i><i style="background:#FFD21A"></i><i style="background:#4DA8FF"></i></span><b>Knockout Royale</b><span>Boxing battle royale. Punches, kicks, power-ups. Last one standing wins.</span></button>
           </div>
         </div>
@@ -1122,6 +1259,14 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     $("#vPl").hidden = !(v === "play" && m === "plinko");
     $("#vTank").hidden = !(v === "play" && m === "tanks");
     $("#vBox").hidden = !(v === "play" && m === "box");
+    $("#vScan").hidden = !(v === "play" && m === "scan");
+    if (v === "play" && m === "scan") renderScan();
+    else {
+      try {
+        scStopCam();
+      } catch (e) {
+      }
+    }
     if (v === "play" && m === "box") {
       if (!bx) {
         bx = newBx();
@@ -1150,7 +1295,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       renderTkUI();
       startTkLoop();
     } else stopTkLoop();
-    Music.play(v === "home" ? "home" : v === "play" ? m : v === "results" ? "victory" : null);
+    Music.play(v === "home" ? "home" : v === "play" ? m === "scan" ? null : m : v === "results" ? "victory" : null);
   }
   function openSetup() {
     renderSetup();
@@ -1245,6 +1390,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       cfg.emojis[+sel.dataset.i] = sel.value;
     });
     $("#modeSeg").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === cfg.mode));
+    $("#teamCount").parentElement.hidden = cfg.mode === "scan";
     $("#ptsField").hidden = cfg.mode !== "tiles";
     $("#powersField").hidden = cfg.mode !== "tiles";
     $("#roundsField").hidden = cfg.mode !== "plinko";
@@ -1347,6 +1493,8 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       startTanks(base, order);
     } else if (cfg.mode === "box") {
       startBox(base, order);
+    } else if (cfg.mode === "scan") {
+      startScan(base, order);
     } else if (cfg.mode === "plinko") {
       game = __spreadProps(__spreadValues({}, base), { mode: "plinko", order, qPtr: 0, asked: 0, phase: "question", rounds: cfg.rounds, turnsTaken: 0, over: false });
       plBall = null;
@@ -8935,10 +9083,10 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       c.fill();
     }
     if (impact) {
-      const t = f - POV_IMP, sc = 1 + Math.max(0, 0.7 - t * 0.07);
+      const t = f - POV_IMP, sc2 = 1 + Math.max(0, 0.7 - t * 0.07);
       c.save();
       c.translate(W / 2, H * 0.22);
-      c.scale(sc, sc);
+      c.scale(sc2, sc2);
       povText(c, P.boomTxt || "BOOM!", 0, 0, 54, "#FFD21A", "center", U);
       c.restore();
       povText(c, P.kind === "nuke" ? "\u2622 NUCLEAR IMPACT \u2622" : "\u{1F3A5} DIRECT HIT", W / 2, H * 0.22 + 44 * U, 20, P.kind === "nuke" ? "#FFE58A" : "#CBB6FF", "center", U);
@@ -9085,10 +9233,10 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     if (f < P.rel) povText(c, P.foe ? `TARGET: ${game.teams[P.foe.team].name}` : "TARGET LOCKED", W / 2, pad + 50 * U, 20, "#FF6B85", "center", U);
     if (f >= P.rel && f < P.rel + 28) povText(c, "\u{1F4A3} BOMBS AWAY! \u{1F4A3}", W / 2, H * 0.25, 40, "#FFD21A", "center", U);
     if (P.hitAt) {
-      const t = f - P.hitAt, sc = 1 + Math.max(0, 0.7 - t * 0.07);
+      const t = f - P.hitAt, sc2 = 1 + Math.max(0, 0.7 - t * 0.07);
       c.save();
       c.translate(W / 2, H * 0.22);
-      c.scale(sc, sc);
+      c.scale(sc2, sc2);
       povText(c, P.boomTxt, 0, 0, 54, "#FFD21A", "center", U);
       c.restore();
     } else if (f > P.rel + 40 && !P.foe) povText(c, P.boomTxt, W / 2, H * 0.22, 44, "#FFD21A", "center", U);
@@ -9145,10 +9293,10 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     if (f < POV_FIRE && blink) povText(c, "\u26A0 NUCLEAR LAUNCH DETECTED \u26A0", W / 2, H * 0.26, 26, "#FFD21A", "center", U);
     const cd = f < 18 ? null : f < 32 ? "3" : f < 46 ? "2" : f < POV_FIRE ? "1" : f < POV_FIRE + 22 ? "LAUNCH!" : null;
     if (cd) {
-      const local = cd === "LAUNCH!" ? f - POV_FIRE : (f - 18) % 14, sc = 1 + Math.max(0, 0.6 - local * 0.06);
+      const local = cd === "LAUNCH!" ? f - POV_FIRE : (f - 18) % 14, sc2 = 1 + Math.max(0, 0.6 - local * 0.06);
       c.save();
       c.translate(W / 2, H * 0.42);
-      c.scale(sc, sc);
+      c.scale(sc2, sc2);
       povText(c, cd, 0, 0, cd === "LAUNCH!" ? 60 : 72, cd === "LAUNCH!" ? "#FFD21A" : "#fff", "center", U);
       c.restore();
     }
@@ -11246,8 +11394,8 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       for (let j = 0; j < 3; j++) bxPart({ x: A.x + rnd(-26, 26), y: A.y - A.jump - rnd(0, 60), vx: rnd(-2, 2), vy: -rnd(2, 5), life: 26, size: rnd(18, 30), type: "fire" });
     }
     if (name === "scream" && a.t % 6 === 1) {
-      const sc = bxScale(A.y);
-      bx.rings.push({ x: A.x + A.dir * 40 * sc, y: A.y - 190 * sc, r: 20, max: 900, t: 0, col: game.teams[a.a].color });
+      const sc2 = bxScale(A.y);
+      bx.rings.push({ x: A.x + A.dir * 40 * sc2, y: A.y - 190 * sc2, r: 20, max: 900, t: 0, col: game.teams[a.a].color });
       SFX.play("whoosh");
       for (let j = 0; j < 2; j++) bxPart({ x: A.x + rnd(-60, 60), y: A.y - rnd(150, 260), vx: rnd(-3, 3), vy: -rnd(1, 3), life: 40, size: rnd(14, 20), type: "note" });
     }
@@ -11258,13 +11406,13 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       const per = Math.max(1, Math.floor(dur / (a.R.n || 1)));
       if ((a.t - 1) % per === 0 && a.hitIdx < (a.R.n || 1)) {
         const k = a.hitIdx++;
-        const sc = bxScale(A.y);
+        const sc2 = bxScale(A.y);
         a.targets.forEach((ti) => {
           const B = bx.b[ti];
           bx.proj.push({
             kind: a.R.proj,
-            x: A.x + (a.move === "tomato" ? 0 : A.dir * 50 * sc),
-            y: A.y - (a.move === "tomato" ? 60 : 160 * sc),
+            x: A.x + (a.move === "tomato" ? 0 : A.dir * 50 * sc2),
+            y: A.y - (a.move === "tomato" ? 60 : 160 * sc2),
             tx: B.x + rnd(-10, 10),
             ty: B.y - 160 * bxScale(B.y) + rnd(-20, 20),
             t: 0,
@@ -11324,14 +11472,14 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     }
   }
   function bxPowerFx(a, u) {
-    const A = bx.b[a.a], sc = bxScale(A.y), k = a.move.slice(3);
+    const A = bx.b[a.a], sc2 = bxScale(A.y), k = a.move.slice(3);
     A.flex = Math.sin(u * Math.PI);
     if (k === "heal" || k === "medkit") {
-      if (bx.t % 3 === 0) bxPart({ x: A.x + rnd(-60, 60), y: A.y - rnd(20, 250) * sc, vx: 0, vy: -rnd(1, 3), life: 50, size: rnd(12, 18), type: "heart" });
-      if (k === "medkit" && bx.t % 2 === 0) bxPart({ x: A.x + rnd(-80, 80), y: A.y - rnd(0, 280) * sc, vx: 0, vy: -2, life: 30, size: rnd(8, 12), type: "plus" });
+      if (bx.t % 3 === 0) bxPart({ x: A.x + rnd(-60, 60), y: A.y - rnd(20, 250) * sc2, vx: 0, vy: -rnd(1, 3), life: 50, size: rnd(12, 18), type: "heart" });
+      if (k === "medkit" && bx.t % 2 === 0) bxPart({ x: A.x + rnd(-80, 80), y: A.y - rnd(0, 280) * sc2, vx: 0, vy: -2, life: 30, size: rnd(8, 12), type: "plus" });
     }
-    if (k === "guard" && bx.t % 3 === 0) bxPart({ x: A.x + rnd(-80, 80), y: A.y - rnd(0, 260) * sc, vx: 0, vy: -1, life: 26, size: 5, type: "spark", col: "#9FD8FF" });
-    if (k === "fire" && bx.t % 1 === 0) for (let j = 0; j < 2; j++) bxPart({ x: A.x + rnd(-70, 70), y: A.y - rnd(0, 280) * sc, vx: rnd(-1, 1), vy: -rnd(2, 5), life: 30, size: rnd(14, 26), type: "fire" });
+    if (k === "guard" && bx.t % 3 === 0) bxPart({ x: A.x + rnd(-80, 80), y: A.y - rnd(0, 260) * sc2, vx: 0, vy: -1, life: 26, size: 5, type: "spark", col: "#9FD8FF" });
+    if (k === "fire" && bx.t % 1 === 0) for (let j = 0; j < 2; j++) bxPart({ x: A.x + rnd(-70, 70), y: A.y - rnd(0, 280) * sc2, vx: rnd(-1, 1), vy: -rnd(2, 5), life: 30, size: rnd(14, 26), type: "fire" });
     if (k === "thunder" && Math.random() < 0.2) {
       bx.bolts = 5;
       bx.boltX = A.x;
@@ -11340,7 +11488,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     }
     if (k === "beast") {
       A.grow = u;
-      if (bx.t % 2 === 0) bxPart({ x: A.x + rnd(-90, 90), y: A.y - rnd(0, 280) * sc, vx: rnd(-2, 2), vy: -rnd(1, 3), life: 30, size: rnd(14, 22), type: "smoke" });
+      if (bx.t % 2 === 0) bxPart({ x: A.x + rnd(-90, 90), y: A.y - rnd(0, 280) * sc2, vx: rnd(-2, 2), vy: -rnd(1, 3), life: 30, size: rnd(14, 22), type: "smoke" });
       bx.shake = Math.max(bx.shake, 4);
     }
   }
@@ -11376,7 +11524,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
   function bxHit(a, ti, frac, last) {
     const T = bx.b[ti], F = game.f[ti], A = bx.b[a.a], FA = game.f[a.a], C = bxF(a.a);
     if (!F.alive) return;
-    const sc = bxScale(T.y), hx = T.x, hy = T.y - (a.move === "sweep" || a.move === "tail" ? 40 : a.move === "flykick" ? 150 : 175) * sc;
+    const sc2 = bxScale(T.y), hx = T.x, hy = T.y - (a.move === "sweep" || a.move === "tail" ? 40 : a.move === "flykick" ? 150 : 175) * sc2;
     if (a.missed === void 0) a.missed = {};
     if (a.missed[ti] === void 0) a.missed[ti] = Math.random() > a.acc;
     if (a.missed[ti]) {
@@ -11425,7 +11573,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     } else if (a.move === "banana") {
       F.slip = true;
       SFX.play("slip");
-      bxPow(hx, hy + 60 * sc, "SLIP!", "#FFD21A");
+      bxPow(hx, hy + 60 * sc2, "SLIP!", "#FFD21A");
     } else if (a.move === "claws") {
       bx.slashes.push({ x: hx + rnd(-20, 20), y: hy + rnd(-30, 30), t: 0, rot: rnd(-0.6, 0.6), n: 3 });
       if (last) bxPow(hx, hy, "NYA-NYA-NYA!", "#FF5FA2", true);
@@ -11435,7 +11583,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     } else if (a.move === "storm") {
       bx.bolts = 12;
       bx.boltX = T.x;
-      bx.boltY = T.y - 120 * sc;
+      bx.boltY = T.y - 120 * sc2;
       F.soot = 90;
       SFX.play("zap");
       bxPow(hx, hy, "ZZZAP!", "#FFE45C", true);
@@ -11550,13 +11698,13 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     const B = bx.b[i], d = B.down;
     if (!d) return;
     d.t++;
-    const sc = bxScale(B.y);
+    const sc2 = bxScale(B.y);
     if (d.phase === "air") {
       const D = 40, u = Math.min(1, d.t / D);
       B.x = Math.max(260, Math.min(1340, d.sx + d.vx * d.t * 0.7));
       B.jump = Math.sin(u * Math.PI) * 170;
       B.rot = -u * Math.PI * 2.5 * (d.away === B.dir ? 1 : -1);
-      if (d.t % 3 === 0) bxPart({ x: B.x, y: B.y - B.jump - 100 * sc, vx: 0, vy: 0, life: 18, size: rnd(10, 16), type: "smoke" });
+      if (d.t % 3 === 0) bxPart({ x: B.x, y: B.y - B.jump - 100 * sc2, vx: 0, vy: 0, life: 18, size: rnd(10, 16), type: "smoke" });
       if (d.t >= D) {
         d.phase = "land";
         d.t = 0;
@@ -11597,7 +11745,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
         } else {
           d.phase = "up";
           d.t = 0;
-          bxFloat(B.x, B.y - 300 * sc, "Gets up!", "#fff");
+          bxFloat(B.x, B.y - 300 * sc2, "Gets up!", "#fff");
         }
       }
     } else if (d.phase === "up") {
@@ -11662,8 +11810,8 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       } else {
         S.t++;
         const A = B, P = bx.b[S.b], u = S.t / S.dur;
-        const side = A.hx < P.hx ? -1 : 1, sc = bxScale(P.hy);
-        const st = { x: P.hx + side * 112 * sc, y: P.hy + 3 };
+        const side = A.hx < P.hx ? -1 : 1, sc2 = bxScale(P.hy);
+        const st = { x: P.hx + side * 112 * sc2, y: P.hy + 3 };
         const e = u < 0.18 ? bxEase(u / 0.18) : u > 0.82 ? bxEase((1 - u) / 0.18) : 1;
         A.sox = (st.x - A.hx) * e;
         A.soy = (st.y - A.hy) * e;
@@ -11945,11 +12093,11 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       c.stroke();
     }
   }
-  function drawFighter(c, S, P, now, sc, dir, x, y, extra) {
+  function drawFighter(c, S, P, now, sc2, dir, x, y, extra) {
     extra = extra || {};
     const C = FIGHTERS[S.char] || FIGHTERS.toro, tc = S.color, dmg = S.dmg || 0, bw = C.w || 1;
     const id = S.char, skin = C.skin, robot = id === "mecha";
-    const s = sc * (extra.grow ? 1 + extra.grow * 0.35 : 1) * (S.buff === "beast" ? 1.3 : 1);
+    const s = sc2 * (extra.grow ? 1 + extra.grow * 0.35 : 1) * (S.buff === "beast" ? 1.3 : 1);
     c.save();
     c.translate(x, y);
     if (!extra.noShadow) {
@@ -13389,15 +13537,15 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     }
     return bxFaceCache[src];
   }
-  function drawBoxer(c, i, x, y, sc, dir, P, now) {
+  function drawBoxer(c, i, x, y, sc2, dir, P, now) {
     const B = bx.b[i], F = game.f[i];
     const a = bx.act, grow = a && a.a === i && a.move === "pu_beast" ? B.grow || 0 : 0;
-    drawFighter(c, bxFighterSpec(i), P, now, sc, dir, x, y, { jump: (B.jump || 0) + (B.ky || 0), spin: B.spin, squash: B.squash, grow, pivotFeet: !!B.down && B.down.phase !== "air" || !!B.ko, tail: a && a.a === i && a.move === "tail" ? 1 : 0 });
+    drawFighter(c, bxFighterSpec(i), P, now, sc2, dir, x, y, { jump: (B.jump || 0) + (B.ky || 0), spin: B.spin, squash: B.squash, grow, pivotFeet: !!B.down && B.down.phase !== "air" || !!B.ko, tail: a && a.a === i && a.move === "tail" ? 1 : 0 });
     if (F.soot > 0) F.soot--;
     if (B.say && !B.ko && !B.down) {
       B.say.t++;
       const text = B.say.text, bxw = Math.min(380, 26 + text.length * 11.5);
-      const by = y - (B.jump || 0) - 290 * sc - 20;
+      const by = y - (B.jump || 0) - 290 * sc2 - 20;
       c.save();
       c.font = "800 22px Nunito, sans-serif";
       c.textAlign = "center";
@@ -13424,14 +13572,14 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     R.x += (R.tx - R.x) * 0.1;
     R.y += (R.ty - R.y) * 0.1;
     R.arm *= 0.85;
-    const sc = bxScale(R.y) * 0.92, dir = R.x < BX.CX ? 1 : -1, walk = Math.abs(R.tx - R.x) > 4 ? Math.sin(now * 0.4) * 10 : 0;
+    const sc2 = bxScale(R.y) * 0.92, dir = R.x < BX.CX ? 1 : -1, walk = Math.abs(R.tx - R.x) > 4 ? Math.sin(now * 0.4) * 10 : 0;
     c.save();
     c.translate(R.x, R.y);
     c.fillStyle = "rgba(0,0,0,.25)";
     c.beginPath();
-    c.ellipse(0, 3, 40 * sc, 9 * sc, 0, 0, 7);
+    c.ellipse(0, 3, 40 * sc2, 9 * sc2, 0, 0, 7);
     c.fill();
-    c.scale(sc * dir, sc);
+    c.scale(sc2 * dir, sc2);
     bxStrokeLine(c, [[-8, -76], [-8 + walk * 0.4, -38], [-10 + walk, 0]], 14, "#1E1A3A");
     bxStrokeLine(c, [[8, -76], [8 - walk * 0.4, -38], [10 - walk, 0]], 14, "#1E1A3A");
     c.fillStyle = "#fff";
@@ -13819,7 +13967,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
         return;
       }
       const B = bx.b[i];
-      const sc = bxScale(Math.min(B.y, 820));
+      const sc2 = bxScale(Math.min(B.y, 820));
       const P = bxPose(i, now);
       if (B.rot) P.rot = B.rot;
       if (B.ko && B.ko.done) {
@@ -13827,13 +13975,13 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
         c.translate(B.x, B.y);
         c.rotate(Math.PI / 2 * 0.98);
         c.translate(-B.x, -B.y);
-        drawFighter(c, bxFighterSpec(i), __spreadProps(__spreadValues({}, P), { rot: 0 }), now, sc * 0.85, 1, B.x, B.y, { noShadow: true });
+        drawFighter(c, bxFighterSpec(i), __spreadProps(__spreadValues({}, P), { rot: 0 }), now, sc2 * 0.85, 1, B.x, B.y, { noShadow: true });
         c.restore();
         for (let j = 0; j < 3; j++) {
           const a2 = now * 0.08 + j * 2.1;
           c.font = "24px sans-serif";
           c.textAlign = "center";
-          c.fillText("\u2B50", B.x + 150 * sc * 0.85 + Math.cos(a2) * 34, B.y - 30 + Math.sin(a2) * 10);
+          c.fillText("\u2B50", B.x + 150 * sc2 * 0.85 + Math.cos(a2) * 34, B.y - 30 + Math.sin(a2) * 10);
         }
         c.save();
         c.fillStyle = game.teams[i].color;
@@ -13844,7 +13992,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
         c.strokeText(game.teams[i].name, B.x + 90, B.y - 62);
         c.fillText(game.teams[i].name, B.x + 90, B.y - 62);
         c.restore();
-        bx.hit.push({ i, x0: B.x - 40, x1: B.x + 220 * sc, y0: B.y - 60, y1: B.y + 40 });
+        bx.hit.push({ i, x0: B.x - 40, x1: B.x + 220 * sc2, y0: B.y - 60, y1: B.y + 40 });
         return;
       }
       if (!B.ko) {
@@ -13853,7 +14001,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
         c.strokeStyle = game.teams[i].color;
         c.lineWidth = 7;
         c.beginPath();
-        c.ellipse(B.x, B.y + 2, 62 * sc, 15 * sc, 0, 0, 7);
+        c.ellipse(B.x, B.y + 2, 62 * sc2, 15 * sc2, 0, 0, 7);
         c.stroke();
         c.restore();
       }
@@ -13869,23 +14017,23 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
           c.setLineDash([12, 10]);
           c.lineDashOffset = -now;
           c.beginPath();
-          c.ellipse(B.x, B.y, 80 * sc, 22 * sc, 0, 0, 7);
+          c.ellipse(B.x, B.y, 80 * sc2, 22 * sc2, 0, 0, 7);
           c.stroke();
           c.setLineDash([]);
           c.font = "38px sans-serif";
-          c.fillText("\u{1F3AF}", B.x, B.y - 300 * sc + Math.sin(now * 0.15) * 8);
+          c.fillText("\u{1F3AF}", B.x, B.y - 300 * sc2 + Math.sin(now * 0.15) * 8);
         }
         if (game.turn === i && (game.phase === "question" || game.phase === "act")) {
           c.fillStyle = "#FFD21A";
           c.strokeStyle = BXINK;
           c.lineWidth = 3;
-          bxStar(c, B.x, B.y - 292 * sc + Math.sin(now * 0.12) * 6, 18, 5, 0.45);
+          bxStar(c, B.x, B.y - 292 * sc2 + Math.sin(now * 0.12) * 6, 18, 5, 0.45);
           c.fill();
           c.stroke();
         }
         c.restore();
       }
-      bx.hit.push({ i, x0: B.x - 70 * sc, x1: B.x + 70 * sc, y0: B.y - 260 * sc, y1: B.y + 20 });
+      bx.hit.push({ i, x0: B.x - 70 * sc2, x1: B.x + 70 * sc2, y0: B.y - 260 * sc2, y1: B.y + 20 });
     };
     order.forEach(drawOne);
     bxDrawFrontRopes(c);
@@ -14468,6 +14616,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
   let saveSig = "";
   function canSave() {
     if (!game || game.over || view !== "play" || !$("#overlay").hidden) return false;
+    if (game.mode === "scan") return false;
     if (game.mode === "tanks") return game.phase === "question" && tk && !(tk.shots || []).length;
     if (game.mode === "c4" || game.mode === "plinko" || game.mode === "box") return game.phase === "question" && !(bx && bx.act);
     return true;
@@ -14591,8 +14740,8 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       return;
     }
     const names = { tiles: "Tile Board", c4: "Four in a Row", plinko: "Ball Drop", tanks: "Tank Battle", box: "Knockout Royale" };
-    const sc = d.game.teams.map((t) => `${t.name} ${t.score}`).join(" \xB7 "), when = new Date(d.savedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    b.innerHTML = `\u25B6 Continue saved game<small>${names[d.game.mode] || ""} \xB7 ${esc(sc)} \xB7 ${when}</small>`;
+    const sc2 = d.game.teams.map((t) => `${t.name} ${t.score}`).join(" \xB7 "), when = new Date(d.savedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    b.innerHTML = `\u25B6 Continue saved game<small>${names[d.game.mode] || ""} \xB7 ${esc(sc2)} \xB7 ${when}</small>`;
     b.hidden = false;
   }
   $("#homeSaved").onclick = resumeSaved;
@@ -14600,6 +14749,1214 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     if (view === "home") refreshSavedBtn();
   }, 1500);
   ((_b = (_a = window.claude) == null ? void 0 : _a.hot) == null ? void 0 : _b.ready) ? window.claude.hot.ready(start) : start((_e = (_d = (_c = window.claude) == null ? void 0 : _c.hot) == null ? void 0 : _d.data) != null ? _e : {});
+  const ARUCO = function() {
+    var module = { exports: {} };
+    var CV = CV || {};
+    CV.Image = function(width, height, data) {
+      this.width = width || 0;
+      this.height = height || 0;
+      this.data = data || [];
+    };
+    CV.grayscale = function(imageSrc, imageDst) {
+      var src = imageSrc.data, dst = imageDst.data, len = src.length, i = 0, j = 0;
+      for (; i < len; i += 4) {
+        dst[j++] = src[i] * 0.299 + src[i + 1] * 0.587 + src[i + 2] * 0.114 + 0.5 & 255;
+      }
+      imageDst.width = imageSrc.width;
+      imageDst.height = imageSrc.height;
+      return imageDst;
+    };
+    CV.threshold = function(imageSrc, imageDst, threshold) {
+      var src = imageSrc.data, dst = imageDst.data, len = src.length, tab = [], i;
+      for (i = 0; i < 256; ++i) {
+        tab[i] = i <= threshold ? 0 : 255;
+      }
+      for (i = 0; i < len; ++i) {
+        dst[i] = tab[src[i]];
+      }
+      imageDst.width = imageSrc.width;
+      imageDst.height = imageSrc.height;
+      return imageDst;
+    };
+    CV.adaptiveThreshold = function(imageSrc, imageDst, kernelSize, threshold) {
+      var src = imageSrc.data, dst = imageDst.data, len = src.length, tab = [], i;
+      CV.stackBoxBlur(imageSrc, imageDst, kernelSize);
+      for (i = 0; i < 768; ++i) {
+        tab[i] = i - 255 <= -threshold ? 255 : 0;
+      }
+      for (i = 0; i < len; ++i) {
+        dst[i] = tab[src[i] - dst[i] + 255];
+      }
+      imageDst.width = imageSrc.width;
+      imageDst.height = imageSrc.height;
+      return imageDst;
+    };
+    CV.otsu = function(imageSrc) {
+      var src = imageSrc.data, len = src.length, hist = [], threshold = 0, sum = 0, sumB = 0, wB = 0, wF = 0, max = 0, mu, between, i;
+      for (i = 0; i < 256; ++i) {
+        hist[i] = 0;
+      }
+      for (i = 0; i < len; ++i) {
+        hist[src[i]]++;
+      }
+      for (i = 0; i < 256; ++i) {
+        sum += hist[i] * i;
+      }
+      for (i = 0; i < 256; ++i) {
+        wB += hist[i];
+        if (0 !== wB) {
+          wF = len - wB;
+          if (0 === wF) {
+            break;
+          }
+          sumB += hist[i] * i;
+          mu = sumB / wB - (sum - sumB) / wF;
+          between = wB * wF * mu * mu;
+          if (between > max) {
+            max = between;
+            threshold = i;
+          }
+        }
+      }
+      return threshold;
+    };
+    CV.stackBoxBlurMult = [1, 171, 205, 293, 57, 373, 79, 137, 241, 27, 391, 357, 41, 19, 283, 265];
+    CV.stackBoxBlurShift = [0, 9, 10, 11, 9, 12, 10, 11, 12, 9, 13, 13, 10, 9, 13, 13];
+    CV.BlurStack = function() {
+      this.color = 0;
+      this.next = null;
+    };
+    CV.stackBoxBlur = function(imageSrc, imageDst, kernelSize) {
+      var src = imageSrc.data, dst = imageDst.data, height = imageSrc.height, width = imageSrc.width, heightMinus1 = height - 1, widthMinus1 = width - 1, size = kernelSize + kernelSize + 1, radius = kernelSize + 1, mult = CV.stackBoxBlurMult[kernelSize], shift = CV.stackBoxBlurShift[kernelSize], stack, stackStart, color, sum, pos, start2, p, x, y, i;
+      stack = stackStart = new CV.BlurStack();
+      for (i = 1; i < size; ++i) {
+        stack = stack.next = new CV.BlurStack();
+      }
+      stack.next = stackStart;
+      pos = 0;
+      for (y = 0; y < height; ++y) {
+        start2 = pos;
+        color = src[pos];
+        sum = radius * color;
+        stack = stackStart;
+        for (i = 0; i < radius; ++i) {
+          stack.color = color;
+          stack = stack.next;
+        }
+        for (i = 1; i < radius; ++i) {
+          stack.color = src[pos + i];
+          sum += stack.color;
+          stack = stack.next;
+        }
+        stack = stackStart;
+        for (x = 0; x < width; ++x) {
+          dst[pos++] = sum * mult >>> shift;
+          p = x + radius;
+          p = start2 + (p < widthMinus1 ? p : widthMinus1);
+          sum -= stack.color - src[p];
+          stack.color = src[p];
+          stack = stack.next;
+        }
+      }
+      for (x = 0; x < width; ++x) {
+        pos = x;
+        start2 = pos + width;
+        color = dst[pos];
+        sum = radius * color;
+        stack = stackStart;
+        for (i = 0; i < radius; ++i) {
+          stack.color = color;
+          stack = stack.next;
+        }
+        for (i = 1; i < radius; ++i) {
+          stack.color = dst[start2];
+          sum += stack.color;
+          stack = stack.next;
+          start2 += width;
+        }
+        stack = stackStart;
+        for (y = 0; y < height; ++y) {
+          dst[pos] = sum * mult >>> shift;
+          p = y + radius;
+          p = x + (p < heightMinus1 ? p : heightMinus1) * width;
+          sum -= stack.color - dst[p];
+          stack.color = dst[p];
+          stack = stack.next;
+          pos += width;
+        }
+      }
+      return imageDst;
+    };
+    CV.gaussianBlur = function(imageSrc, imageDst, imageMean, kernelSize) {
+      var kernel = CV.gaussianKernel(kernelSize);
+      imageDst.width = imageSrc.width;
+      imageDst.height = imageSrc.height;
+      imageMean.width = imageSrc.width;
+      imageMean.height = imageSrc.height;
+      CV.gaussianBlurFilter(imageSrc, imageMean, kernel, true);
+      CV.gaussianBlurFilter(imageMean, imageDst, kernel, false);
+      return imageDst;
+    };
+    CV.gaussianBlurFilter = function(imageSrc, imageDst, kernel, horizontal) {
+      var src = imageSrc.data, dst = imageDst.data, height = imageSrc.height, width = imageSrc.width, pos = 0, limit = kernel.length >> 1, cur, value, i, j, k;
+      for (i = 0; i < height; ++i) {
+        for (j = 0; j < width; ++j) {
+          value = 0;
+          for (k = -limit; k <= limit; ++k) {
+            if (horizontal) {
+              cur = pos + k;
+              if (j + k < 0) {
+                cur = pos;
+              } else if (j + k >= width) {
+                cur = pos;
+              }
+            } else {
+              cur = pos + k * width;
+              if (i + k < 0) {
+                cur = pos;
+              } else if (i + k >= height) {
+                cur = pos;
+              }
+            }
+            value += kernel[limit + k] * src[cur];
+          }
+          dst[pos++] = horizontal ? value : value + 0.5 & 255;
+        }
+      }
+      return imageDst;
+    };
+    CV.gaussianKernel = function(kernelSize) {
+      var tab = [
+        [1],
+        [0.25, 0.5, 0.25],
+        [0.0625, 0.25, 0.375, 0.25, 0.0625],
+        [0.03125, 0.109375, 0.21875, 0.28125, 0.21875, 0.109375, 0.03125]
+      ], kernel = [], center, sigma, scale2X, sum, x, i;
+      if (kernelSize <= 7 && kernelSize % 2 === 1) {
+        kernel = tab[kernelSize >> 1];
+      } else {
+        center = (kernelSize - 1) * 0.5;
+        sigma = 0.8 + 0.3 * (center - 1);
+        scale2X = -0.5 / (sigma * sigma);
+        sum = 0;
+        for (i = 0; i < kernelSize; ++i) {
+          x = i - center;
+          sum += kernel[i] = Math.exp(scale2X * x * x);
+        }
+        sum = 1 / sum;
+        for (i = 0; i < kernelSize; ++i) {
+          kernel[i] *= sum;
+        }
+      }
+      return kernel;
+    };
+    CV.findContours = function(imageSrc, binary) {
+      var width = imageSrc.width, height = imageSrc.height, contours = [], src, deltas, pos, pix, nbd, outer, hole, i, j;
+      src = CV.binaryBorder(imageSrc, binary);
+      deltas = CV.neighborhoodDeltas(width + 2);
+      pos = width + 3;
+      nbd = 1;
+      for (i = 0; i < height; ++i, pos += 2) {
+        for (j = 0; j < width; ++j, ++pos) {
+          pix = src[pos];
+          if (0 !== pix) {
+            outer = hole = false;
+            if (1 === pix && 0 === src[pos - 1]) {
+              outer = true;
+            } else if (pix >= 1 && 0 === src[pos + 1]) {
+              hole = true;
+            }
+            if (outer || hole) {
+              ++nbd;
+              contours.push(CV.borderFollowing(src, pos, nbd, { x: j, y: i }, hole, deltas));
+            }
+          }
+        }
+      }
+      return contours;
+    };
+    CV.borderFollowing = function(src, pos, nbd, point, hole, deltas) {
+      var contour = [], pos1, pos3, pos4, s, s_end, s_prev;
+      contour.hole = hole;
+      s = s_end = hole ? 0 : 4;
+      do {
+        s = s - 1 & 7;
+        pos1 = pos + deltas[s];
+        if (src[pos1] !== 0) {
+          break;
+        }
+      } while (s !== s_end);
+      if (s === s_end) {
+        src[pos] = -nbd;
+        contour.push({ x: point.x, y: point.y });
+      } else {
+        pos3 = pos;
+        s_prev = s ^ 4;
+        while (true) {
+          s_end = s;
+          do {
+            pos4 = pos3 + deltas[++s];
+          } while (src[pos4] === 0);
+          s &= 7;
+          if (s - 1 >>> 0 < s_end >>> 0) {
+            src[pos3] = -nbd;
+          } else if (src[pos3] === 1) {
+            src[pos3] = nbd;
+          }
+          contour.push({ x: point.x, y: point.y });
+          s_prev = s;
+          point.x += CV.neighborhood[s][0];
+          point.y += CV.neighborhood[s][1];
+          if (pos4 === pos && pos3 === pos1) {
+            break;
+          }
+          pos3 = pos4;
+          s = s + 4 & 7;
+        }
+      }
+      return contour;
+    };
+    CV.neighborhood = [[1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1], [0, 1], [1, 1]];
+    CV.neighborhoodDeltas = function(width) {
+      var deltas = [], len = CV.neighborhood.length, i = 0;
+      for (; i < len; ++i) {
+        deltas[i] = CV.neighborhood[i][0] + CV.neighborhood[i][1] * width;
+      }
+      return deltas.concat(deltas);
+    };
+    CV.approxPolyDP = function(contour, epsilon) {
+      var slice = { start_index: 0, end_index: 0 }, right_slice = { start_index: 0, end_index: 0 }, poly2 = [], stack = [], len = contour.length, pt, start_pt, end_pt, dist, max_dist, le_eps, dx, dy, i, j, k;
+      epsilon *= epsilon;
+      k = 0;
+      for (i = 0; i < 3; ++i) {
+        max_dist = 0;
+        k = (k + right_slice.start_index) % len;
+        start_pt = contour[k];
+        if (++k === len) {
+          k = 0;
+        }
+        for (j = 1; j < len; ++j) {
+          pt = contour[k];
+          if (++k === len) {
+            k = 0;
+          }
+          dx = pt.x - start_pt.x;
+          dy = pt.y - start_pt.y;
+          dist = dx * dx + dy * dy;
+          if (dist > max_dist) {
+            max_dist = dist;
+            right_slice.start_index = j;
+          }
+        }
+      }
+      if (max_dist <= epsilon) {
+        poly2.push({ x: start_pt.x, y: start_pt.y });
+      } else {
+        slice.start_index = k;
+        slice.end_index = right_slice.start_index += slice.start_index;
+        right_slice.start_index -= right_slice.start_index >= len ? len : 0;
+        right_slice.end_index = slice.start_index;
+        if (right_slice.end_index < right_slice.start_index) {
+          right_slice.end_index += len;
+        }
+        stack.push({ start_index: right_slice.start_index, end_index: right_slice.end_index });
+        stack.push({ start_index: slice.start_index, end_index: slice.end_index });
+      }
+      while (stack.length !== 0) {
+        slice = stack.pop();
+        end_pt = contour[slice.end_index % len];
+        start_pt = contour[k = slice.start_index % len];
+        if (++k === len) {
+          k = 0;
+        }
+        if (slice.end_index <= slice.start_index + 1) {
+          le_eps = true;
+        } else {
+          max_dist = 0;
+          dx = end_pt.x - start_pt.x;
+          dy = end_pt.y - start_pt.y;
+          for (i = slice.start_index + 1; i < slice.end_index; ++i) {
+            pt = contour[k];
+            if (++k === len) {
+              k = 0;
+            }
+            dist = Math.abs((pt.y - start_pt.y) * dx - (pt.x - start_pt.x) * dy);
+            if (dist > max_dist) {
+              max_dist = dist;
+              right_slice.start_index = i;
+            }
+          }
+          le_eps = max_dist * max_dist <= epsilon * (dx * dx + dy * dy);
+        }
+        if (le_eps) {
+          poly2.push({ x: start_pt.x, y: start_pt.y });
+        } else {
+          right_slice.end_index = slice.end_index;
+          slice.end_index = right_slice.start_index;
+          stack.push({ start_index: right_slice.start_index, end_index: right_slice.end_index });
+          stack.push({ start_index: slice.start_index, end_index: slice.end_index });
+        }
+      }
+      return poly2;
+    };
+    CV.warp = function(imageSrc, imageDst, contour, warpSize) {
+      var src = imageSrc.data, dst = imageDst.data, width = imageSrc.width, height = imageSrc.height, pos = 0, sx1, sx2, dx1, dx2, sy1, sy2, dy1, dy2, p1, p2, p3, p4, m, r, s, t, u, v, w, x, y, i, j;
+      m = CV.getPerspectiveTransform(contour, warpSize - 1);
+      r = m[8];
+      s = m[2];
+      t = m[5];
+      for (i = 0; i < warpSize; ++i) {
+        r += m[7];
+        s += m[1];
+        t += m[4];
+        u = r;
+        v = s;
+        w = t;
+        for (j = 0; j < warpSize; ++j) {
+          u += m[6];
+          v += m[0];
+          w += m[3];
+          x = v / u;
+          y = w / u;
+          sx1 = x >>> 0;
+          sx2 = sx1 === width - 1 ? sx1 : sx1 + 1;
+          dx1 = x - sx1;
+          dx2 = 1 - dx1;
+          sy1 = y >>> 0;
+          sy2 = sy1 === height - 1 ? sy1 : sy1 + 1;
+          dy1 = y - sy1;
+          dy2 = 1 - dy1;
+          p1 = p2 = sy1 * width;
+          p3 = p4 = sy2 * width;
+          dst[pos++] = dy2 * (dx2 * src[p1 + sx1] + dx1 * src[p2 + sx2]) + dy1 * (dx2 * src[p3 + sx1] + dx1 * src[p4 + sx2]) & 255;
+        }
+      }
+      imageDst.width = warpSize;
+      imageDst.height = warpSize;
+      return imageDst;
+    };
+    CV.getPerspectiveTransform = function(src, size) {
+      var rq = CV.square2quad(src);
+      rq[0] /= size;
+      rq[1] /= size;
+      rq[3] /= size;
+      rq[4] /= size;
+      rq[6] /= size;
+      rq[7] /= size;
+      return rq;
+    };
+    CV.square2quad = function(src) {
+      var sq = [], px, py, dx1, dx2, dy1, dy2, den;
+      px = src[0].x - src[1].x + src[2].x - src[3].x;
+      py = src[0].y - src[1].y + src[2].y - src[3].y;
+      if (0 === px && 0 === py) {
+        sq[0] = src[1].x - src[0].x;
+        sq[1] = src[2].x - src[1].x;
+        sq[2] = src[0].x;
+        sq[3] = src[1].y - src[0].y;
+        sq[4] = src[2].y - src[1].y;
+        sq[5] = src[0].y;
+        sq[6] = 0;
+        sq[7] = 0;
+        sq[8] = 1;
+      } else {
+        dx1 = src[1].x - src[2].x;
+        dx2 = src[3].x - src[2].x;
+        dy1 = src[1].y - src[2].y;
+        dy2 = src[3].y - src[2].y;
+        den = dx1 * dy2 - dx2 * dy1;
+        sq[6] = (px * dy2 - dx2 * py) / den;
+        sq[7] = (dx1 * py - px * dy1) / den;
+        sq[8] = 1;
+        sq[0] = src[1].x - src[0].x + sq[6] * src[1].x;
+        sq[1] = src[3].x - src[0].x + sq[7] * src[3].x;
+        sq[2] = src[0].x;
+        sq[3] = src[1].y - src[0].y + sq[6] * src[1].y;
+        sq[4] = src[3].y - src[0].y + sq[7] * src[3].y;
+        sq[5] = src[0].y;
+      }
+      return sq;
+    };
+    CV.isContourConvex = function(contour) {
+      var orientation = 0, convex = true, len = contour.length, i = 0, j = 0, cur_pt, prev_pt, dxdy0, dydx0, dx0, dy0, dx, dy;
+      prev_pt = contour[len - 1];
+      cur_pt = contour[0];
+      dx0 = cur_pt.x - prev_pt.x;
+      dy0 = cur_pt.y - prev_pt.y;
+      for (; i < len; ++i) {
+        if (++j === len) {
+          j = 0;
+        }
+        prev_pt = cur_pt;
+        cur_pt = contour[j];
+        dx = cur_pt.x - prev_pt.x;
+        dy = cur_pt.y - prev_pt.y;
+        dxdy0 = dx * dy0;
+        dydx0 = dy * dx0;
+        orientation |= dydx0 > dxdy0 ? 1 : dydx0 < dxdy0 ? 2 : 3;
+        if (3 === orientation) {
+          convex = false;
+          break;
+        }
+        dx0 = dx;
+        dy0 = dy;
+      }
+      return convex;
+    };
+    CV.perimeter = function(poly2) {
+      var len = poly2.length, i = 0, j = len - 1, p = 0, dx, dy;
+      for (; i < len; j = i++) {
+        dx = poly2[i].x - poly2[j].x;
+        dy = poly2[i].y - poly2[j].y;
+        p += Math.sqrt(dx * dx + dy * dy);
+      }
+      return p;
+    };
+    CV.minEdgeLength = function(poly2) {
+      var len = poly2.length, i = 0, j = len - 1, min = Infinity, d, dx, dy;
+      for (; i < len; j = i++) {
+        dx = poly2[i].x - poly2[j].x;
+        dy = poly2[i].y - poly2[j].y;
+        d = dx * dx + dy * dy;
+        if (d < min) {
+          min = d;
+        }
+      }
+      return Math.sqrt(min);
+    };
+    CV.countNonZero = function(imageSrc, square) {
+      var src = imageSrc.data, height = square.height, width = square.width, pos = square.x + square.y * imageSrc.width, span = imageSrc.width - width, nz = 0, i, j;
+      for (i = 0; i < height; ++i) {
+        for (j = 0; j < width; ++j) {
+          if (0 !== src[pos++]) {
+            ++nz;
+          }
+        }
+        pos += span;
+      }
+      return nz;
+    };
+    CV.binaryBorder = function(imageSrc, dst) {
+      var src = imageSrc.data, height = imageSrc.height, width = imageSrc.width, posSrc = 0, posDst = 0, i, j;
+      for (j = -2; j < width; ++j) {
+        dst[posDst++] = 0;
+      }
+      for (i = 0; i < height; ++i) {
+        dst[posDst++] = 0;
+        for (j = 0; j < width; ++j) {
+          dst[posDst++] = 0 === src[posSrc++] ? 0 : 1;
+        }
+        dst[posDst++] = 0;
+      }
+      for (j = -2; j < width; ++j) {
+        dst[posDst++] = 0;
+      }
+      return dst;
+    };
+    module.exports = CV;
+    var CV_ = module.exports;
+    module = { exports: {} };
+    var require2 = function() {
+      return CV_;
+    };
+    var CV = require2("./cv");
+    var AR = AR || {};
+    AR.Marker = function(id, corners) {
+      this.id = id;
+      this.corners = corners;
+    };
+    AR.Detector = function() {
+      this.grey = new CV.Image();
+      this.thres = new CV.Image();
+      this.homography = new CV.Image();
+      this.binary = [];
+      this.contours = [];
+      this.polys = [];
+      this.candidates = [];
+    };
+    AR.Detector.prototype.detect = function(image) {
+      CV.grayscale(image, this.grey);
+      CV.adaptiveThreshold(this.grey, this.thres, 2, 7);
+      this.contours = CV.findContours(this.thres, this.binary);
+      this.candidates = this.findCandidates(this.contours, image.width * 0.2, 0.05, 10);
+      this.candidates = this.clockwiseCorners(this.candidates);
+      this.candidates = this.notTooNear(this.candidates, 10);
+      return this.findMarkers(this.grey, this.candidates, 49);
+    };
+    AR.Detector.prototype.findCandidates = function(contours, minSize, epsilon, minLength) {
+      var candidates = [], len = contours.length, contour, poly2, i;
+      this.polys = [];
+      for (i = 0; i < len; ++i) {
+        contour = contours[i];
+        if (contour.length >= minSize) {
+          poly2 = CV.approxPolyDP(contour, contour.length * epsilon);
+          this.polys.push(poly2);
+          if (4 === poly2.length && CV.isContourConvex(poly2)) {
+            if (CV.minEdgeLength(poly2) >= minLength) {
+              candidates.push(poly2);
+            }
+          }
+        }
+      }
+      return candidates;
+    };
+    AR.Detector.prototype.clockwiseCorners = function(candidates) {
+      var len = candidates.length, dx1, dx2, dy1, dy2, swap, i;
+      for (i = 0; i < len; ++i) {
+        dx1 = candidates[i][1].x - candidates[i][0].x;
+        dy1 = candidates[i][1].y - candidates[i][0].y;
+        dx2 = candidates[i][2].x - candidates[i][0].x;
+        dy2 = candidates[i][2].y - candidates[i][0].y;
+        if (dx1 * dy2 - dy1 * dx2 < 0) {
+          swap = candidates[i][1];
+          candidates[i][1] = candidates[i][3];
+          candidates[i][3] = swap;
+        }
+      }
+      return candidates;
+    };
+    AR.Detector.prototype.notTooNear = function(candidates, minDist) {
+      var notTooNear = [], len = candidates.length, dist, dx, dy, i, j, k;
+      for (i = 0; i < len; ++i) {
+        for (j = i + 1; j < len; ++j) {
+          dist = 0;
+          for (k = 0; k < 4; ++k) {
+            dx = candidates[i][k].x - candidates[j][k].x;
+            dy = candidates[i][k].y - candidates[j][k].y;
+            dist += dx * dx + dy * dy;
+          }
+          if (dist / 4 < minDist * minDist) {
+            if (CV.perimeter(candidates[i]) < CV.perimeter(candidates[j])) {
+              candidates[i].tooNear = true;
+            } else {
+              candidates[j].tooNear = true;
+            }
+          }
+        }
+      }
+      for (i = 0; i < len; ++i) {
+        if (!candidates[i].tooNear) {
+          notTooNear.push(candidates[i]);
+        }
+      }
+      return notTooNear;
+    };
+    AR.Detector.prototype.findMarkers = function(imageSrc, candidates, warpSize) {
+      var markers = [], len = candidates.length, candidate, marker, i;
+      for (i = 0; i < len; ++i) {
+        candidate = candidates[i];
+        CV.warp(imageSrc, this.homography, candidate, warpSize);
+        CV.threshold(this.homography, this.homography, CV.otsu(this.homography));
+        marker = this.getMarker(this.homography, candidate);
+        if (marker) {
+          markers.push(marker);
+        }
+      }
+      return markers;
+    };
+    AR.Detector.prototype.getMarker = function(imageSrc, candidate) {
+      var width = imageSrc.width / 7 >>> 0, minZero = width * width >> 1, bits = [], rotations = [], distances = [], square, pair, inc, i, j;
+      for (i = 0; i < 7; ++i) {
+        inc = 0 === i || 6 === i ? 1 : 6;
+        for (j = 0; j < 7; j += inc) {
+          square = { x: j * width, y: i * width, width, height: width };
+          if (CV.countNonZero(imageSrc, square) > minZero) {
+            return null;
+          }
+        }
+      }
+      for (i = 0; i < 5; ++i) {
+        bits[i] = [];
+        for (j = 0; j < 5; ++j) {
+          square = { x: (j + 1) * width, y: (i + 1) * width, width, height: width };
+          bits[i][j] = CV.countNonZero(imageSrc, square) > minZero ? 1 : 0;
+        }
+      }
+      rotations[0] = bits;
+      distances[0] = this.hammingDistance(rotations[0]);
+      pair = { first: distances[0], second: 0 };
+      for (i = 1; i < 4; ++i) {
+        rotations[i] = this.rotate(rotations[i - 1]);
+        distances[i] = this.hammingDistance(rotations[i]);
+        if (distances[i] < pair.first) {
+          pair.first = distances[i];
+          pair.second = i;
+        }
+      }
+      if (0 !== pair.first) {
+        return null;
+      }
+      return new AR.Marker(
+        this.mat2id(rotations[pair.second]),
+        this.rotate2(candidate, 4 - pair.second)
+      );
+    };
+    AR.Detector.prototype.hammingDistance = function(bits) {
+      var ids = [[1, 0, 0, 0, 0], [1, 0, 1, 1, 1], [0, 1, 0, 0, 1], [0, 1, 1, 1, 0]], dist = 0, sum, minSum, i, j, k;
+      for (i = 0; i < 5; ++i) {
+        minSum = Infinity;
+        for (j = 0; j < 4; ++j) {
+          sum = 0;
+          for (k = 0; k < 5; ++k) {
+            sum += bits[i][k] === ids[j][k] ? 0 : 1;
+          }
+          if (sum < minSum) {
+            minSum = sum;
+          }
+        }
+        dist += minSum;
+      }
+      return dist;
+    };
+    AR.Detector.prototype.mat2id = function(bits) {
+      var id = 0, i;
+      for (i = 0; i < 5; ++i) {
+        id <<= 1;
+        id |= bits[i][1];
+        id <<= 1;
+        id |= bits[i][3];
+      }
+      return id;
+    };
+    AR.Detector.prototype.rotate = function(src) {
+      var dst = [], len = src.length, i, j;
+      for (i = 0; i < len; ++i) {
+        dst[i] = [];
+        for (j = 0; j < src[i].length; ++j) {
+          dst[i][j] = src[src[i].length - j - 1][i];
+        }
+      }
+      return dst;
+    };
+    AR.Detector.prototype.rotate2 = function(src, rotation) {
+      var dst = [], len = src.length, i;
+      for (i = 0; i < len; ++i) {
+        dst[i] = src[(rotation + i) % len];
+      }
+      return dst;
+    };
+    module.exports = AR;
+    return { CV: CV_, AR: module.exports };
+  }();
+  const SC_WORDS = [[1, 0, 0, 0, 0], [1, 0, 1, 1, 1], [0, 1, 0, 0, 1], [0, 1, 1, 1, 0]];
+  function scBits(id) {
+    const b = [];
+    for (let r = 0; r < 5; r++) {
+      const v = id >> 8 - 2 * r & 3;
+      b.push(SC_WORDS[v].slice());
+    }
+    return b;
+  }
+  function scRot(m) {
+    const n = m.length, d = [];
+    for (let i = 0; i < n; i++) {
+      d[i] = [];
+      for (let j = 0; j < n; j++) d[i][j] = m[n - j - 1][i];
+    }
+    return d;
+  }
+  function scHam(bits) {
+    let dist = 0;
+    for (let i = 0; i < 5; i++) {
+      let mn = 9;
+      for (const w of SC_WORDS) {
+        let s = 0;
+        for (let k = 0; k < 5; k++) s += bits[i][k] === w[k] ? 0 : 1;
+        mn = Math.min(mn, s);
+      }
+      dist += mn;
+    }
+    return dist;
+  }
+  const SC_IDS = (() => {
+    const out = [];
+    for (let id = 1; id < 1024 && out.length < 80; id++) {
+      let r = scBits(id), ok = true;
+      for (let k = 1; k < 4; k++) {
+        r = scRot(r);
+        if (scHam(r) === 0) {
+          ok = false;
+          break;
+        }
+      }
+      const ones = scBits(id).flat().reduce((a, b) => a + b, 0);
+      if (ok && ones >= 8 && ones <= 17) out.push(id);
+    }
+    return out;
+  })();
+  function scAnswer(c) {
+    const cx = (c[0].x + c[1].x + c[2].x + c[3].x) / 4, cy = (c[0].y + c[1].y + c[2].y + c[3].y) / 4, mx = (c[0].x + c[1].x) / 2, my = (c[0].y + c[1].y) / 2;
+    const a = Math.atan2(my - cy, mx - cx);
+    const deg = (a * 180 / Math.PI + 360) % 360;
+    if (deg >= 225 && deg < 315) return 0;
+    if (deg >= 315 || deg < 45) return 3;
+    if (deg >= 45 && deg < 135) return 2;
+    return 1;
+  }
+  function scDetect(det, img) {
+    const CV = ARUCO.CV;
+    CV.grayscale(img, det.grey);
+    CV.adaptiveThreshold(det.grey, det.thres, 2, 7);
+    det.contours = CV.findContours(det.thres, det.binary);
+    let cand = det.findCandidates(det.contours, 60, 0.05, 12);
+    cand = det.clockwiseCorners(cand);
+    cand = det.notTooNear(cand, 10);
+    return det.findMarkers(det.grey, cand, 49);
+  }
+  const SC_COL = ["#FF4F6D", "#4DA8FF", "#FFB400", "#3FBF4F"], SC_L = "ABCD";
+  let sc = null, scCamOn = false, scStream = null, scDet = null, scRaf = null, scRaceRaf = null;
+  const scCardNo = (id) => SC_IDS.indexOf(id) + 1;
+  function scMarkerSVG(no, px) {
+    const b = scBits(SC_IDS[no - 1]);
+    let r = "";
+    for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) if (!b[i][j]) r += `<rect x="${j + 2}" y="${i + 2}" width="1.02" height="1.02"/>`;
+    return `<svg viewBox="0 0 9 9" width="${px}" height="${px}" shape-rendering="crispEdges"><rect width="9" height="9" fill="#fff"/><g fill="#000"><rect x="1" y="1" width="7" height="1"/><rect x="1" y="7" width="7" height="1"/><rect x="1" y="1" width="1" height="7"/><rect x="7" y="1" width="1" height="7"/>${r}</g></svg>`;
+  }
+  function scQuestions(set) {
+    return set.questions.map((q, i) => ({ q, i })).filter((o) => o.q.type === "mc" && o.q.options.length >= 2 || o.q.type === "tf");
+  }
+  function startScan(base, order) {
+    const ok = scQuestions(base.set).map((o) => o.i), ord = order.filter((i) => ok.includes(i));
+    game = __spreadProps(__spreadValues({}, base), { mode: "scan", order: ord, qPtr: 0, phase: "lobby", over: false });
+    sc = { n: cfg.scanN || 30, names: (cfg.scanNames || "").split("\n"), qi: -1, answers: {}, students: [], log: [], msg: "", secs: 0 };
+  }
+  function scBuildStudents() {
+    sc.students = Array.from({ length: sc.n }, (_, k) => ({ no: k + 1, name: (sc.names[k] || "").trim(), pts: 0, streak: 0, x: 0, vx: 0, spin: 0, boost: 0, hue: k * 47 % 360, ans: [] }));
+  }
+  function scLabel(s) {
+    return `#${s.no}${s.name ? " " + s.name : ""}`;
+  }
+  function renderScan() {
+    const v = $("#vScan");
+    if (!v || !game || game.mode !== "scan") return;
+    const ph = game.phase;
+    $("#scLobby").hidden = ph !== "lobby";
+    $("#scPlay").hidden = !(ph === "q" || ph === "reveal");
+    $("#scEnd").hidden = ph !== "end";
+    if (ph === "lobby") {
+      $("#scSetTitle").textContent = `${game.set.title} \xB7 ${game.order.length} preguntas de opci\xF3n m\xFAltiple`;
+      $("#scN").value = sc.n;
+      $("#scNames").value = cfg.scanNames || "";
+      const all = game.order.length;
+      $("#scQn").innerHTML = [5, 10, 15, 20].filter((k) => k < all).map((k) => `<option value="${k}">${k}</option>`).join("") + `<option value="0">Todas (${all})</option>`;
+      $("#scQn").value = [5, 10, 15, 20].includes(cfg.scanQn) && cfg.scanQn < all ? cfg.scanQn : all > 10 ? 10 : 0;
+    }
+    if (ph === "q" || ph === "reveal") scRenderQ();
+    if (ph === "end") scRenderEnd();
+    if ((ph === "q" || ph === "reveal") && !scRaceRaf) scRaceRaf = requestAnimationFrame(scRaceLoop);
+  }
+  function scStart() {
+    sc.n = Math.max(1, Math.min(SC_IDS.length, parseInt($("#scN").value) || 30));
+    cfg.scanN = sc.n;
+    cfg.scanNames = $("#scNames").value;
+    sc.names = cfg.scanNames.split("\n");
+    if (!game.order.length) {
+      alert("Este set no tiene preguntas de opci\xF3n m\xFAltiple.");
+      return;
+    }
+    const qn = parseInt($("#scQn").value) || 0;
+    cfg.scanQn = qn;
+    if (qn > 0) game.order = game.order.slice(0, qn);
+    scBuildStudents();
+    sc.done = 0;
+    scNext();
+  }
+  function scNext() {
+    sc.qi++;
+    if (sc.qi >= game.order.length) {
+      game.phase = "end";
+      game.over = true;
+      scStopCam();
+      renderScan();
+      Music.play("victory");
+      return;
+    }
+    sc.answers = {};
+    game.phase = "q";
+    sc.msg = ["\xA1Arrancan motores! \u{1F3C1}", "\xA1Prep\xE1rense, cadetes! \u{1FA96}", "\xA1Que empiece el desmadre! \u{1F602}", "\xA1A ver qui\xE9n se queda sin gasolina! \u26FD"][sc.qi % 4];
+    sc.secs = game.timer || 0;
+    renderScan();
+    scTick();
+    scPlayAudio(1);
+  }
+  function scQ() {
+    return normQ(game.set.questions[game.order[sc.qi]]);
+  }
+  function scOpts(q) {
+    return q.type === "tf" ? ["True", "False"] : q.options;
+  }
+  function scCorrect(q) {
+    return q.type === "tf" ? q.correct ? 0 : 1 : q.correct;
+  }
+  let scTimerId = null;
+  function scTick() {
+    clearInterval(scTimerId);
+    if (!sc.secs) {
+      $("#scTime") && ($("#scTime").textContent = "");
+      return;
+    }
+    const el = () => $("#scTime");
+    let left = sc.secs;
+    if (el()) el().textContent = left + "s";
+    scTimerId = setInterval(() => {
+      if (game.phase !== "q") {
+        clearInterval(scTimerId);
+        return;
+      }
+      left--;
+      if (el()) {
+        el().textContent = Math.max(0, left) + "s";
+        el().classList.toggle("warn", left <= 5);
+      }
+      if (left <= 5 && left > 0) beep(880, 0.06);
+      if (left <= 0) {
+        clearInterval(scTimerId);
+        beep(300, 0.4);
+      }
+    }, 1e3);
+  }
+  let scAudioEl = null;
+  async function scPlayAudio(rate) {
+    const q = scQ();
+    try {
+      if (scAudioEl) {
+        scAudioEl.pause();
+      }
+      speechSynthesis.cancel();
+    } catch (e) {
+    }
+    if (q.audio) {
+      try {
+        const u = await audioUrl(q.audio);
+        scAudioEl = new Audio(u);
+        scAudioEl.playbackRate = rate || 1;
+        scAudioEl.play();
+      } catch (e) {
+      }
+    } else if (q.tts) speak(q.tts, rate || 1);
+  }
+  function scRenderQ() {
+    const q = scQ(), opts = scOpts(q), cor = scCorrect(q), rev = game.phase === "reveal", n = sc.n, got = Object.keys(sc.answers).length;
+    const counts = [0, 0, 0, 0];
+    Object.values(sc.answers).forEach((a) => {
+      if (a < opts.length) counts[a]++;
+    });
+    $("#scHead").innerHTML = `<b>Pregunta ${sc.qi + 1} / ${game.order.length}</b><span id="scTime" class="sctime"></span><span class="scgot">\u{1F4CB} ${got} / ${n} respondieron</span>`;
+    $("#scQ").innerHTML = `<div class="scqt">${esc(q.q)}</div>${q.audio || q.tts ? `<div class="scaud"><button class="btn" data-r="1">\u{1F50A} Escuchar</button><button class="btn" data-r="0.75">\u{1F422} Lento</button></div>` : ""}`;
+    $("#scQ").querySelectorAll(".scaud button").forEach((b) => b.onclick = () => scPlayAudio(+b.dataset.r));
+    $("#scOpts").innerHTML = opts.map((o, i) => `<div class="scopt${rev ? i === cor ? " ok" : " no" : ""}" style="--oc:${SC_COL[i]}"><span class="scl">${SC_L[i]}</span><span class="sct">${esc(o)}</span>${rev ? `<span class="scc"><i style="width:${got ? Math.round(counts[i] / got * 100) : 0}%"></i><b>${counts[i]}</b></span>` : ""}</div>`).join("");
+    $("#scBtns").innerHTML = rev ? `<button class="btn" id="scScanB">\u{1F4F7} Escanear otra vez</button><button class="btn primary" id="scNextB">${sc.qi + 1 >= game.order.length ? "\u{1F3C1} Ver resultados" : "Siguiente \u25B6"}</button>` : `<button class="btn primary big" id="scScanB">\u{1F4F7} Escanear tarjetas</button><button class="btn" id="scRevB">\u2714 Revelar respuesta</button>`;
+    $("#scScanB").onclick = scOpenCam;
+    if ($("#scRevB")) $("#scRevB").onclick = scReveal;
+    if ($("#scNextB")) $("#scNextB").onclick = scNext;
+    $("#scMsg").textContent = sc.msg;
+  }
+  function scReveal() {
+    if (game.phase !== "q") return;
+    scStopCam();
+    const q = scQ(), cor = scCorrect(q);
+    game.phase = "reveal";
+    clearInterval(scTimerId);
+    sc.done = sc.qi + 1;
+    let hits = [], miss = [];
+    sc.students.forEach((s) => {
+      const a = sc.answers[s.no];
+      s.ans[sc.qi] = a == null ? "" : SC_L[a];
+      if (a === cor) {
+        s.streak++;
+        s.pts += 1;
+        s.boost = 70;
+        hits.push(s);
+      } else {
+        s.streak = 0;
+        if (a != null) {
+          s.spin = 60;
+          miss.push(s);
+        }
+      }
+    });
+    const lead = sc.students.slice().sort((a, b) => b.pts - a.pts)[0];
+    const lines = [];
+    if (hits.length) lines.push(`\u{1F680} \xA1${hits.length} le atinaron!`);
+    const hot = hits.find((s) => s.streak >= 3);
+    if (hot) lines.push(`\u{1F525} ${scLabel(hot)} lleva ${hot.streak} seguidas`);
+    if (miss.length) lines.push(miss.length > 1 ? `\u{1F4A8} ${miss.length} se dieron un trompo` : `\u{1F4A8} ${scLabel(miss[0])} se dio un trompo`);
+    if (lead && lead.pts) lines.push(`\u{1F451} Va ganando ${scLabel(lead)}`);
+    sc.msg = lines.join(" \xB7 ") || "Nadie respondi\xF3 \u{1F997}";
+    hits.length ? jingle([660, 880, 1100], 90, 0.12) : beep(220, 0.3);
+    renderScan();
+  }
+  async function scOpenCam() {
+    $("#scCam").hidden = false;
+    scRenderRoster();
+    if (!scDet) scDet = new ARUCO.AR.Detector();
+    try {
+      if (!scStream) scStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+      const v = $("#scVideo");
+      v.srcObject = scStream;
+      await v.play();
+      scCamOn = true;
+      scLoop();
+    } catch (e) {
+      $("#scCamMsg").textContent = "No se pudo abrir la c\xE1mara: " + (e.message || e) + ". Revisa los permisos del navegador.";
+    }
+  }
+  function scStopCam() {
+    scCamOn = false;
+    cancelAnimationFrame(scRaf);
+    $("#scCam") && ($("#scCam").hidden = true);
+    if (scStream) {
+      scStream.getTracks().forEach((t) => t.stop());
+      scStream = null;
+    }
+  }
+  let scWork = null, scLast = 0;
+  function scLoop() {
+    if (!scCamOn) return;
+    scRaf = requestAnimationFrame(scLoop);
+    const v = $("#scVideo"), cv = $("#scCanvas");
+    if (!v.videoWidth) return;
+    const now = performance.now();
+    if (now - scLast < 180) return;
+    scLast = now;
+    const W = Math.min(1280, v.videoWidth), H = Math.round(v.videoHeight * W / v.videoWidth);
+    if (!scWork) {
+      scWork = document.createElement("canvas");
+    }
+    if (scWork.width !== W) {
+      scWork.width = W;
+      scWork.height = H;
+    }
+    const w = scWork.getContext("2d");
+    w.drawImage(v, 0, 0, W, H);
+    const img = w.getImageData(0, 0, W, H);
+    let ms = [];
+    try {
+      ms = scDetect(scDet, img);
+    } catch (e) {
+    }
+    cv.width = W;
+    cv.height = H;
+    const c = cv.getContext("2d");
+    c.drawImage(scWork, 0, 0);
+    let fresh = 0;
+    ms.forEach((m) => {
+      const no = scCardNo(m.id);
+      if (!no || no > sc.n) return;
+      const a = scAnswer(m.corners);
+      if (game.phase === "q" && sc.answers[no] == null) fresh++;
+      if (game.phase === "q") sc.answers[no] = a;
+      c.beginPath();
+      m.corners.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
+      c.closePath();
+      c.fillStyle = "rgba(63,191,79,.35)";
+      c.fill();
+      c.lineWidth = 4;
+      c.strokeStyle = "#3FBF4F";
+      c.stroke();
+      const cx = m.corners.reduce((s, p) => s + p.x, 0) / 4, cy = m.corners.reduce((s, p) => s + p.y, 0) / 4;
+      c.font = "900 22px Nunito, sans-serif";
+      c.textAlign = "center";
+      c.lineWidth = 5;
+      c.strokeStyle = "#000";
+      c.strokeText("\u2713 " + no, cx, cy + 8);
+      c.fillStyle = "#fff";
+      c.fillText("\u2713 " + no, cx, cy + 8);
+    });
+    if (fresh) {
+      beep(1200, 0.04);
+      scRenderRoster();
+    }
+  }
+  function scRenderRoster() {
+    const got = Object.keys(sc.answers).length;
+    $("#scCamCount").textContent = `${got} / ${sc.n}`;
+    $("#scRoster").innerHTML = sc.students.map((s) => `<span class="${sc.answers[s.no] != null ? "on" : ""}" title="${esc(s.name)}">${s.no}</span>`).join("");
+  }
+  function scRaceLoop() {
+    scRaceRaf = null;
+    if (view !== "play" || !game || game.mode !== "scan" || !(game.phase === "q" || game.phase === "reveal")) return;
+    const cv = $("#scRace"), wrap = cv.parentElement, dpr = Math.min(2, window.devicePixelRatio || 1);
+    const n = sc.students.length, avail = Math.max(300, Math.min(window.innerHeight * 0.8, 1e3)), laneH = Math.max(18, Math.min(64, Math.floor((avail - 30) / Math.max(1, n)))), Wc = wrap.clientWidth, Hc = 30 + laneH * n;
+    if (cv.width !== Math.round(Wc * dpr) || cv.height !== Math.round(Hc * dpr)) {
+      cv.width = Math.round(Wc * dpr);
+      cv.height = Math.round(Hc * dpr);
+      cv.style.height = Hc + "px";
+    }
+    const c = cv.getContext("2d");
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const now = performance.now();
+    c.fillStyle = "#3B3458";
+    c.fillRect(0, 0, Wc, Hc);
+    const left = Math.min(150, Wc * 0.2) + 30, right = Wc - 54, total = Math.max(1, game.order.length), maxPts = Math.max(...sc.students.map((s) => s.pts), 0);
+    for (let k = 0; k <= total; k++) {
+      const x = left + (right - left) * k / total;
+      c.strokeStyle = "rgba(255,255,255,.08)";
+      c.beginPath();
+      c.moveTo(x, 24);
+      c.lineTo(x, Hc);
+      c.stroke();
+    }
+    for (let y = 24; y < Hc; y += 10) {
+      const o = Math.floor((y - 24) / 10) % 2;
+      c.fillStyle = o ? "#fff" : "#111";
+      c.fillRect(right + 4, y, 10, 10);
+      c.fillStyle = o ? "#111" : "#fff";
+      c.fillRect(right + 14, y, 10, 10);
+    }
+    c.font = "900 13px Nunito, sans-serif";
+    c.fillStyle = "#FFD21A";
+    c.textAlign = "left";
+    c.fillText(`\u{1F3C1} META \xB7 ${total} preguntas`, right - 150, 17);
+    sc.students.forEach((s, i) => {
+      const y = 26 + i * laneH, cy = y + laneH / 2;
+      c.fillStyle = i % 2 ? "#463E66" : "#4F4772";
+      c.fillRect(0, y, Wc, laneH - 1);
+      for (let yy = y; yy < y + laneH - 1; yy += 10) {
+        const o = Math.floor((yy - 24) / 10) % 2, h = Math.min(10, y + laneH - 1 - yy);
+        c.fillStyle = o ? "#fff" : "#111";
+        c.fillRect(right + 4, yy, 10, h);
+        c.fillStyle = o ? "#111" : "#fff";
+        c.fillRect(right + 14, yy, 10, h);
+      }
+      const tx = left + (right - left) * s.pts / total;
+      s.x += (tx - s.x) * 0.06;
+      if (!s.x) s.x = left;
+      if (s.x < left) s.x = left;
+      c.font = `800 ${Math.min(14, laneH - 3)}px Nunito, sans-serif`;
+      c.textAlign = "left";
+      c.fillStyle = sc.answers[s.no] != null && game.phase === "q" ? "#7CFF8A" : "#fff";
+      c.fillText(scLabel(s).slice(0, 18), 6, cy + 4);
+      const sz = Math.min(laneH * 1.15, 56), x = s.x;
+      c.save();
+      c.translate(x, cy);
+      if (s.spin > 0) {
+        c.rotate((60 - s.spin) * 0.35);
+        s.spin--;
+        if (s.spin % 6 === 0) {
+          c.fillStyle = "rgba(220,220,230,.6)";
+        }
+      }
+      if (s.boost > 0) {
+        s.boost--;
+        c.fillStyle = s.boost % 4 < 2 ? "#FFD21A" : "#FF5A1F";
+        c.beginPath();
+        c.moveTo(-sz * 0.55, -sz * 0.18);
+        c.lineTo(-sz * (0.9 + Math.random() * 0.6), 0);
+        c.lineTo(-sz * 0.55, sz * 0.18);
+        c.fill();
+      }
+      c.fillStyle = `hsl(${s.hue} 80% 58%)`;
+      c.strokeStyle = "#1A1530";
+      c.lineWidth = 1.6;
+      c.beginPath();
+      c.roundRect ? c.roundRect(-sz * 0.5, -sz * 0.22, sz, sz * 0.36, sz * 0.12) : c.rect(-sz * 0.5, -sz * 0.22, sz, sz * 0.36);
+      c.fill();
+      c.stroke();
+      c.beginPath();
+      c.moveTo(-sz * 0.18, -sz * 0.22);
+      c.lineTo(-sz * 0.05, -sz * 0.42);
+      c.lineTo(sz * 0.22, -sz * 0.42);
+      c.lineTo(sz * 0.3, -sz * 0.22);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#BFE3FF";
+      c.fillRect(-sz * 0.02, -sz * 0.38, sz * 0.2, sz * 0.13);
+      c.fillStyle = "#1A1530";
+      [-sz * 0.28, sz * 0.3].forEach((wx) => {
+        c.beginPath();
+        c.arc(wx, sz * 0.15, sz * 0.13, 0, 7);
+        c.fill();
+      });
+      if (sz >= 16) {
+        c.fillStyle = "#fff";
+        c.font = `900 ${Math.round(sz * 0.3)}px Nunito, sans-serif`;
+        c.textAlign = "center";
+        c.fillText(s.no, -sz * 0.18, sz * 0.06);
+      }
+      c.restore();
+      if (s.spin > 30) {
+        c.font = `${Math.min(18, laneH)}px sans-serif`;
+        c.textAlign = "center";
+        c.fillText("\u{1F4A8}", x - sz * 0.8, cy + 5);
+      }
+      if (maxPts > 0 && s.pts === maxPts) {
+        c.font = `${Math.min(18, laneH)}px sans-serif`;
+        c.textAlign = "center";
+        c.fillText("\u{1F451}", x, cy - sz * 0.35);
+      }
+    });
+    scRaceRaf = requestAnimationFrame(scRaceLoop);
+  }
+  function scRenderEnd() {
+    const rows = sc.students.slice().sort((a, b) => b.pts - a.pts || a.no - b.no), tot = Math.max(1, sc.done || 0);
+    const pod = rows.slice(0, 3);
+    $("#scPodium").innerHTML = [1, 0, 2].map((k) => pod[k] ? `<div class="scpod p${k + 1}"><div class="scmed">${["\u{1F947}", "\u{1F948}", "\u{1F949}"][k]}</div><b>${esc(scLabel(pod[k]))}</b><span>${pod[k].pts} / ${tot}</span><i></i></div>` : "").join("");
+    $("#scTable").innerHTML = `<tr><th>Lugar</th><th>Tarjeta</th><th>Nombre</th><th>Aciertos</th><th>%</th></tr>` + rows.map((s, i) => `<tr><td>${i + 1}</td><td>#${s.no}</td><td>${esc(s.name)}</td><td>${s.pts} / ${tot}</td><td>${Math.round(s.pts / tot * 100)}%</td></tr>`).join("");
+  }
+  function scCSV() {
+    const tot = Math.max(1, sc.done || 0), qs = game.order.slice(0, tot).map((i) => normQ(game.set.questions[i]));
+    const head = ["Tarjeta", "Nombre", "Aciertos", "Porcentaje"].concat(qs.map((q, i) => `P${i + 1} (correcta ${SC_L[scCorrect(q)]})`));
+    const lines = [head].concat(sc.students.map((s) => [s.no, s.name, s.pts, Math.round(s.pts / tot * 100) + "%"].concat(qs.map((q, i) => s.ans[i] || "-"))));
+    const csv = "\uFEFF" + lines.map((r) => r.map((x) => `"${String(x).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = `resultados_${(game.set.title || "quiz").replace(/[^\w]+/g, "_").slice(0, 40)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  function scPrintCards() {
+    const n = Math.max(1, Math.min(SC_IDS.length, parseInt($("#scN").value) || 30)), names = $("#scNames").value.split("\n");
+    $("#scPrintCards").innerHTML = Array.from({ length: n }, (_, k) => {
+      const no = k + 1, nm = (names[k] || "").trim();
+      return `<div class="sccard"><div class="sccard-in"><span class="scs a">A</span><span class="scs b">B</span><span class="scs c">C</span><span class="scs d">D</span>${scMarkerSVG(no, 380)}<em class="scno">#${no}${nm ? " \xB7 " + esc(nm) : ""}</em></div></div>`;
+    }).join("");
+    $("#scPrint").hidden = false;
+  }
+  function wireScan() {
+    document.body.appendChild($("#scPrint"));
+    document.body.appendChild($("#scCam"));
+    $("#scStart").onclick = scStart;
+    $("#scPrintB").onclick = scPrintCards;
+    $("#scPrintGo").onclick = () => {
+      document.body.classList.add("scprinting");
+      setTimeout(() => {
+        window.print();
+        setTimeout(() => document.body.classList.remove("scprinting"), 500);
+      }, 100);
+    };
+    $("#scPrintClose").onclick = () => {
+      $("#scPrint").hidden = true;
+    };
+    $("#scCamDone").onclick = () => {
+      scStopCam();
+      renderScan();
+    };
+    $("#scCamReveal").onclick = () => {
+      scStopCam();
+      scReveal();
+    };
+    $("#scCSV").onclick = scCSV;
+    $("#scAgain").onclick = () => {
+      scStopCam();
+      show("home");
+    };
+    $("#scEndNow").onclick = () => {
+      if (confirmEnd()) {
+        scStopCam();
+        game.phase = "end";
+        game.over = true;
+        renderScan();
+      }
+    };
+  }
+  function confirmEnd() {
+    return true;
+  }
+  wireScan();
+  $("#scHomeB").onclick = () => show("home");
 })();
 </script>
 
