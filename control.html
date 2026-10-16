@@ -63,6 +63,7 @@ html,body{margin:0;background:#1B1440;color:#fff;font-family:Nunito,system-ui,-a
 .qrtxt{position:relative;color:#fff;font:900 20px system-ui,sans-serif;text-align:center;margin-bottom:auto;margin-top:40px}
 .qrmsg{position:relative;color:#FFD21A;font:800 16px system-ui,sans-serif;text-align:center}
 #qrUI .cb{position:relative;width:100%}
+.cx-sel{width:100%;font:800 17px system-ui,sans-serif;padding:12px;border-radius:14px;border:3px solid #fff;background:#3B3458;color:#fff}
 #camUI{position:fixed;top:0;left:0;right:0;bottom:0;z-index:200;background:#000;overflow:hidden}
 #camUI[hidden]{display:none}
 #camV{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
@@ -5139,17 +5140,21 @@ function camTick() {
   });
   c.globalAlpha = 1;
 }
-const RT = { role: null, code: null, peer: null, conns: [], es: null, bc: null, onMsg: null, mode: "off", lastIn: -1e9, pend: {}, timer: null, lastRelay: 0 };
+const RT = { role: null, code: null, peer: null, conns: [], es: null, bc: null, mq: [], onMsg: null, lastIn: -1e9, pend: {}, timer: null, lastRelay: 0, seen: {}, seenQ: [], seq: 0, id: Math.random().toString(36).slice(2, 8) };
+const RT_BROKERS = [{ url: "wss://public.cloud.shiftr.io", user: "public", pass: "public" }, { url: "wss://broker.hivemq.com:8884/mqtt" }];
 function rtTopic(side) {
   return "tilerush-" + RT.code + "-" + side;
 }
 function rtOpenConns() {
   return RT.conns.filter((c) => c.open);
 }
+function rtMqOpen() {
+  return RT.mq.filter((q) => q.ok).length;
+}
 function rtStatus() {
   if (rtOpenConns().length) return "p2p";
   if (performance.now() - RT.lastIn < 3e4) return "relay";
-  return RT.es && RT.es.readyState === 1 ? "wait" : "off";
+  return rtMqOpen() || RT.es && RT.es.readyState === 1 ? "wait" : "off";
 }
 function rtReceive(raw) {
   let m;
@@ -5159,12 +5164,128 @@ function rtReceive(raw) {
     return;
   }
   if (!m || !m.t) return;
+  if (m._i) {
+    if (RT.seen[m._i]) return;
+    RT.seen[m._i] = 1;
+    RT.seenQ.push(m._i);
+    if (RT.seenQ.length > 300) delete RT.seen[RT.seenQ.shift()];
+  }
   RT.lastIn = performance.now();
   try {
     RT.onMsg && RT.onMsg(m);
   } catch (e) {
     console.warn(e);
   }
+}
+function mqStr(s) {
+  const b = new TextEncoder().encode(s);
+  return [b.length >> 8, b.length & 255, ...b];
+}
+function mqPkt(type, body) {
+  const len = [];
+  let n = body.length;
+  do {
+    let d = n % 128;
+    n = Math.floor(n / 128);
+    if (n > 0) d |= 128;
+    len.push(d);
+  } while (n > 0);
+  return new Uint8Array([type, ...len, ...body]);
+}
+function mqOpen(br, subTopic) {
+  const q = { br, ws: null, ok: false, dead: false, ping: 0, retry: 0 };
+  const go = () => {
+    if (q.dead) return;
+    let ws;
+    try {
+      ws = new WebSocket(br.url, "mqtt");
+    } catch (e) {
+      return later();
+    }
+    q.ws = ws;
+    ws.binaryType = "arraybuffer";
+    ws.onopen = () => {
+      const cid = "tr" + RT.id + Math.random().toString(36).slice(2, 6);
+      let flags = 2, pay = mqStr(cid);
+      if (br.user) {
+        flags |= 128;
+        pay = pay.concat(mqStr(br.user));
+      }
+      if (br.pass) {
+        flags |= 64;
+        pay = pay.concat(mqStr(br.pass));
+      }
+      ws.send(mqPkt(16, [...mqStr("MQTT"), 4, flags, 0, 40, ...pay]));
+    };
+    let buf = new Uint8Array(0);
+    ws.onmessage = (e) => {
+      const d = new Uint8Array(e.data), nb = new Uint8Array(buf.length + d.length);
+      nb.set(buf);
+      nb.set(d, buf.length);
+      buf = nb;
+      while (buf.length >= 2) {
+        let mul = 1, len = 0, i = 1, b;
+        do {
+          if (i >= buf.length) return;
+          b = buf[i++];
+          len += (b & 127) * mul;
+          mul *= 128;
+        } while (b & 128);
+        if (buf.length < i + len) return;
+        const hdr = buf[0], type = hdr >> 4, body = buf.slice(i, i + len);
+        buf = buf.slice(i + len);
+        if (type === 2) {
+          if (body[1] === 0) {
+            q.ok = true;
+            q.retry = 0;
+            ws.send(mqPkt(130, [0, 1, ...mqStr(subTopic), 0]));
+            clearInterval(q.ping);
+            q.ping = setInterval(() => {
+              try {
+                ws.send(new Uint8Array([192, 0]));
+              } catch (x) {
+              }
+            }, 25e3);
+          }
+        } else if (type === 3) {
+          const tl = body[0] << 8 | body[1], off = 2 + tl + (hdr >> 1 & 3 ? 2 : 0);
+          try {
+            rtReceive(new TextDecoder().decode(body.slice(off)));
+          } catch (x) {
+          }
+        }
+      }
+    };
+    ws.onclose = ws.onerror = () => {
+      if (q.ws !== ws) return;
+      q.ok = false;
+      clearInterval(q.ping);
+      q.ws = null;
+      later();
+    };
+  };
+  const later = () => {
+    if (q.dead) return;
+    q.retry = Math.min(q.retry + 1, 6);
+    setTimeout(go, 1e3 * q.retry);
+  };
+  q.send = (topic, s) => {
+    if (!q.ok || !q.ws) return;
+    try {
+      q.ws.send(mqPkt(48, [...mqStr(topic), ...new TextEncoder().encode(s)]));
+    } catch (e) {
+    }
+  };
+  q.stop = () => {
+    q.dead = true;
+    clearInterval(q.ping);
+    try {
+      q.ws && q.ws.close();
+    } catch (e) {
+    }
+  };
+  go();
+  return q;
 }
 function rtStop() {
   try {
@@ -5179,6 +5300,13 @@ function rtStop() {
     RT.peer && RT.peer.destroy();
   } catch (e) {
   }
+  RT.mq.forEach((q) => {
+    try {
+      q.stop();
+    } catch (e) {
+    }
+  });
+  RT.mq = [];
   clearInterval(RT.dialT);
   RT.es = RT.bc = RT.peer = null;
   RT.conns = [];
@@ -5189,15 +5317,16 @@ function rtStart(role, code, onMsg2) {
   RT.role = role;
   RT.code = code;
   RT.onMsg = onMsg2;
-  const other = role === "screen" ? "p" : "s";
-  if (!/nobc/.test(location.search)) try {
+  const other = role === "screen" ? "p" : "s", qs = location.search;
+  if (!/nobc/.test(qs)) try {
     RT.bc = new BroadcastChannel(rtTopic("bc"));
     RT.bc.onmessage = (e) => {
       if (e.data && e.data.from !== role) rtReceive(e.data.m);
     };
   } catch (e) {
   }
-  try {
+  if (window.WebSocket && window.TextEncoder && !/nomq/.test(qs)) RT.mq = RT_BROKERS.map((br) => mqOpen(br, "tilerush/" + code + "/" + other));
+  if (!/nontfy/.test(qs)) try {
     RT.es = new EventSource("https://ntfy.sh/" + rtTopic(other) + "/sse");
     RT.es.onmessage = (e) => {
       try {
@@ -5208,7 +5337,7 @@ function rtStart(role, code, onMsg2) {
     };
   } catch (e) {
   }
-  if (window.Peer) {
+  if (window.Peer && !/nop2p/.test(qs)) {
     const hook = (conn2) => {
       RT.conns.push(conn2);
       conn2.on("data", (d) => rtReceive(d));
@@ -5228,6 +5357,7 @@ function rtStart(role, code, onMsg2) {
           RT.peer.on("connection", hook);
           RT.peer.on("error", (e) => {
             if (e && e.type === "unavailable-id") setTimeout(() => {
+              if (RT.role !== "screen" || RT.code !== code) return;
               try {
                 RT.peer.destroy();
               } catch (x) {
@@ -5271,7 +5401,8 @@ function rtStart(role, code, onMsg2) {
   }
 }
 function rtSend(m, key) {
-  const s = JSON.stringify(m);
+  m = Object.assign({ _i: RT.id + ++RT.seq }, m);
+  const s = JSON.stringify(m), mine = RT.role === "screen" ? "s" : "p";
   try {
     RT.bc && RT.bc.postMessage({ from: RT.role, m: s });
   } catch (e) {
@@ -5286,6 +5417,8 @@ function rtSend(m, key) {
     });
     return;
   }
+  RT.mq.forEach((q) => q.send("tilerush/" + RT.code + "/" + mine, s));
+  if (rtMqOpen()) return;
   if (!key) {
     rtPost(s);
     return;
@@ -5300,7 +5433,7 @@ function rtFlush() {
   RT.timer = null;
   const ks = Object.keys(RT.pend);
   if (!ks.length) return;
-  if (rtOpenConns().length) {
+  if (rtOpenConns().length || rtMqOpen()) {
     RT.pend = {};
     return;
   }
@@ -5478,7 +5611,7 @@ function onMsg(m) {
     if (!RM.st || RM.st.qi !== m.qi || m.phase !== "q") {
       if (!RM.st || RM.st.qi !== m.qi) RM.ans = {};
     }
-    const changed = !RM.st || RM.st.phase !== m.phase || RM.st.qi !== m.qi || RM.st.total !== m.total || m.phase === "pick" && RM.st.reg !== m.reg || RM.st.slide !== m.slide;
+    const changed = !RM.st || RM.st.phase !== m.phase || m.phase === "none" && !$("#cxSet") || RM.st.qi !== m.qi || RM.st.total !== m.total || m.phase === "pick" && RM.st.reg !== m.reg || RM.st.slide !== m.slide;
     RM.st = m;
     if (m.phase !== "q" && m.phase !== "pick" && CAM.on) camClose();
     if (changed) render();
@@ -5511,8 +5644,10 @@ function status() {
 function render() {
   const s = RM.st;
   let body = "";
-  if (!s) body = `<div class="cx-card">Buscando la pantalla con el c\xF3digo <b>${esc(RM.code)}</b>\u2026<br><span class="rmsmall">\xBFCambiaste de pantalla? Escanea su QR.</span></div><button class="cb scan huge" id="cxQR2">\u{1F4F7} Escanear QR de la pantalla</button><button class="cb" id="cxNew">\u{1F522} Escribir el c\xF3digo</button>`;
-  else if (s.phase === "none") body = `<div class="cx-card">\u2705 Pantalla encontrada. Ah\xED elige <b>\u{1F4F7} Scan Race</b> y un set.</div>`;
+  if (!s) body = `<div class="cx-card">\u23F3 Buscando la pantalla <b>${esc(RM.code)}</b>\u2026<br><span class="rmsmall">Abre el juego en la pantalla del sal\xF3n. Si no conecta, dale "Conectar ahora" o escanea su QR.</span></div><button class="cb go huge" id="cxNow">\u{1F504} Conectar ahora</button><button class="cb scan big" id="cxQR2">\u{1F4F7} Escanear QR de la pantalla</button><button class="cb" id="cxNew">\u{1F522} Escribir el c\xF3digo</button>`;
+  else if (s.phase === "none") body = `<div class="cx-card">\u2705 \xA1Pantalla conectada! Elige el set y dale Empezar.</div>
+      <select id="cxSet" class="cx-sel">${(s.sets || []).map((o) => `<option value="${esc(o.id)}"${o.id === lsGet("scanrace.set") ? " selected" : ""}>${esc(o.x)}</option>`).join("")}</select>
+      <button class="cb go huge" id="cxOpen">\u{1F3C1} Empezar</button>`;
   else if (s.phase === "lobby") body = `<button class="cb go huge" data-c="start">\u{1F3C1} Arrancar carrera</button>`;
   else if (s.phase === "end") body = `<div class="cx-card"><h2>\u{1F3C6} \xA1Termin\xF3!</h2>${(s.top || []).map((t, i) => `<p class="cx-top">${["\u{1F947}", "\u{1F948}", "\u{1F949}"][i]} ${esc(t)}</p>`).join("")}<p class="rmsmall">Pantalla: ${["\u{1F3C6} Podio", "\u{1F605} Mortero", "\u{1F4CA} Calificaciones"][s.slide || 0]}</p></div>
       <div class="cx-grid"><button class="cb big" data-c="eprev">\u25C0 Atr\xE1s</button><button class="cb go big" data-c="enext">Siguiente \u25B6</button></div>`;
@@ -5537,6 +5672,20 @@ function render() {
     showCode();
   };
   if ($("#cxQR2")) $("#cxQR2").onclick = qrScan;
+  if ($("#cxNow")) $("#cxNow").onclick = () => {
+    vib(30);
+    reconnect();
+    $("#cxNow").textContent = "\u23F3 Conectando\u2026";
+    setTimeout(() => {
+      if (!RM.st) render();
+    }, 6e3);
+  };
+  if ($("#cxOpen")) $("#cxOpen").onclick = () => {
+    const v = $("#cxSet").value;
+    lsSet("scanrace.set", v);
+    cmd("open", { set: v });
+    $("#cxOpen").textContent = "\u23F3 Abriendo\u2026";
+  };
   if ($("#cxNew")) $("#cxNew").onclick = () => {
     if (RT.role) rtStop();
     RM.st = null;
