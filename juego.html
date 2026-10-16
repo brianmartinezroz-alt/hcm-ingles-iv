@@ -20124,7 +20124,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       $("#scLink").hidden = true;
     };
   }
-  const RT = { role: null, code: null, peer: null, conns: [], es: null, bc: null, onMsg: null, mode: "off", lastIn: 0, pend: {}, timer: null, lastRelay: 0 };
+  const RT = { role: null, code: null, peer: null, conns: [], es: null, bc: null, onMsg: null, mode: "off", lastIn: -1e9, pend: {}, timer: null, lastRelay: 0 };
   function rtTopic(side) {
     return "tilerush-" + RT.code + "-" + side;
   }
