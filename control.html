@@ -4312,7 +4312,7 @@ function camCount() {
   const o = CAM.opts;
   if (!o) return;
   const list = o.roster ? o.roster.slice() : o.dynamic ? Object.keys(CAM.seen).map(Number).sort((a, b) => a - b) : Array.from({ length: o.n }, (_, k) => k + 1);
-  if (o.roster) Object.keys(CAM.seen).forEach((k) => {
+  if (o.roster && !o.allowNew) Object.keys(CAM.seen).forEach((k) => {
     if (o.roster.indexOf(+k) < 0) delete CAM.seen[k];
   });
   const nos = Object.keys(CAM.seen), got = nos.length, hasCor = o.cor != null && o.cor >= 0, tot = o.dynamic ? got : list.length;
@@ -4340,7 +4340,13 @@ function camResults(out, w, h) {
   if (!o) return;
   let changed = false;
   out.forEach((m) => {
-    if (m.no > o.n || o.roster && o.roster.indexOf(m.no) < 0) return;
+    if (m.no > o.n) return;
+    if (o.roster && o.roster.indexOf(m.no) < 0) {
+      if (!o.allowNew) return;
+      o.roster.push(m.no);
+      o.roster.sort((a, b) => a - b);
+      changed = true;
+    }
     if (CAM.seen[m.no] == null) fresh++;
     if (CAM.seen[m.no] !== m.a) {
       CAM.seen[m.no] = m.a;
@@ -4404,7 +4410,7 @@ function camTick() {
   c.globalAlpha = Math.max(0, 1 - age / 700);
   const cor = CAM.opts.cor, hasCor = cor != null && cor >= 0;
   CAM.res.forEach((m) => {
-    if (m.no > CAM.opts.n || CAM.opts.roster && CAM.opts.roster.indexOf(m.no) < 0) return;
+    if (m.no > CAM.opts.n || CAM.opts.roster && !CAM.opts.allowNew && CAM.opts.roster.indexOf(m.no) < 0) return;
     const col = !hasCor ? "#3FBF4F" : m.a === cor ? "#3FBF4F" : "#FF3B5C";
     const pts = m.c.map((p) => [ox + p[0] * k, oy + p[1] * k]);
     c.beginPath();
@@ -4685,7 +4691,7 @@ function onMsg(m) {
     if (!RM.st || RM.st.qi !== m.qi || m.phase !== "q") {
       if (!RM.st || RM.st.qi !== m.qi) RM.ans = {};
     }
-    const changed = !RM.st || RM.st.phase !== m.phase || RM.st.qi !== m.qi || RM.st.total !== m.total || m.phase === "pick" && RM.st.reg !== m.reg;
+    const changed = !RM.st || RM.st.phase !== m.phase || RM.st.qi !== m.qi || RM.st.total !== m.total || m.phase === "pick" && RM.st.reg !== m.reg || RM.st.slide !== m.slide;
     RM.st = m;
     if (m.phase !== "q" && m.phase !== "pick" && CAM.on) camClose();
     if (changed) render();
@@ -4721,17 +4727,19 @@ function render() {
   if (!s) body = `<div class="cx-card">Abre <b>\u{1F4F7} Scan Race</b> en la pantalla del sal\xF3n con el c\xF3digo <b>${esc(RM.code)}</b>.</div>`;
   else if (s.phase === "none") body = `<div class="cx-card">\u2705 Pantalla encontrada. Ah\xED elige <b>\u{1F4F7} Scan Race</b> y un set.</div>`;
   else if (s.phase === "lobby") body = `<button class="cb go huge" data-c="start">\u{1F3C1} Arrancar carrera</button>`;
-  else if (s.phase === "end") body = `<div class="cx-card"><h2>\u{1F3C6} \xA1Termin\xF3!</h2>${(s.top || []).map((t, i) => `<p class="cx-top">${["\u{1F947}", "\u{1F948}", "\u{1F949}"][i]} ${esc(t)}</p>`).join("")}</div>`;
+  else if (s.phase === "end") body = `<div class="cx-card"><h2>\u{1F3C6} \xA1Termin\xF3!</h2>${(s.top || []).map((t, i) => `<p class="cx-top">${["\u{1F947}", "\u{1F948}", "\u{1F949}"][i]} ${esc(t)}</p>`).join("")}<p class="rmsmall">Pantalla: ${["\u{1F3C6} Podio", "\u{1F605} Mortero", "\u{1F4CA} Calificaciones"][s.slide || 0]}</p></div>
+      <div class="cx-grid"><button class="cb big" data-c="eprev">\u25C0 Atr\xE1s</button><button class="cb go big" data-c="enext">Siguiente \u25B6</button></div>`;
   else if (s.phase === "pick") body = `<div class="cx-card"><b>\u{1F3C3} Registro de corredores</b><br>Escanea a todos (cualquier letra). Despu\xE9s personal\xEDzalos en la pantalla.<br><b>${s.reg || 0}</b> registrados</div>
       <button class="cb scan huge" data-c="scan">\u{1F4F7} Escanear para registrar</button>
       <div class="cx-grid"><button class="cb" data-c="rand">\u{1F3B2} Todos al azar</button><button class="cb" data-c="pop">\u{1FA9F} Ventana</button></div>
       <button class="cb go big" data-c="go">\u{1F3C1} \xA1Arrancar la carrera!</button>`;
   else if (s.phase === "q") body = `<button class="cb scan huge" data-c="scan">\u{1F4F7} Escanear</button>
       <button class="cb chk big" data-c="reveal">\u2714 Checar respuestas</button>
-      <div class="cx-grid">${s.audio ? `<button class="cb" data-c="audio">\u{1F50A} Audio</button><button class="cb" data-c="slow">\u{1F422} Lento</button>` : ""}
-      <button class="cb" data-c="skip">\u23ED Saltar</button><button class="cb" data-c="mix">\u{1F500} Mezclar</button><button class="cb" data-c="list">\u{1F4CB} Elegir</button><button class="cb" data-c="pop">\u{1FA9F} Pregunta</button><button class="cb end" data-c="end">\u{1F3C1} Terminar</button></div>`;
+      <div class="cx-grid">${s.audio ? `<button class="cb" data-c="audio">\u{1F50A} Audio</button>` : ""}<button class="cb" data-c="more">${RM.more ? "\u2715 Cerrar" : "\u22EF M\xE1s"}</button></div>
+      ${RM.more ? `<div class="cx-grid">${s.audio ? `<button class="cb" data-c="slow">\u{1F422} Lento</button><button class="cb" data-c="txt">\u{1F4DD} Texto</button>` : ""}<button class="cb" data-c="skip">\u23ED Saltar</button><button class="cb" data-c="mix">\u{1F500} Mezclar</button><button class="cb" data-c="list">\u{1F4CB} Elegir</button><button class="cb" data-c="pop">\u{1FA9F} Pregunta</button><button class="cb end" data-c="end">\u{1F3C1} Terminar</button></div>` : ""}`;
   else if (s.phase === "reveal") body = `<button class="cb go huge" data-c="next">${s.qi + 1 >= s.total ? "\u{1F3C6} Resultados" : "\u25B6 Siguiente"}</button>
-      <div class="cx-grid">${s.audio ? `<button class="cb" data-c="audio">\u{1F50A} Audio</button>` : ""}<button class="cb" data-c="pop">\u{1FA9F} Pregunta</button><button class="cb" data-c="mix">\u{1F500} Mezclar</button><button class="cb" data-c="list">\u{1F4CB} Elegir</button><button class="cb end" data-c="end">\u{1F3C1} Terminar</button></div>`;
+      <div class="cx-grid">${s.audio ? `<button class="cb" data-c="audio">\u{1F50A} Audio</button>` : ""}<button class="cb" data-c="more">${RM.more ? "\u2715 Cerrar" : "\u22EF M\xE1s"}</button></div>
+      ${RM.more ? `<div class="cx-grid">${s.audio ? `<button class="cb" data-c="txt">\u{1F4DD} Texto</button>` : ""}<button class="cb" data-c="pop">\u{1FA9F} Pregunta</button><button class="cb" data-c="mix">\u{1F500} Mezclar</button><button class="cb" data-c="list">\u{1F4CB} Elegir</button><button class="cb end" data-c="end">\u{1F3C1} Terminar</button></div>` : ""}`;
   $("#app").innerHTML = `<div class="cx-head"><span id="cxConn" class="cx-conn">\u25CB</span><button id="cxCode" class="cx-codebtn">\u{1F522} ${esc(RM.code)}</button></div>
     <div id="cxStat" class="cx-stat"></div><div class="cx-body">${body}</div>
     <div id="cxList" class="cx-list" hidden><div class="cx-lhead"><b>\u{1F4CB} \xBFCu\xE1l sigue?</b><button class="cb small" id="cxLClose">Cerrar</button></div><div id="cxLBody"></div></div>`;
@@ -4748,6 +4756,12 @@ function render() {
   };
   document.querySelectorAll("[data-c]").forEach((b) => b.onclick = () => {
     const c = b.dataset.c;
+    if (c === "more") {
+      RM.more = !RM.more;
+      render();
+      return;
+    }
+    if (c !== "list") RM.more = false;
     if (c === "scan") scan();
     else if (c === "audio") cmd("audio", { r: 1 });
     else if (c === "slow") cmd("audio", { r: 0.75 });
@@ -4788,7 +4802,8 @@ function scan() {
     cor: pick ? null : s.cor,
     got,
     dynamic: pick,
-    roster: pick ? null : s.roster,
+    roster: pick ? null : (s.roster || []).slice(),
+    allowNew: !pick,
     onCard: (no, a) => {
       if (RM.ans[no] !== a) {
         RM.ans[no] = a;
