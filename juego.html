@@ -21970,16 +21970,18 @@ onmessage = function(e){ var m = e.data, out = [];
       onCheck: () => scReveal()
     });
   }
-  const SC_BIOMES = [
-    { name: "\u{1F3DB}\uFE0F Colegio Militar", sky: ["#58B7FF", "#DDF3FF"], far: "#86A9C9", ground: "#C9B48E", line: "#FFFFFF", edge: "#5C9E45" },
-    { name: "\u{1F3D9}\uFE0F Ciudad", sky: ["#7EC8FF", "#D7F0FF"], far: "#8FA3C7", ground: "#5B5F6E", line: "#F2F2F2", edge: "#3A3D48" },
-    { name: "\u{1F333} Bosque", sky: ["#8ED6FF", "#E3F7FF"], far: "#5E9E5B", ground: "#6B4F2A", line: "#C9A86A", edge: "#3E7D2F" },
-    { name: "\u{1F335} Desierto", sky: ["#FFB86B", "#FFE7B3"], far: "#E0975A", ground: "#D9A55B", line: "#F5D9A6", edge: "#B97A3A" },
-    { name: "\u{1F3D6}\uFE0F Playa", sky: ["#5EC8FF", "#C8F1FF"], far: "#2E9BD6", ground: "#EED9A0", line: "#FFF6D8", edge: "#D9BE78" },
-    { name: "\u{1F3D4}\uFE0F Monta\xF1a", sky: ["#9EC9F0", "#EEF6FF"], far: "#8E9CC2", ground: "#E8F0FA", line: "#B8C6DA", edge: "#9FB0C8" },
-    { name: "\u{1F30B} Volc\xE1n", sky: ["#5A1F2E", "#E0663C"], far: "#3A2430", ground: "#3C2E2E", line: "#FF7A3D", edge: "#22181A" },
-    { name: "\u{1F30C} Espacio", sky: ["#0B0726", "#2B1B5A"], far: "#3A2C6E", ground: "#4A3E7A", line: "#C8B8FF", edge: "#2A2050" }
+  const SC_ZONES = [
+    { name: "\u{1F6AA} Puerta principal", ground: "#CFC6B6", edge: "#8C8577" },
+    { name: "\u{1F3DB}\uFE0F Edificio de Gobierno", ground: "#D6CDBD", edge: "#9A917F" },
+    { name: "\u{1F1F2}\u{1F1FD} Plaza de la Bandera", ground: "#C9C2B5", edge: "#8E877A" },
+    { name: "\u{1F4DA} Aulas", ground: "#7A7F8C", edge: "#5C9E45" },
+    { name: "\u{1F37D}\uFE0F Comedor", ground: "#80858F", edge: "#5C9E45" },
+    { name: "\u{1F985} Dormitorios", ground: "#76808A", edge: "#5C9E45" },
+    { name: "\u{1F9D7} Pista de obst\xE1culos", ground: "#9B7449", edge: "#5C9E45" },
+    { name: "\u{1F40E} Caballerizas", ground: "#A88B5E", edge: "#4E8E3A" },
+    { name: "\u{1F3DF}\uFE0F Estadio", ground: "#C2553A", edge: "#3E8E41" }
   ];
+  const SC_SKY = [["#FF9E6B", "#FFE2C2"], ["#58B7FF", "#DDF3FF"], ["#3FA9FF", "#D3EEFF"], ["#4FA6E8", "#E6F2FF"], ["#FF8A5B", "#FFD39B"], ["#5B4C9E", "#FF9F7A"]];
   function scHash(k) {
     let x = Math.sin(k * 127.1 + 311.7) * 43758.5453;
     return x - Math.floor(x);
@@ -21988,154 +21990,322 @@ onmessage = function(e){ var m = e.data, out = [];
     const p = (s) => [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)], A = p(a), B = p(b);
     return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * f)).join(",")})`;
   }
-  let scCampusCv = null;
-  function scCampus() {
-    if (scCampusCv) return scCampusCv;
-    const W = 1800, H = 420, y0 = 410, m = (scCampusCv = document.createElement("canvas")).getContext("2d");
-    scCampusCv.width = W;
-    scCampusCv.height = H;
-    try {
-      const S = SEASONS.summer;
-      stepPyramid(m, 110, y0, 200, S, false);
-      serpentBuilding(m, 230, y0, 360, S, false);
-      govBuilding(m, 870, y0, S, false);
-      m.font = "900 15px Nunito, sans-serif";
-      m.textAlign = "center";
-      m.fillStyle = "#2B2366";
-      m.fillText("HEROICO COLEGIO MILITAR", 870, y0 - 182);
-      const fx = 1150;
-      m.strokeStyle = "#2B2366";
+  function scZoneOf(k, total) {
+    if (k <= 0) return 0;
+    if (k >= total - 1) return 8;
+    return 1 + (k - 1) % 7;
+  }
+  const scZoneCv = {};
+  function scZone(z) {
+    if (scZoneCv[z]) return scZoneCv[z];
+    const W = 1e3, H = 430, y0 = 420, cv = document.createElement("canvas");
+    cv.width = W;
+    cv.height = H;
+    const m = cv.getContext("2d");
+    scZoneCv[z] = cv;
+    const S = SEASONS.summer, INKc = "#2B2366";
+    const sign = (x, y, txt) => {
+      m.font = "900 22px Nunito, sans-serif";
+      const tw = m.measureText(txt).width + 24;
+      m.fillStyle = "#fff";
+      m.strokeStyle = INKc;
       m.lineWidth = 3;
-      m.fillStyle = "#9C9AB0";
       m.beginPath();
-      m.rect(fx - 3, y0 - 330, 6, 330);
+      if (m.roundRect) m.roundRect(x - tw / 2, y - 20, tw, 36, 10);
+      else m.rect(x - tw / 2, y - 20, tw, 36);
       m.fill();
       m.stroke();
-      m.fillStyle = "#006847";
-      m.fillRect(fx + 3, y0 - 326, 40, 70);
-      m.fillStyle = "#fff";
-      m.fillRect(fx + 43, y0 - 326, 40, 70);
-      m.fillStyle = "#CE1126";
-      m.fillRect(fx + 83, y0 - 326, 40, 70);
-      m.fillStyle = "#8B5A2B";
+      m.fillStyle = INKc;
+      m.textAlign = "center";
+      m.textBaseline = "middle";
+      m.fillText(txt, x, y - 1);
+      m.textBaseline = "alphabetic";
+    };
+    const pole = (x, h) => {
+      m.fillStyle = "#9C9AB0";
+      m.strokeStyle = INKc;
+      m.lineWidth = 3;
       m.beginPath();
-      m.arc(fx + 63, y0 - 291, 9, 0, 7);
+      m.rect(x - 3, y0 - h, 6, h);
       m.fill();
-      cadets(m, 1010, 1130, y0);
-      cadets(m, 1180, 1300, y0);
-      eagleDorm(m, 1430, y0, S, false);
-      stepPyramid(m, 1680, y0, 170, S, false);
+      m.stroke();
+      m.fillStyle = "#FFD21A";
+      m.beginPath();
+      m.arc(x, y0 - h - 4, 7, 0, 7);
+      m.fill();
+      m.stroke();
+    };
+    const tree = (x, s) => {
+      m.save();
+      m.translate(x, y0);
+      m.scale(s, s);
+      try {
+        drawTree(m, 0, 0, "summer");
+      } catch (e) {
+      }
+      m.restore();
+    };
+    try {
+      if (z === 0) {
+        stepPyramid(m, 120, y0, 190, S, false);
+        stepPyramid(m, 880, y0, 190, S, false);
+        [380, 620].forEach((x) => {
+          m.fillStyle = S.concrete;
+          m.strokeStyle = INKc;
+          m.lineWidth = 3;
+          m.fillRect(x - 28, y0 - 230, 56, 230);
+          m.strokeRect(x - 28, y0 - 230, 56, 230);
+          m.fillStyle = "#B9AE98";
+          m.fillRect(x - 36, y0 - 246, 72, 18);
+          m.strokeRect(x - 36, y0 - 246, 72, 18);
+        });
+        m.fillStyle = "#3B3458";
+        m.fillRect(352, y0 - 300, 296, 50);
+        m.fillStyle = "#FFD21A";
+        m.font = "900 22px Nunito, sans-serif";
+        m.textAlign = "center";
+        m.fillText("HEROICO COLEGIO MILITAR", 500, y0 - 268);
+        m.strokeStyle = "#2B2366";
+        m.lineWidth = 4;
+        for (let x = 412; x < 590; x += 16) {
+          m.beginPath();
+          m.moveTo(x, y0);
+          m.lineTo(x, y0 - 150);
+          m.stroke();
+        }
+        m.beginPath();
+        m.moveTo(408, y0 - 150);
+        m.lineTo(592, y0 - 150);
+        m.stroke();
+        m.fillStyle = "#E9E1D2";
+        m.fillRect(680, y0 - 80, 60, 80);
+        m.strokeRect(680, y0 - 80, 60, 80);
+        m.fillStyle = "#7EC8FF";
+        m.fillRect(692, y0 - 64, 36, 24);
+        m.fillStyle = "#B23A3A";
+        m.fillRect(674, y0 - 92, 72, 14);
+        cadets(m, 300, 345, y0);
+        cadets(m, 655, 670, y0);
+      } else if (z === 1) {
+        tree(70, 1);
+        stepPyramid(m, 160, y0, 170, S, false);
+        govBuilding(m, 520, y0, S, false);
+        m.font = "900 15px Nunito, sans-serif";
+        m.textAlign = "center";
+        m.fillStyle = INKc;
+        m.fillText("HEROICO COLEGIO MILITAR", 520, y0 - 182);
+        stepPyramid(m, 880, y0, 170, S, false);
+        tree(960, 0.9);
+      } else if (z === 2) {
+        tribuna(m, 330, y0, S, false);
+        pole(760, 340);
+        const fx = 763, top = y0 - 336;
+        [["#006847", 0], ["#FFFFFF", 1], ["#CE1126", 2]].forEach(([c, i]) => {
+          m.fillStyle = c;
+          m.fillRect(fx + i * 46, top, 46, 84);
+        });
+        m.fillStyle = "#8B5A2B";
+        m.beginPath();
+        m.arc(fx + 69, top + 42, 11, 0, 7);
+        m.fill();
+        m.strokeStyle = INKc;
+        m.lineWidth = 2;
+        m.strokeRect(fx, top, 138, 84);
+        cadets(m, 560, 720, y0);
+        cadets(m, 800, 960, y0);
+      } else if (z === 3) {
+        classBuilding(m, 270, y0, S, false, false);
+        classBuilding(m, 740, y0, S, false, true);
+        sign(500, y0 - 40, "\u{1F4DA} AULAS");
+      } else if (z === 4) {
+        tree(60, 1);
+        m.fillStyle = S.concrete;
+        m.strokeStyle = INKc;
+        m.lineWidth = 3;
+        m.fillRect(150, y0 - 170, 700, 170);
+        m.strokeRect(150, y0 - 170, 700, 170);
+        m.fillStyle = "#B9AE98";
+        m.beginPath();
+        m.moveTo(130, y0 - 170);
+        m.lineTo(500, y0 - 250);
+        m.lineTo(870, y0 - 170);
+        m.closePath();
+        m.fill();
+        m.stroke();
+        for (let x = 190; x < 820; x += 90) {
+          m.fillStyle = "#3B3458";
+          m.beginPath();
+          m.moveTo(x, y0);
+          m.lineTo(x, y0 - 90);
+          m.arc(x + 30, y0 - 90, 30, Math.PI, 0);
+          m.lineTo(x + 60, y0);
+          m.fill();
+        }
+        sign(500, y0 - 205, "\u{1F37D}\uFE0F COMEDOR");
+        m.fillStyle = "rgba(255,255,255,.7)";
+        [[760, -260], [780, -290], [750, -320]].forEach(([x, y]) => {
+          m.beginPath();
+          m.arc(x, y0 + y, 16, 0, 7);
+          m.fill();
+        });
+        m.fillStyle = "#9C9AB0";
+        m.fillRect(750, y0 - 250, 26, 80);
+        m.strokeRect(750, y0 - 250, 26, 80);
+        tree(940, 1);
+      } else if (z === 5) {
+        eagleDorm(m, 260, y0, S, false);
+        eagleDorm(m, 740, y0, S, false);
+        sign(500, y0 - 30, "\u{1F985} DORMITORIOS");
+        tree(500, 0.8);
+      } else if (z === 6) {
+        m.fillStyle = "#8B5A2B";
+        m.strokeStyle = INKc;
+        m.lineWidth = 3;
+        m.fillRect(100, y0 - 120, 120, 120);
+        m.strokeRect(100, y0 - 120, 120, 120);
+        for (let y = y0 - 110; y < y0; y += 22) {
+          m.beginPath();
+          m.moveTo(100, y);
+          m.lineTo(220, y);
+          m.stroke();
+        }
+        m.fillRect(300, y0 - 200, 10, 200);
+        m.fillRect(440, y0 - 200, 10, 200);
+        m.fillRect(300, y0 - 205, 150, 10);
+        m.strokeStyle = "#C9A86A";
+        m.lineWidth = 4;
+        for (let x = 320; x < 440; x += 24) {
+          m.beginPath();
+          m.moveTo(x, y0 - 195);
+          m.quadraticCurveTo(x + 6, y0 - 100, x, y0 - 30);
+          m.stroke();
+        }
+        m.fillStyle = "#1A1530";
+        [540, 600, 660, 570, 630].forEach((x, i) => {
+          m.beginPath();
+          m.ellipse(x, y0 - 14 - (i > 2 ? 26 : 0), 30, 14, 0, 0, 7);
+          m.fill();
+          m.fillStyle = "#555";
+          m.beginPath();
+          m.ellipse(x, y0 - 14 - (i > 2 ? 26 : 0), 14, 6, 0, 0, 7);
+          m.fill();
+          m.fillStyle = "#1A1530";
+        });
+        m.fillStyle = "#8B5A2B";
+        m.strokeStyle = INKc;
+        m.lineWidth = 3;
+        for (let i = 0; i < 4; i++) {
+          m.fillRect(740 + i * 55, y0 - 60 - i * 30, 50, 60 + i * 30);
+          m.strokeRect(740 + i * 55, y0 - 60 - i * 30, 50, 60 + i * 30);
+        }
+        sign(260, y0 - 250, "\u{1F9D7} PISTA DE OBST\xC1CULOS");
+      } else if (z === 7) {
+        tree(60, 1.1);
+        m.fillStyle = "#B23A3A";
+        m.strokeStyle = INKc;
+        m.lineWidth = 3;
+        m.fillRect(150, y0 - 160, 380, 160);
+        m.strokeRect(150, y0 - 160, 380, 160);
+        m.fillStyle = "#7A2626";
+        m.beginPath();
+        m.moveTo(130, y0 - 160);
+        m.lineTo(340, y0 - 240);
+        m.lineTo(550, y0 - 160);
+        m.closePath();
+        m.fill();
+        m.stroke();
+        [200, 300, 400].forEach((x) => {
+          m.fillStyle = "#fff";
+          m.fillRect(x, y0 - 100, 70, 100);
+          m.strokeStyle = "#B23A3A";
+          m.lineWidth = 6;
+          m.beginPath();
+          m.moveTo(x, y0 - 100);
+          m.lineTo(x + 70, y0);
+          m.moveTo(x + 70, y0 - 100);
+          m.lineTo(x, y0);
+          m.stroke();
+        });
+        m.strokeStyle = "#8B5A2B";
+        m.lineWidth = 6;
+        for (let x = 580; x < 990; x += 50) {
+          m.beginPath();
+          m.moveTo(x, y0);
+          m.lineTo(x, y0 - 60);
+          m.stroke();
+        }
+        m.beginPath();
+        m.moveTo(570, y0 - 50);
+        m.lineTo(1e3, y0 - 50);
+        m.moveTo(570, y0 - 25);
+        m.lineTo(1e3, y0 - 25);
+        m.stroke();
+        [[700, "#6B4423"], [860, "#F2E8DA"]].forEach(([x, col]) => {
+          m.fillStyle = col;
+          m.strokeStyle = INKc;
+          m.lineWidth = 3;
+          m.beginPath();
+          m.ellipse(x, y0 - 70, 46, 24, 0, 0, 7);
+          m.fill();
+          m.stroke();
+          m.fillRect(x - 36, y0 - 52, 9, 52);
+          m.fillRect(x + 26, y0 - 52, 9, 52);
+          m.beginPath();
+          m.moveTo(x + 36, y0 - 80);
+          m.lineTo(x + 58, y0 - 128);
+          m.lineTo(x + 78, y0 - 116);
+          m.lineTo(x + 50, y0 - 72);
+          m.closePath();
+          m.fill();
+          m.stroke();
+          m.fillStyle = "#2B2366";
+          m.fillRect(x + 40, y0 - 130, 8, 40);
+        });
+        sign(340, y0 - 270, "\u{1F40E} CABALLERIZAS");
+      } else {
+        m.fillStyle = "#8E8AA0";
+        m.strokeStyle = INKc;
+        m.lineWidth = 3;
+        m.beginPath();
+        m.moveTo(40, y0);
+        m.lineTo(120, y0 - 220);
+        m.lineTo(880, y0 - 220);
+        m.lineTo(960, y0);
+        m.closePath();
+        m.fill();
+        m.stroke();
+        for (let r = 0; r < 8; r++) {
+          const y = y0 - 20 - r * 25;
+          for (let x = 80 + r * 10; x < 920 - r * 10; x += 14) {
+            m.fillStyle = ["#FF4F6D", "#4DA8FF", "#FFD21A", "#3FBF4F", "#fff", "#B06BFF"][Math.floor(scHash(x * 3 + r * 7) * 6)];
+            m.beginPath();
+            m.arc(x, y, 5, 0, 7);
+            m.fill();
+          }
+        }
+        [100, 900].forEach((x) => {
+          m.fillStyle = "#9C9AB0";
+          m.fillRect(x - 4, y0 - 380, 8, 380);
+          m.fillStyle = "#FFF6B0";
+          m.fillRect(x - 30, y0 - 400, 60, 26);
+          m.strokeRect(x - 30, y0 - 400, 60, 26);
+        });
+        sign(500, y0 - 250, "\u{1F3DF}\uFE0F ESTADIO \xB7 \xA1META!");
+      }
     } catch (e) {
-      m.fillStyle = "#DCD3C5";
-      m.fillRect(300, 200, 1200, 210);
       m.fillStyle = "#2B2366";
       m.font = "900 40px sans-serif";
-      m.fillText("HEROICO COLEGIO MILITAR", 450, 300);
+      m.fillText(SC_ZONES[z].name, 300, 300);
     }
-    return scCampusCv;
+    return cv;
   }
-  function scProp(c, b, x, yb, k, t) {
-    const r = scHash(k), dk = "#1A1530";
-    if (b === 1) {
-      const w = 50 + r * 50, h = 70 + scHash(k + 1) * 110;
-      c.fillStyle = ["#6C7A99", "#7E8CAB", "#59647F"][k % 3];
-      c.fillRect(x, yb - h, w, h);
-      c.fillStyle = "#FFE9A0";
-      for (let i = 8; i < h - 10; i += 18) for (let j = 6; j < w - 10; j += 14) if (scHash(k * 7 + i + j) > 0.45) c.fillRect(x + j, yb - h + i, 7, 9);
-    } else if (b === 2) {
-      const h = 60 + r * 70;
-      c.fillStyle = "#6B4423";
-      c.fillRect(x - 4, yb - h * 0.3, 8, h * 0.3);
-      c.fillStyle = ["#2F7D32", "#3E8E41", "#25692A"][k % 3];
-      for (let i = 0; i < 3; i++) {
-        c.beginPath();
-        c.moveTo(x, yb - h + i * h * 0.18);
-        c.lineTo(x - h * 0.32 + i * 4, yb - h * 0.28 - i * h * 0.06 + 0);
-        c.lineTo(x + h * 0.32 - i * 4, yb - h * 0.28 - i * h * 0.06);
-        c.fill();
-      }
-    } else if (b === 3) {
-      const h = 40 + r * 60;
-      c.fillStyle = "#3E8E41";
-      scRR(c, x - 7, yb - h, 14, h, 7);
-      c.fill();
-      scRR(c, x - 22, yb - h * 0.7, 10, h * 0.35, 5);
-      c.fill();
-      c.fillRect(x - 16, yb - h * 0.42, 12, 7);
-      scRR(c, x + 12, yb - h * 0.85, 10, h * 0.4, 5);
-      c.fill();
-      c.fillRect(x + 4, yb - h * 0.5, 12, 7);
-    } else if (b === 4) {
-      const h = 80 + r * 50;
-      c.strokeStyle = "#8B5A2B";
-      c.lineWidth = 7;
-      c.beginPath();
-      c.moveTo(x, yb);
-      c.quadraticCurveTo(x + 16, yb - h * 0.5, x + 8, yb - h);
-      c.stroke();
-      c.fillStyle = "#2E9E4F";
-      for (let i = 0; i < 5; i++) {
-        const a = -Math.PI * 0.9 + i * Math.PI * 0.45;
-        c.beginPath();
-        c.ellipse(x + 8 + Math.cos(a) * 22, yb - h + Math.sin(a) * 10 + 6, 26, 7, a, 0, 7);
-        c.fill();
-      }
-    } else if (b === 5) {
-      const h = 50 + r * 50;
-      c.fillStyle = "#2F6B4F";
-      c.beginPath();
-      c.moveTo(x, yb - h);
-      c.lineTo(x - h * 0.3, yb);
-      c.lineTo(x + h * 0.3, yb);
-      c.fill();
-      c.fillStyle = "#fff";
-      c.beginPath();
-      c.moveTo(x, yb - h);
-      c.lineTo(x - h * 0.12, yb - h * 0.6);
-      c.lineTo(x + h * 0.12, yb - h * 0.6);
-      c.fill();
-    } else if (b === 6) {
-      const h = 30 + r * 40;
-      c.fillStyle = "#2A1E22";
-      c.beginPath();
-      c.moveTo(x - h * 0.6, yb);
-      c.lineTo(x - h * 0.2, yb - h);
-      c.lineTo(x + h * 0.3, yb - h * 0.8);
-      c.lineTo(x + h * 0.6, yb);
-      c.fill();
-      c.fillStyle = "#FF7A3D";
-      c.fillRect(x - 2, yb - h * 0.8, 4, h * 0.8);
-    } else {
-      c.fillStyle = "#fff";
-      for (let i = 0; i < 5; i++) {
-        c.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(t * 2 + k + i));
-        c.fillRect(x + scHash(k + i * 3) * 120 - 60, yb - 20 - scHash(k * 5 + i) * 150, 2.5, 2.5);
-      }
-      c.globalAlpha = 1;
-      if (k % 4 === 0) {
-        c.fillStyle = ["#FFB400", "#B98AFF", "#7EC8FF"][k % 3];
-        c.beginPath();
-        c.arc(x, yb - 110 - r * 40, 16 + r * 12, 0, 7);
-        c.fill();
-      }
-    }
-  }
-  function scFar(c, b, W, top, base, off, col) {
+  function scFar(c, W, base, off, col) {
     c.fillStyle = col;
     c.beginPath();
     c.moveTo(0, base);
-    for (let x = 0; x <= W + 40; x += 40) {
-      const wx = x + off, k = Math.floor(wx / 40);
-      let y;
-      if (b === 1) y = base - 40 - scHash(k) * 90;
-      else if (b === 0 || b === 5) y = base - 60 - Math.abs(Math.sin(wx / 170)) * 140;
-      else if (b === 6) y = base - 30 - Math.max(0, 140 - Math.abs((wx % 900 + 900) % 900 - 450) * 0.6);
-      else if (b === 4) y = base - 18;
-      else y = base - 30 - (Math.sin(wx / 130) + 1) * 35;
-      if (b === 1) {
-        c.lineTo(x, y);
-        c.lineTo(x + 40, y);
-      } else c.lineTo(x, y);
+    for (let x = 0; x <= W + 40; x += 20) {
+      const wx = x + off;
+      c.lineTo(x, base - 50 - Math.abs(Math.sin(wx / 260)) * 110 - Math.sin(wx / 97) * 18);
     }
     c.lineTo(W, base);
     c.closePath();
@@ -22156,7 +22326,7 @@ onmessage = function(e){ var m = e.data, out = [];
     const c = cv.getContext("2d");
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
     const t = performance.now() / 1e3;
-    const viewW = W - 112, total = Math.max(1, game.order.length), U = Math.max(260, viewW * 0.27), start2 = U * 0.75;
+    const viewW = W - 112, total = Math.max(1, game.order.length), U = Math.max(300, viewW * 0.34), start2 = U * 0.75;
     const n = Math.max(1, sc.students.length), roadTop = Math.max(230, H * 0.33), roadBot = H - 14, laneH = (roadBot - roadTop) / n;
     const lead = Math.max(0, ...sc.students.map((s) => s.shown)), tail = Math.min(lead, ...sc.students.map((s) => s.shown));
     let target = start2 + lead * U - viewW * 0.62;
@@ -22166,61 +22336,49 @@ onmessage = function(e){ var m = e.data, out = [];
     if (sc.cam == null) sc.cam = target;
     sc.cam += (target - sc.cam) * 0.04;
     const cam = sc.cam;
-    const pos = (cam + viewW * 0.5 - start2) / U, bi = Math.max(0, Math.floor(pos)), f = Math.min(1, Math.max(0, pos - bi - 0.5) * 2);
-    const B0 = SC_BIOMES[bi % 8], B1 = SC_BIOMES[(bi + 1) % 8], fin = bi >= total;
+    const prog = Math.max(0, Math.min(1, (cam + viewW * 0.5 - start2) / (total * U))), sp = prog * (SC_SKY.length - 1), si = Math.min(SC_SKY.length - 2, Math.floor(sp)), sf = sp - si;
     const g = c.createLinearGradient(0, 0, 0, roadTop);
-    g.addColorStop(0, scMix(B0.sky[0], B1.sky[0], f));
-    g.addColorStop(1, scMix(B0.sky[1], B1.sky[1], f));
+    g.addColorStop(0, scMix(SC_SKY[si][0], SC_SKY[si + 1][0], sf));
+    g.addColorStop(1, scMix(SC_SKY[si][1], SC_SKY[si + 1][1], sf));
     c.fillStyle = g;
     c.fillRect(0, 0, W, roadTop);
-    if (bi % 8 >= 6 || (bi + 1) % 8 >= 6 && f > 0.5) {
-      c.fillStyle = "#fff";
-      for (let i = 0; i < 60; i++) {
-        c.globalAlpha = 0.3 + 0.5 * Math.abs(Math.sin(t + i));
-        c.fillRect((scHash(i) * W * 1.3 - cam * 0.05) % W, scHash(i + 99) * roadTop * 0.8, 2, 2);
-      }
-      c.globalAlpha = 1;
-    } else {
-      c.fillStyle = "rgba(255,255,255,.85)";
-      for (let i = 0; i < 5; i++) {
-        const x = ((scHash(i) * W * 1.5 - cam * 0.15 + t * 8) % (W + 260) + W + 260) % (W + 260) - 130, y = 40 + scHash(i + 7) * roadTop * 0.35, r = 18 + scHash(i + 3) * 16;
-        c.beginPath();
-        c.arc(x, y, r, 0, 7);
-        c.arc(x + r, y - r * 0.5, r * 1.1, 0, 7);
-        c.arc(x + r * 2.1, y, r * 0.9, 0, 7);
-        c.fill();
-      }
+    const sunX = W * (0.1 + prog * 0.8), sunY = roadTop * (0.75 - Math.sin(prog * Math.PI) * 0.6);
+    c.fillStyle = prog > 0.8 || prog < 0.12 ? "#FF9A3D" : "#FFE066";
+    c.beginPath();
+    c.arc(sunX, sunY, Math.min(W, H) * 0.05, 0, 7);
+    c.fill();
+    c.fillStyle = "rgba(255,255,255,.85)";
+    for (let i = 0; i < 5; i++) {
+      const x = ((scHash(i) * W * 1.5 - cam * 0.15 + t * 8) % (W + 260) + W + 260) % (W + 260) - 130, y = 30 + scHash(i + 7) * roadTop * 0.3, r = 18 + scHash(i + 3) * 16;
+      c.beginPath();
+      c.arc(x, y, r, 0, 7);
+      c.arc(x + r, y - r * 0.5, r * 1.1, 0, 7);
+      c.arc(x + r * 2.1, y, r * 0.9, 0, 7);
+      c.fill();
     }
-    c.globalAlpha = 1 - f;
-    scFar(c, bi % 8, W, 0, roadTop - 6, cam * 0.35, B0.far);
-    c.globalAlpha = f;
-    if (f > 0) scFar(c, (bi + 1) % 8, W, 0, roadTop - 6, cam * 0.35, B1.far);
-    c.globalAlpha = 1;
+    scFar(c, W, roadTop - 6, cam * 0.3, scMix("#8FA7C9", "#6E5A8E", prog));
     const k0 = Math.max(0, Math.floor((cam - start2) / U) - 1), k1 = Math.ceil((cam + W - start2) / U) + 1;
     for (let k = k0; k <= k1; k++) {
-      const x0 = start2 + k * U - cam, b = k < 0 ? 0 : k >= total ? 7 : k % 8, Bk = SC_BIOMES[b];
+      const x0 = start2 + k * U - cam, z = k >= total ? 8 : scZoneOf(k, total), Z = SC_ZONES[z];
       if (k === 0) {
-        c.fillStyle = Bk.edge;
+        c.fillStyle = Z.edge;
         c.fillRect(x0 - start2, roadTop - 12, start2, 14);
-        c.fillStyle = Bk.ground;
+        c.fillStyle = Z.ground;
         c.fillRect(x0 - start2, roadTop, start2, roadBot - roadTop + 14);
       }
-      c.fillStyle = Bk.edge;
+      c.fillStyle = Z.edge;
       c.fillRect(x0, roadTop - 12, U + 1, 14);
-      c.fillStyle = Bk.ground;
+      c.fillStyle = Z.ground;
       c.fillRect(x0, roadTop, U + 1, roadBot - roadTop + 14);
-      if (b === 0 && (k === 0 || k > 0 && k < total)) {
-        const cp = scCampus(), wp = (k === 0 ? start2 + U : U * 1) * 1, scl = Math.min((roadTop - 16) / cp.height, (k === 0 ? start2 + U : U) / cp.width * 1), dw = cp.width * scl, dh = cp.height * scl, dx = k === 0 ? x0 - start2 : x0;
-        c.drawImage(cp, dx, roadTop - 6 - dh, dw, dh);
-      } else if (k >= 0 && k < total) for (let p = 0; p < 3; p++) {
-        const px = x0 + U * (0.15 + p * 0.33) + scHash(k * 13 + p) * U * 0.1;
-        if (px > -150 && px < W + 150) scProp(c, b, px, roadTop - 10, k * 13 + p, t);
+      if (k < total && x0 > -U * 1.5 && x0 < W + U) {
+        const zc = scZone(z), scl = Math.min((roadTop - 18) / zc.height, (k === 0 ? start2 + U : U) / zc.width), dw = zc.width * scl, dh = zc.height * scl, bx2 = k === 0 ? x0 - start2 : x0;
+        c.drawImage(zc, bx2 + ((k === 0 ? start2 + U : U) - dw) / 2, roadTop - 8 - dh, dw, dh);
       }
     }
     c.setLineDash([18, 16]);
     for (let i = 1; i < n; i++) {
       const y = roadTop + laneH * i;
-      c.strokeStyle = "rgba(255,255,255,.28)";
+      c.strokeStyle = "rgba(255,255,255,.3)";
       c.lineWidth = 2;
       c.beginPath();
       c.moveTo(-(cam % 34), y);
@@ -22230,7 +22388,7 @@ onmessage = function(e){ var m = e.data, out = [];
     c.setLineDash([]);
     for (let k = 0; k <= total; k++) {
       const x = start2 + k * U - cam;
-      if (x < -60 || x > W + 60) continue;
+      if (x < -80 || x > W + 80) continue;
       if (k === 0 || k === total) {
         for (let y = roadTop, i = 0; y < roadBot; y += 12, i++) {
           c.fillStyle = i % 2 ? "#111" : "#fff";
@@ -22239,7 +22397,7 @@ onmessage = function(e){ var m = e.data, out = [];
           c.fillRect(x, y, 12, 12);
         }
       } else {
-        c.strokeStyle = "rgba(255,255,255,.7)";
+        c.strokeStyle = "rgba(255,255,255,.75)";
         c.lineWidth = 4;
         c.setLineDash([10, 10]);
         c.beginPath();
@@ -22248,13 +22406,11 @@ onmessage = function(e){ var m = e.data, out = [];
         c.stroke();
         c.setLineDash([]);
       }
-      const label = k === 0 ? "\u{1F6A6} SALIDA \xB7 " + SC_BIOMES[0].name : k === total ? "\u{1F3C1} META" : `${k} \xB7 ${SC_BIOMES[k % 8].name}`;
-      c.font = "900 16px Nunito, sans-serif";
-      const tw = c.measureText(label).width + 20;
-      c.fillStyle = "#6B4423";
-      c.fillRect(x - 3, roadTop - 70, 6, 60);
+      const label = k === 0 ? "\u{1F6A6} SALIDA" : k === total ? "\u{1F3C1} META" : `${k}`;
+      c.font = "900 17px Nunito, sans-serif";
+      const tw = c.measureText(label).width + 22;
       c.fillStyle = k === total ? "#FFD21A" : "#fff";
-      scRR(c, x - tw / 2, roadTop - 96, tw, 30, 10);
+      scRR(c, x - tw / 2, roadTop + 4, tw, 28, 10);
       c.fill();
       c.strokeStyle = "#2B2366";
       c.lineWidth = 3;
@@ -22262,17 +22418,17 @@ onmessage = function(e){ var m = e.data, out = [];
       c.fillStyle = "#2B2366";
       c.textAlign = "center";
       c.textBaseline = "middle";
-      c.fillText(label, x, roadTop - 80);
+      c.fillText(label, x, roadTop + 18);
       c.textBaseline = "alphabetic";
     }
-    const rs = Math.max(50, Math.min(laneH * 2.5, 180)), vw = rs * 0.62, qphase = game.phase === "q";
+    const rs = Math.max(50, Math.min(laneH * 2.5, 180)), qphase = game.phase === "q";
     sc.students.forEach((s, i) => {
-      const tx = start2 + Math.min(s.shown, total) * U - vw * 0.62;
-      if (s.x == null) s.x = start2 - vw * 0.62;
+      const tx = start2 + Math.min(s.shown, total) * U - rs * 0.38;
+      if (s.x == null) s.x = start2 - rs * 0.38;
       s.x += (tx - s.x) * 0.045;
-      let sx = s.x - cam, cy = roadTop + laneH * (i + 0.5), off = sx < 6 + vw * 0.5;
-      if (off) sx = 6 + vw * 0.5;
-      let rot = 0, yy = cy + Math.sin(t * 9 + i) * (s.boost > 0 ? 2.5 : 0.8);
+      let sx = s.x - cam, cy = roadTop + laneH * (i + 0.5) + rs * 0.12, off = sx < 6 + rs * 0.3;
+      if (off) sx = 6 + rs * 0.3;
+      let rot = 0, yy = cy;
       if (s.spin > 0) {
         rot = Math.sin((50 - s.spin) * 0.6) * 0.18 * (s.spin / 50);
         s.spin--;
@@ -22281,6 +22437,10 @@ onmessage = function(e){ var m = e.data, out = [];
       c.translate(sx, yy);
       c.rotate(rot);
       if (off) c.globalAlpha = 0.55;
+      c.fillStyle = "rgba(0,0,0,.18)";
+      c.beginPath();
+      c.ellipse(0, rs * 0.44, rs * 0.22, rs * 0.05, 0, 0, 7);
+      c.fill();
       if (s.boost > 0) {
         s.boost--;
         c.strokeStyle = "rgba(255,255,255,.85)";
@@ -22318,7 +22478,7 @@ onmessage = function(e){ var m = e.data, out = [];
         c.fillStyle = "#fff";
         c.font = `900 ${Math.round(br)}px sans-serif`;
         c.textAlign = "center";
-        c.fillText("\u25C0", 10, cy + br * 0.4);
+        c.fillText("\u25C0", 10, cy);
       }
       if (s.spin > 20) {
         c.font = `${Math.round(rs * 0.25)}px sans-serif`;
@@ -22331,6 +22491,17 @@ onmessage = function(e){ var m = e.data, out = [];
         c.fillText("\u{1F451}", sx + rs * 0.35, yy - rs * 0.45);
       }
     });
+    const kc = Math.floor((cam + viewW * 0.5 - start2) / U), zn = kc < 0 ? 0 : kc >= total ? 8 : scZoneOf(kc, total);
+    c.font = "900 20px Nunito, sans-serif";
+    const nm = "\u{1F4CD} " + SC_ZONES[zn].name, nw = c.measureText(nm).width + 28;
+    c.fillStyle = "rgba(43,35,102,.85)";
+    scRR(c, 14, H - 50, nw, 38, 14);
+    c.fill();
+    c.fillStyle = "#fff";
+    c.textAlign = "left";
+    c.textBaseline = "middle";
+    c.fillText(nm, 28, H - 31);
+    c.textBaseline = "alphabetic";
     scRaceRaf = requestAnimationFrame(scRaceLoop);
   }
   function scRenderEnd() {
