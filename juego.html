@@ -21258,7 +21258,7 @@ onmessage = function(e){ var m = e.data, out = [];
     const R = (n) => Math.floor(Math.random() * n);
     return { sp: R(SC_SP.length), hat: R(SC_HAT.length), gl: Math.random() < 0.45 ? 0 : 1 + R(SC_GL.length - 1), shoe: R(SC_SHOE.length), shirt: SC_SHIRT[R(SC_SHIRT.length)], skin: R(3) };
   }
-  function scDrawRunner(c, L, size, t, run) {
+  function scDrawRunner(c, L, size, t, run, noLegs) {
     const u = size / 10.5, sp = SC_SP[L.sp] ? SC_SP[L.sp][0] : "cadete", dk = "#1A1530";
     let fur = SC_SP[L.sp] ? SC_SP[L.sp][2] : "#E0AC7E", fur2 = SC_SP[L.sp] ? SC_SP[L.sp][3] : "#C68B59";
     if (sp === "cadete") fur = ["#F1C9A0", "#E0AC7E", "#A86B45"][L.skin || 0];
@@ -21321,7 +21321,7 @@ onmessage = function(e){ var m = e.data, out = [];
         c.fill();
       }
     }
-    leg(-a, true);
+    if (!noLegs) leg(-a, true);
     arm(a, true);
     c.fillStyle = shorts;
     scRR(c, -u * 1.35, u * 0.6, u * 2.7, u * 1.4, u * 0.4);
@@ -21340,7 +21340,7 @@ onmessage = function(e){ var m = e.data, out = [];
     }
     c.fillStyle = "rgba(255,255,255,.5)";
     c.fillRect(-u * 1.45, -u * 0.4, u * 2.9, u * 0.35);
-    leg(a, false);
+    if (!noLegs) leg(a, false);
     const hx = u * 0.45, hy = -u * 4, hr = u * 1.85;
     if (sp === "leon") {
       c.fillStyle = fur2;
@@ -22567,6 +22567,32 @@ onmessage = function(e){ var m = e.data, out = [];
     c.textBaseline = "alphabetic";
     scRaceRaf = requestAnimationFrame(scRaceLoop);
   }
+  function scDrawMortero(c, L, size, t, i) {
+    const u = size / 10.5, shoe = SC_SHOE[L.shoe] || "#fff", fur = L.sp === 0 ? ["#F1C9A0", "#E0AC7E", "#A86B45"][L.skin || 0] : SC_SP[L.sp] ? SC_SP[L.sp][2] : "#E0AC7E";
+    const hipX = -u * 0.6, hipY = -u * 5.85 + Math.sin(t * 3 + i) * u * 0.12;
+    [[hipX - u * 2.4, 0.82], [hipX - u * 1.5, 1]].forEach(([fx, k]) => {
+      c.strokeStyle = k < 1 ? shade3c(fur, 0.8) : fur;
+      c.lineWidth = u * 1.05;
+      c.lineCap = "round";
+      c.beginPath();
+      c.moveTo(hipX, hipY);
+      c.lineTo(fx, -u * 0.45);
+      c.stroke();
+      c.fillStyle = k < 1 ? shade3c(shoe, 0.8) : shoe;
+      c.strokeStyle = "#1A1530";
+      c.lineWidth = Math.max(1, u * 0.25);
+      scRR(c, fx - u * 0.55, -u * 0.9, u * 1.7, u * 0.9, u * 0.4);
+      c.fill();
+      c.stroke();
+    });
+    c.save();
+    c.translate(hipX, hipY);
+    c.rotate(Math.PI * 0.75);
+    c.translate(0, -u * 1.6);
+    scDrawRunner(c, L, size, t, false, true);
+    c.restore();
+    return [hipX - u * 0.9, hipY - u * 1.6];
+  }
   function scEndGroups() {
     const st = sc.students.slice(), lv = [...new Set(st.map((s) => s.pts))].sort((a, b) => b - a);
     const pod = [0, 1, 2].map((i) => lv[i] == null ? [] : st.filter((s) => s.pts === lv[i]));
@@ -22719,14 +22745,9 @@ onmessage = function(e){ var m = e.data, out = [];
       m.forEach((s, i) => {
         const px = 80 + (viewW - 320) * (i + 0.5) / n, wob = Math.sin(t * 4 + i) * 0.04;
         c.save();
-        c.translate(px, groundY - size * 0.5);
-        c.rotate(Math.PI * 0.86 + wob);
-        const bp = scDrawRunner(c, s.look, size, 0, false);
-        c.restore();
-        const bx2 = px - size * 0.1, by = groundY - size * 1.08;
-        c.save();
-        c.translate(bx2, by);
-        badge(s, [0, 0], size);
+        c.translate(px - size * 0.15, groundY + 2);
+        const bp = scDrawMortero(c, s.look, size, t, i);
+        badge(s, bp, size);
         c.restore();
         c.font = `${Math.round(size * 0.16)}px sans-serif`;
         c.textAlign = "center";
