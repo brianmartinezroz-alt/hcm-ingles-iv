@@ -389,6 +389,8 @@ body.scfull{overflow:hidden}
 .scendh{font:900 clamp(26px,3.4vw,46px) Nunito,sans-serif;white-space:nowrap}
 #scEnd:not([hidden]){position:fixed;z-index:60;left:16px;right:120px;top:90px;bottom:16px;overflow:auto;background:var(--paper);border:var(--stroke);border-radius:24px;box-shadow:0 8px 0 var(--ink);padding:16px;max-width:none}
 #scEnd .scpodium,#scEnd h2{display:none}
+.sccodeedit{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.sccodeedit input{width:120px;font:900 28px Nunito,sans-serif;letter-spacing:6px;text-align:center;border:var(--stroke);border-radius:12px;padding:4px}
 #camUI{position:fixed;top:0;left:0;right:0;bottom:0;z-index:200;background:#000;overflow:hidden}
 #camUI[hidden]{display:none}
 #camV{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
@@ -917,6 +919,8 @@ body.qopen .tkscreen .tktop{display:none!important}
         <div>
           <div class="scbigcode-l">Código para tu celular</div>
           <div class="scbigcode" id="scLobbyCode">----</div>
+          <button class="btn small" id="scCodeChg">✏️ Usar mi propio código</button>
+          <div id="scCodeEdit" class="sccodeedit" hidden><input id="scCodeIn" inputmode="numeric" maxlength="4" placeholder="1234"><button class="btn primary small" id="scCodeOk">Usar</button><span class="hint">Pon el mismo código en todas las pantallas y tu celular siempre se conecta solo.</span></div>
           <div class="sclconn" id="scLobbyConn">⏳ Esperando al celular…</div>
           <ol class="scsteps"><li>Escanea el QR con tu celular (la primera vez) o abre tu app <b>Scan Race</b>.</li><li>Escribe el código de 4 números.</li><li><b>🏁 Arrancar</b> → escanea a todos para registrarlos → personalízalos → ¡carrera!</li></ol>
           <div class="hint" id="scLobbyUrl" style="word-break:break-all"></div>
@@ -21109,6 +21113,7 @@ onmessage = function(e){ var m = e.data, out = [];
     $("#scQn").innerHTML = [5, 10, 15, 20].filter((k) => k < all).map((k) => `<option value="${k}">${k}</option>`).join("") + `<option value="0">Todas (${all})</option>`;
     $("#scQn").value = [5, 10, 15, 20].includes(cfg.scanQn) && cfg.scanQn < all ? cfg.scanQn : all > 10 ? 10 : 0;
     $("#scLobbyCode").textContent = scLinkCode();
+    $("#scCodeEdit").hidden = true;
     let img = "";
     try {
       const q = qrcode(0, "M");
@@ -22839,6 +22844,19 @@ onmessage = function(e){ var m = e.data, out = [];
       $("#scLink").hidden = true;
     };
     $("#scHomeB").onclick = () => show("home");
+    $("#scCodeChg").onclick = scAskCode;
+    $("#scCodeOk").onclick = () => {
+      const v = $("#scCodeIn").value.replace(/\D/g, "");
+      if (!scSetCode(v)) {
+        $("#scCodeIn").value = "";
+        $("#scCodeIn").placeholder = "4 n\xFAmeros";
+        return;
+      }
+      $("#scCodeEdit").hidden = true;
+    };
+    $("#scCodeIn").oninput = (e) => {
+      e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4);
+    };
   }
   let scSyncT = null, scSyncLast = "";
   function scLinkCode() {
@@ -22857,11 +22875,52 @@ onmessage = function(e){ var m = e.data, out = [];
     }
     return cfg.scanCode;
   }
+  let scLinkTimer = null;
   function scEnsureLink() {
     if (RT.role) return;
     rtStart("screen", scLinkCode(), scOnRemote);
-    setInterval(scRenderLink, 2e3);
+    if (!scLinkTimer) scLinkTimer = setInterval(scRenderLink, 2e3);
   }
+  function scSetCode(code) {
+    if (!/^\d{4}$/.test(code)) return false;
+    cfg.scanCode = code;
+    try {
+      localStorage.setItem("tilerush.scancode4", code);
+    } catch (e) {
+    }
+    try {
+      rtStop();
+    } catch (e) {
+    }
+    scEnsureLink();
+    if (game && game.phase === "lobby") scRenderLobby();
+    scRenderLink();
+    return true;
+  }
+  function scAskCode() {
+    const box = $("#scCodeEdit");
+    if (!box) return;
+    box.hidden = false;
+    const inp = $("#scCodeIn");
+    inp.value = "";
+    inp.focus();
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && RT.role === "screen" && rtStatus() !== "p2p") {
+      try {
+        if (RT.peer && RT.peer.disconnected) RT.peer.reconnect();
+      } catch (e) {
+      }
+      try {
+        if (!RT.es || RT.es.readyState === 2) {
+          const c = RT.code;
+          rtStop();
+          rtStart("screen", c, scOnRemote);
+        }
+      } catch (e) {
+      }
+    }
+  });
   function scAppUrl() {
     return location.href.split("#")[0].split("?")[0].replace(/[^\/]*$/, "") + "control.html?c=" + scLinkCode();
   }
