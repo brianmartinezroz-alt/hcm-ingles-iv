@@ -383,6 +383,12 @@ body.scfull{overflow:hidden}
 .scechip{font:800 16px Nunito,sans-serif;background:#fff;border:var(--stroke);border-radius:12px;padding:6px 10px;cursor:pointer;min-height:40px}
 .scechip.on{background:#FFD21A;box-shadow:0 0 0 3px #7B4DFF}
 .scechip i{display:inline-block;width:26px;height:26px;border-radius:50%;border:2px solid #1A1530;vertical-align:middle}
+.sctx{background:#FFF6DC;border:2px dashed var(--ink);border-radius:14px;padding:8px 12px;font-weight:800;font-size:clamp(16px,1.7vw,24px);margin:6px 0}
+.scd.on{background:#FFD21A}.scd[disabled]{opacity:.35}
+.scpop.scendtitle{left:50%;right:auto;transform:translateX(-50%);width:auto;max-width:none;padding:8px 26px;animation:none}
+.scendh{font:900 clamp(26px,3.4vw,46px) Nunito,sans-serif;white-space:nowrap}
+#scEnd:not([hidden]){position:fixed;z-index:60;left:16px;right:120px;top:90px;bottom:16px;overflow:auto;background:var(--paper);border:var(--stroke);border-radius:24px;box-shadow:0 8px 0 var(--ink);padding:16px;max-width:none}
+#scEnd .scpodium,#scEnd h2{display:none}
 #camUI{position:fixed;top:0;left:0;right:0;bottom:0;z-index:200;background:#000;overflow:hidden}
 #camUI[hidden]{display:none}
 #camV{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
@@ -20729,7 +20735,7 @@ onmessage = function(e){ var m = e.data, out = [];
     const o = CAM.opts;
     if (!o) return;
     const list = o.roster ? o.roster.slice() : o.dynamic ? Object.keys(CAM.seen).map(Number).sort((a, b) => a - b) : Array.from({ length: o.n }, (_, k) => k + 1);
-    if (o.roster) Object.keys(CAM.seen).forEach((k) => {
+    if (o.roster && !o.allowNew) Object.keys(CAM.seen).forEach((k) => {
       if (o.roster.indexOf(+k) < 0) delete CAM.seen[k];
     });
     const nos = Object.keys(CAM.seen), got = nos.length, hasCor = o.cor != null && o.cor >= 0, tot = o.dynamic ? got : list.length;
@@ -20757,7 +20763,13 @@ onmessage = function(e){ var m = e.data, out = [];
     if (!o) return;
     let changed = false;
     out.forEach((m) => {
-      if (m.no > o.n || o.roster && o.roster.indexOf(m.no) < 0) return;
+      if (m.no > o.n) return;
+      if (o.roster && o.roster.indexOf(m.no) < 0) {
+        if (!o.allowNew) return;
+        o.roster.push(m.no);
+        o.roster.sort((a, b) => a - b);
+        changed = true;
+      }
       if (CAM.seen[m.no] == null) fresh++;
       if (CAM.seen[m.no] !== m.a) {
         CAM.seen[m.no] = m.a;
@@ -20821,7 +20833,7 @@ onmessage = function(e){ var m = e.data, out = [];
     c.globalAlpha = Math.max(0, 1 - age / 700);
     const cor = CAM.opts.cor, hasCor = cor != null && cor >= 0;
     CAM.res.forEach((m) => {
-      if (m.no > CAM.opts.n || CAM.opts.roster && CAM.opts.roster.indexOf(m.no) < 0) return;
+      if (m.no > CAM.opts.n || CAM.opts.roster && !CAM.opts.allowNew && CAM.opts.roster.indexOf(m.no) < 0) return;
       const col = !hasCor ? "#3FBF4F" : m.a === cor ? "#3FBF4F" : "#FF3B5C";
       const pts = m.c.map((p) => [ox + p[0] * k, oy + p[1] * k]);
       c.beginPath();
@@ -21074,17 +21086,17 @@ onmessage = function(e){ var m = e.data, out = [];
   function renderScan() {
     const v = $("#vScan");
     if (!v || !game || game.mode !== "scan") return;
-    const ph = game.phase, play = ph === "q" || ph === "reveal" || ph === "pick";
+    const ph = game.phase, play = ph === "q" || ph === "reveal" || ph === "pick" || ph === "end";
     $("#scLobby").hidden = ph !== "lobby";
     $("#scStage").hidden = !play;
-    $("#scEnd").hidden = ph !== "end";
+    if (ph !== "end") $("#scEnd").hidden = true;
     document.body.classList.toggle("scfull", play && view === "play");
     if (ph === "lobby") scRenderLobby();
-    if (play) {
+    if (ph === "end") scRenderEndUI();
+    else if (play) {
       scRenderPop();
       scRenderDock();
     }
-    if (ph === "end") scRenderEnd();
     if (play && !scRaceRaf) scRaceRaf = requestAnimationFrame(scRaceLoop);
     scRenderLink();
     scSync();
@@ -21140,6 +21152,8 @@ onmessage = function(e){ var m = e.data, out = [];
   }
   function scGoQ(msg) {
     sc.answers = {};
+    sc.showTxt = false;
+    sc.more = false;
     game.phase = "q";
     sc.pop = "big";
     sc.popT = performance.now();
@@ -21163,6 +21177,7 @@ onmessage = function(e){ var m = e.data, out = [];
   function scFinish() {
     game.phase = "end";
     game.over = true;
+    if (sc) sc.endSlide = 0;
     try {
       camClose();
     } catch (e) {
@@ -21611,6 +21626,13 @@ onmessage = function(e){ var m = e.data, out = [];
     sc.n = sc.students.length;
     return true;
   }
+  function scLateJoin(no) {
+    if (scRegister(no)) {
+      const s = scStu(no);
+      s.ans = Array(Math.max(0, sc.qi)).fill("");
+      scToast(`\u{1F64B} ${scLabel(s)} se une a la carrera`);
+    }
+  }
   function scGo() {
     if (game.phase !== "pick") return;
     if (!sc.students.length) {
@@ -21648,11 +21670,11 @@ onmessage = function(e){ var m = e.data, out = [];
     const row = (title, key, items, render) => `<div class="scerow"><b>${title}</b><div class="scechips">${items.map((it, i) => `<button class="scechip${L[key] === (render ? it : i) ? " on" : ""}" data-k="${key}" data-v="${render ? it : i}">${render ? render(it) : it[1]}</button>`).join("")}</div></div>`;
     $("#scEditBody").innerHTML = `<div class="scehead"><canvas id="scEditCv" width="220" height="250"></canvas><div><div class="scebig">${scLabel(s)}</div>
       <div class="scbtns"><button class="btn" id="scERand">\u{1F3B2} Aleatorio</button><button class="btn" id="scEPrev">\u25C0</button><button class="btn" id="scENext">\u25B6</button><button class="btn primary" id="scEOk">\u2714 Listo</button></div></div></div>
-    ${row("Personaje", "sp", SC_SP)}${row("Gorra / sombrero", "hat", SC_HAT)}${row("Lentes", "gl", SC_GL)}
-    ${row("Playera", "shirt", SC_SHIRT, (h) => `<i style="background:hsl(${h},75%,52%)"></i>`)}${row("Tenis", "shoe", SC_SHOE.map((c, i) => i), (i) => `<i style="background:${SC_SHOE[i]}"></i>`)}
-    ${L.sp === 0 ? row("Piel", "skin", [0, 1, 2], (i) => `<i style="background:${["#F1C9A0", "#E0AC7E", "#A86B45"][i]}"></i>`) : ""}`;
+    ${row("Animal", "sp", SC_SP)}${row("Gorra", "hat", SC_HAT)}${row("Gafas", "gl", SC_GL)}
+    ${row("Color", "shirt", SC_SHIRT, (h) => `<i style="background:hsl(${h},75%,52%)"></i>`)}`;
     $("#scEditBody").querySelectorAll(".scechip").forEach((b) => b.onclick = () => {
       L[b.dataset.k] = +b.dataset.v;
+      if (b.dataset.k === "shirt") L.shoe = SC_SHIRT.indexOf(+b.dataset.v) % SC_SHOE.length;
       beep(900, 0.03);
       scRenderEdit();
       scRenderPop();
@@ -21788,15 +21810,18 @@ onmessage = function(e){ var m = e.data, out = [];
       if (a < opts.length) counts[a]++;
     });
     const head = `<div class="scph"><b>Pregunta ${sc.qi + 1} / ${game.order.length}</b><span class="sctime"></span><span class="scgot">\u{1F4CB} ${got} / ${sc.n}</span></div>`;
-    const big = sc.pop === "big";
+    const big = sc.pop === "big", txt = q.tts && (sc.showTxt || rev) ? `<div class="sctx">\u{1F4DD} \u201C${esc(q.tts)}\u201D</div>` : "";
     el.className = "scpop " + (big ? "big" : "mini") + (rev ? " rev" : "");
     if (big) {
-      el.innerHTML = head + `<div class="scqt">${esc(q.q)}</div>${(q.audio || q.tts) && !rev ? `<div class="scaud"><button class="btn" data-r="1">\u{1F50A} Escuchar</button><button class="btn" data-r="0.75">\u{1F422} Lento</button></div>` : ""}
+      el.innerHTML = head + `<div class="scqt">${esc(q.q)}</div>${(q.audio || q.tts) && !rev ? `<div class="scaud"><button class="btn" data-r="1">\u{1F50A} Escuchar</button><button class="btn" data-r="0.75">\u{1F422} Lento</button>${q.tts ? `<button class="btn" data-t="1">\u{1F4DD} ${sc.showTxt ? "Ocultar texto" : "Ver texto"}</button>` : ""}</div>` : ""}${txt}
       <div class="scopts">${opts.map((o, i) => `<div class="scopt${rev ? i === cor ? " ok" : " no" : ""}" style="--oc:${SC_COL[i]}"><span class="scl">${SC_L[i]}</span><span class="sct">${esc(o)}</span>${rev ? `<span class="scc"><i style="width:${got ? Math.round(counts[i] / got * 100) : 0}%"></i><b>${counts[i]}</b></span>` : ""}</div>`).join("")}</div>
       <button class="scpopx" aria-label="Ver la carrera">\u25BC Ver la carrera</button>`;
       el.querySelectorAll(".scaud button").forEach((b) => b.onclick = (e) => {
         e.stopPropagation();
-        scPlayAudio(+b.dataset.r);
+        if (b.dataset.t) {
+          sc.showTxt = !sc.showTxt;
+          scRenderPop();
+        } else scPlayAudio(+b.dataset.r);
       });
       el.querySelector(".scpopx").onclick = (e) => {
         e.stopPropagation();
@@ -21822,8 +21847,8 @@ onmessage = function(e){ var m = e.data, out = [];
       });
       return;
     }
-    const rev = game.phase === "reveal", last = sc.qi + 1 >= game.order.length, q = scQ(), aud = !!(q.audio || q.tts);
-    $("#scDock").innerHTML = (rev ? `<button class="scd go" data-d="next">${last ? "\u{1F3C6}" : "\u25B6"}<i>${last ? "Final" : "Siguiente"}</i></button>` : `<button class="scd go" data-d="reveal">\u2714<i>Checar</i></button><button class="scd" data-d="cam">\u{1F4F7}<i>C\xE1mara</i></button><button class="scd" data-d="skip">\u23ED<i>Saltar</i></button>`) + (aud ? `<button class="scd" data-d="audio">\u{1F50A}<i>Audio</i></button>` : "") + `<button class="scd" data-d="mix">\u{1F500}<i>Mezclar</i></button><button class="scd" data-d="pick">\u{1F4CB}<i>Elegir</i></button><button class="scd" data-d="pop">\u{1FA9F}<i>Pregunta</i></button><button class="scd end" data-d="end">\u{1F3C1}<i>Terminar</i></button><button class="scd" data-d="home">\u{1F3E0}<i>Salir</i></button>`;
+    const rev = game.phase === "reveal", last = sc.qi + 1 >= game.order.length, q = scQ(), aud = !!(q.audio || q.tts), more = !!sc.more;
+    $("#scDock").innerHTML = (rev ? `<button class="scd go" data-d="next">${last ? "\u{1F3C6}" : "\u25B6"}<i>${last ? "Final" : "Siguiente"}</i></button>` : `<button class="scd go" data-d="reveal">\u2714<i>Checar</i></button><button class="scd" data-d="cam">\u{1F4F7}<i>C\xE1mara</i></button>`) + (aud ? `<button class="scd" data-d="audio">\u{1F50A}<i>Audio</i></button>` : "") + `<button class="scd${more ? " on" : ""}" data-d="more">${more ? "\u2715" : "\u22EF"}<i>${more ? "Cerrar" : "M\xE1s"}</i></button>` + (more ? (rev ? "" : `<button class="scd" data-d="skip">\u23ED<i>Saltar</i></button>`) + `<button class="scd" data-d="mix">\u{1F500}<i>Mezclar</i></button><button class="scd" data-d="pick">\u{1F4CB}<i>Elegir</i></button><button class="scd" data-d="pop">\u{1FA9F}<i>Pregunta</i></button><button class="scd end" data-d="end">\u{1F3C1}<i>Terminar</i></button><button class="scd" data-d="home">\u{1F3E0}<i>Salir</i></button>` : "");
     $("#scDock").querySelectorAll("button").forEach((b) => b.onclick = () => {
       const d = b.dataset.d;
       if (d === "next") scNext();
@@ -21836,6 +21861,15 @@ onmessage = function(e){ var m = e.data, out = [];
       else if (d === "pop") scSetPop(sc.pop === "big" ? "mini" : "big");
       else if (d === "end") scFinish();
       else if (d === "home") show("home");
+      else if (d === "more") {
+        sc.more = !sc.more;
+        scRenderDock();
+        return;
+      }
+      if (d !== "more" && sc.more) {
+        sc.more = false;
+        scRenderDock();
+      }
     });
   }
   function scToast(t) {
@@ -21924,10 +21958,13 @@ onmessage = function(e){ var m = e.data, out = [];
     let fresh = 0;
     Object.keys(a).forEach((k) => {
       const no = +k;
-      if (scStu(no)) {
-        if (sc.answers[no] == null) fresh++;
-        sc.answers[no] = a[k];
+      if (!(no >= 1 && no <= scMaxCards(sc.kind))) return;
+      if (!scStu(no)) scLateJoin(no);
+      if (sc.answers[no] == null) {
+        fresh++;
+        scStu(no).ansT = performance.now();
       }
+      sc.answers[no] = a[k];
     });
     if (fresh) {
       beep(1200, 0.04);
@@ -21953,13 +21990,16 @@ onmessage = function(e){ var m = e.data, out = [];
       kind: sc.kind,
       n: scMaxCards(sc.kind),
       roster: sc.students.map((s) => s.no),
+      allowNew: true,
       got: Object.assign({}, sc.answers),
       cor: null,
       onCard: (no, a) => {
-        if (game.phase !== "q" || !scStu(no)) return;
+        if (game.phase !== "q") return;
+        if (!scStu(no)) scLateJoin(no);
         const f = sc.answers[no] == null;
         sc.answers[no] = a;
         if (f) {
+          scStu(no).ansT = performance.now();
           scRenderPop();
           scSync();
         }
@@ -22313,7 +22353,7 @@ onmessage = function(e){ var m = e.data, out = [];
   }
   function scRaceLoop() {
     scRaceRaf = null;
-    if (view !== "play" || !game || game.mode !== "scan" || !(game.phase === "q" || game.phase === "reveal" || game.phase === "pick")) return;
+    if (view !== "play" || !game || game.mode !== "scan" || !(game.phase === "q" || game.phase === "reveal" || game.phase === "pick" || game.phase === "end")) return;
     const cv = $("#scRace"), dpr = Math.min(2, window.devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
     if (!W || !H) {
       scRaceRaf = requestAnimationFrame(scRaceLoop);
@@ -22326,12 +22366,21 @@ onmessage = function(e){ var m = e.data, out = [];
     const c = cv.getContext("2d");
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
     const t = performance.now() / 1e3;
-    const viewW = W - 112, total = Math.max(1, game.order.length), U = Math.max(300, viewW * 0.34), start2 = U * 0.75;
+    if (game.phase === "end") {
+      scDrawEnd(c, W, H, t);
+      scRaceRaf = requestAnimationFrame(scRaceLoop);
+      return;
+    }
+    const viewW = W - 112, total = Math.max(1, game.order.length);
+    const leadP = Math.max(0, ...sc.students.map((s) => s.shown)), tailP = Math.min(leadP, ...sc.students.map((s) => s.shown));
+    const Uwant = Math.max(120, Math.min(Math.max(300, viewW * 0.34), (viewW - 260) / Math.max(0.8, leadP - tailP + 0.6)));
+    if (sc.U == null) sc.U = Uwant;
+    sc.U += (Uwant - sc.U) * 0.03;
+    const U = sc.U, start2 = U * 0.75;
     const n = Math.max(1, sc.students.length), roadTop = Math.max(230, H * 0.33), roadBot = H - 14, laneH = (roadBot - roadTop) / n;
-    const lead = Math.max(0, ...sc.students.map((s) => s.shown)), tail = Math.min(lead, ...sc.students.map((s) => s.shown));
-    let target = start2 + lead * U - viewW * 0.62;
-    const tailX = start2 + tail * U - 60;
-    if (target > tailX && (lead - tail) * U < viewW * 0.75) target = tailX;
+    const lead = leadP, tail = tailP;
+    let target = start2 + tail * U - 150;
+    if (start2 + lead * U - target > viewW - 140) target = start2 + lead * U - (viewW - 140);
     target = Math.max(0, Math.min(target, start2 + total * U + U * 0.9 - viewW));
     if (sc.cam == null) sc.cam = target;
     sc.cam += (target - sc.cam) * 0.04;
@@ -22423,10 +22472,9 @@ onmessage = function(e){ var m = e.data, out = [];
     }
     const rs = Math.max(50, Math.min(laneH * 2.5, 180)), qphase = game.phase === "q";
     sc.students.forEach((s, i) => {
-      const tx = start2 + Math.min(s.shown, total) * U - rs * 0.38;
-      if (s.x == null) s.x = start2 - rs * 0.38;
-      s.x += (tx - s.x) * 0.045;
-      let sx = s.x - cam, cy = roadTop + laneH * (i + 0.5) + rs * 0.12, off = sx < 6 + rs * 0.3;
+      if (s.p == null) s.p = 0;
+      s.p += (Math.min(s.shown, total) - s.p) * 0.045;
+      let sx = start2 + s.p * U - rs * 0.38 - cam, cy = roadTop + laneH * (i + 0.5) + rs * 0.12, off = sx < 6 + rs * 0.3;
       if (off) sx = 6 + rs * 0.3;
       let rot = 0, yy = cy;
       if (s.spin > 0) {
@@ -22462,12 +22510,27 @@ onmessage = function(e){ var m = e.data, out = [];
       const answered = qphase && sc.answers[s.no] != null, br = Math.max(15, rs * 0.17);
       c.beginPath();
       c.arc(bp[0], bp[1], br, 0, 7);
-      c.fillStyle = "#fff";
+      c.fillStyle = answered ? "#22C55E" : "#fff";
       c.fill();
-      c.lineWidth = answered ? Math.max(3, br * 0.28) : 2;
-      c.strokeStyle = answered ? "#22C55E" : "#1A1530";
+      c.lineWidth = answered ? 3 : 2;
+      c.strokeStyle = answered ? "#fff" : "#1A1530";
       c.stroke();
-      c.fillStyle = "#1B1440";
+      if (answered) {
+        const age = (performance.now() - (s.ansT || 0)) / 1e3, pop = 1 + Math.max(0, 0.6 - age) * 1.2, cr = Math.max(13, rs * 0.15) * pop;
+        c.beginPath();
+        c.arc(rs * 0.05, -rs * 0.78, cr, 0, 7);
+        c.fillStyle = "#22C55E";
+        c.fill();
+        c.lineWidth = 3;
+        c.strokeStyle = "#fff";
+        c.stroke();
+        c.fillStyle = "#fff";
+        c.font = `900 ${Math.round(cr * 1.3)}px sans-serif`;
+        c.textAlign = "center";
+        c.textBaseline = "middle";
+        c.fillText("\u2713", rs * 0.05, -rs * 0.78 + 1);
+      }
+      c.fillStyle = answered ? "#fff" : "#1B1440";
       c.font = `900 ${Math.round(br * (s.no >= 10 ? 1.12 : 1.4))}px Nunito, system-ui, sans-serif`;
       c.textAlign = "center";
       c.textBaseline = "middle";
@@ -22504,8 +22567,183 @@ onmessage = function(e){ var m = e.data, out = [];
     c.textBaseline = "alphabetic";
     scRaceRaf = requestAnimationFrame(scRaceLoop);
   }
+  function scEndGroups() {
+    const st = sc.students.slice(), lv = [...new Set(st.map((s) => s.pts))].sort((a, b) => b - a);
+    const pod = [0, 1, 2].map((i) => lv[i] == null ? [] : st.filter((s) => s.pts === lv[i]));
+    const onPod = new Set(pod.flat().map((s) => s.no));
+    const asc = st.slice().sort((a, b) => a.pts - b.pts);
+    let mort = [];
+    if (asc.length > 3) {
+      const thr = asc[Math.min(1, asc.length - 1)].pts;
+      mort = asc.filter((s) => s.pts <= thr && !onPod.has(s.no));
+    }
+    const rest = st.filter((s) => !onPod.has(s.no));
+    return { pod, mort, rest };
+  }
+  function scEndSlide(d) {
+    if (!sc || game.phase !== "end") return;
+    sc.endSlide = Math.max(0, Math.min(2, (sc.endSlide || 0) + d));
+    beep(700, 0.05);
+    scRenderEndUI();
+    scSync();
+  }
+  function scRenderEndUI() {
+    const sl = sc.endSlide || 0;
+    $("#scEnd").hidden = sl !== 2;
+    if (sl === 2) scRenderEnd();
+    $("#scPop").className = "scpop big scendtitle";
+    $("#scPop").onclick = null;
+    $("#scPop").innerHTML = sl === 0 ? `<div class="scendh">\u{1F3C6} \xA1Ganadores!</div>` : sl === 1 ? `<div class="scendh">\u{1F605} \xA1A mortero, cadetes!</div>` : `<div class="scendh">\u{1F4CA} Calificaciones</div>`;
+    $("#scDock").innerHTML = `<button class="scd" data-d="prev" ${sl === 0 ? "disabled" : ""}>\u25C0<i>Atr\xE1s</i></button><button class="scd go" data-d="next" ${sl === 2 ? "disabled" : ""}>\u25B6<i>Siguiente</i></button><button class="scd" data-d="home">\u{1F3E0}<i>Salir</i></button>`;
+    $("#scDock").querySelectorAll("button").forEach((b) => b.onclick = () => {
+      const d = b.dataset.d;
+      if (d === "prev") scEndSlide(-1);
+      else if (d === "next") scEndSlide(1);
+      else show("home");
+    });
+  }
+  function scDrawEnd(c, W, H, t) {
+    const sl = sc.endSlide || 0, g = scEndGroups(), groundY = H * 0.8, viewW = W - 112;
+    const sky = c.createLinearGradient(0, 0, 0, groundY);
+    sky.addColorStop(0, sl === 1 ? "#4FA6E8" : "#5B4C9E");
+    sky.addColorStop(1, sl === 1 ? "#E6F2FF" : "#FF9F7A");
+    c.fillStyle = sky;
+    c.fillRect(0, 0, W, groundY);
+    const zc = scZone(sl === 1 ? 6 : 8), sc2 = Math.min((groundY - 80) / zc.height, viewW / zc.width * 1), dw = zc.width * sc2, dh = zc.height * sc2;
+    c.globalAlpha = 0.9;
+    c.drawImage(zc, (viewW - dw) / 2, groundY - dh + 4, dw, dh);
+    c.globalAlpha = 1;
+    c.fillStyle = sl === 1 ? "#9B7449" : "#C2553A";
+    c.fillRect(0, groundY, W, H - groundY);
+    c.strokeStyle = "rgba(255,255,255,.5)";
+    c.lineWidth = 3;
+    for (let y = groundY + 18; y < H; y += 26) {
+      c.beginPath();
+      c.moveTo(0, y);
+      c.lineTo(W, y);
+      c.stroke();
+    }
+    const badge = (s, bp, size) => {
+      const br = Math.max(14, size * 0.17);
+      c.beginPath();
+      c.arc(bp[0], bp[1], br, 0, 7);
+      c.fillStyle = "#fff";
+      c.fill();
+      c.lineWidth = 2;
+      c.strokeStyle = "#1A1530";
+      c.stroke();
+      c.fillStyle = "#1B1440";
+      c.font = `900 ${Math.round(br * (s.no >= 10 ? 1.1 : 1.35))}px Nunito, sans-serif`;
+      c.textAlign = "center";
+      c.textBaseline = "middle";
+      c.fillText(s.no, bp[0], bp[1] + 1);
+      c.textBaseline = "alphabetic";
+    };
+    if (sl === 0 || sl === 2) {
+      const cx = viewW / 2, bw = Math.min(260, viewW * 0.22), hs = [H * 0.2, H * 0.28, H * 0.14], xs = [cx - bw, cx, cx + bw], order = [1, 0, 2], cols = ["#FFD21A", "#C9CFE0", "#E59B5B"];
+      order.forEach((lvl) => {
+        const x = xs[order.indexOf(lvl)], h = hs[order.indexOf(lvl)], top = groundY - h;
+        c.fillStyle = cols[lvl];
+        c.strokeStyle = "#2B2366";
+        c.lineWidth = 4;
+        c.fillRect(x - bw / 2, top, bw, h + 4);
+        c.strokeRect(x - bw / 2, top, bw, h + 4);
+        c.fillStyle = "#2B2366";
+        c.font = `900 ${Math.round(h * 0.32)}px Nunito, sans-serif`;
+        c.textAlign = "center";
+        c.fillText(lvl + 1, x, top + h * 0.62);
+        const grp = g.pod[lvl] || [];
+        if (!grp.length) return;
+        const per = Math.min(bw * 0.9, bw * 0.9 / Math.max(1, grp.length) * 1.6), size = Math.min(170, per * 1.35, H * 0.26);
+        grp.forEach((s, i) => {
+          const px = x - bw * 0.45 + bw * 0.9 * (i + 0.5) / grp.length, jump = Math.abs(Math.sin(t * 5 + i)) * size * 0.08;
+          c.save();
+          c.translate(px, top - size * 0.46 - jump);
+          const bp = scDrawRunner(c, s.look, size, t, false);
+          badge(s, bp, size);
+          c.restore();
+          c.font = `${Math.round(size * 0.22)}px sans-serif`;
+          c.textAlign = "center";
+          c.fillText(["\u{1F947}", "\u{1F948}", "\u{1F949}"][lvl], px, top - size * 1 - jump);
+        });
+        c.fillStyle = "#2B2366";
+        c.font = "900 18px Nunito, sans-serif";
+        c.fillText(`${grp[0].pts} pts`, x, top + h * 0.88);
+      });
+      const rest = g.rest, rowN = Math.max(1, Math.ceil(rest.length / 2)), rsz = Math.min(110, (viewW - 40) / Math.max(1, rowN) * 1.4, H * 0.14);
+      rest.forEach((s, i) => {
+        const row = i % 2, col = Math.floor(i / 2), px = 30 + (viewW - 60) * (col + 0.5) / rowN + (row ? rsz * 0.25 : 0), py = H - 10 - rsz * 0.46 - (row ? 0 : rsz * 0.42), hop = Math.abs(Math.sin(t * 6 + i * 0.7)) * rsz * 0.07;
+        c.save();
+        c.translate(px, py - hop);
+        const bp = scDrawRunner(c, s.look, rsz, t, false);
+        badge(s, bp, rsz);
+        c.restore();
+        if (Math.sin(t * 6 + i) > 0.2) {
+          c.font = `${Math.round(rsz * 0.24)}px sans-serif`;
+          c.textAlign = "center";
+          c.fillText("\u{1F44F}", px + rsz * 0.32, py - rsz * 0.2 - hop);
+        }
+      });
+      for (let i = 0; i < 80; i++) {
+        const x = scHash(i) * viewW + Math.sin(t + i) * 20, y = (scHash(i + 50) * H + t * (60 + scHash(i + 9) * 80)) % (H * 0.8);
+        c.fillStyle = ["#FF4F6D", "#4DA8FF", "#FFD21A", "#3FBF4F", "#B06BFF"][i % 5];
+        c.save();
+        c.translate(x, y);
+        c.rotate(t * 3 + i);
+        c.fillRect(-4, -2, 8, 4);
+        c.restore();
+      }
+    } else {
+      const m = g.mort, n = Math.max(1, m.length), size = Math.min(190, (viewW - 220) / n * 1.5, H * 0.32);
+      const sx = viewW - 110, sy = groundY - size * 0.48;
+      c.save();
+      c.translate(sx, sy);
+      c.scale(-1, 1);
+      scDrawRunner(c, { sp: 0, hat: 2, gl: 1, shoe: 5, shirt: 130, skin: 1 }, size * 1.05, t, false);
+      c.restore();
+      c.fillStyle = "#fff";
+      c.strokeStyle = "#2B2366";
+      c.lineWidth = 3;
+      scRR(c, sx - 230, sy - size * 0.95, 210, 64, 18);
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#2B2366";
+      c.font = "900 26px Nunito, sans-serif";
+      c.textAlign = "center";
+      c.fillText(Math.sin(t * 3) > 0 ? "\xA1A MORTERO! \u{1F4E2}" : "\xA1ABAJO! \u{1F4E2}", sx - 125, sy - size * 0.95 + 42);
+      if (!m.length) {
+        c.fillStyle = "#fff";
+        c.font = "900 40px Nunito, sans-serif";
+        c.fillText("\xA1Nadie se qued\xF3 atr\xE1s! \u{1F389}", viewW / 2, groundY - 60);
+      }
+      m.forEach((s, i) => {
+        const px = 80 + (viewW - 320) * (i + 0.5) / n, wob = Math.sin(t * 4 + i) * 0.04;
+        c.save();
+        c.translate(px, groundY - size * 0.5);
+        c.rotate(Math.PI * 0.86 + wob);
+        const bp = scDrawRunner(c, s.look, size, 0, false);
+        c.restore();
+        const bx2 = px - size * 0.1, by = groundY - size * 1.08;
+        c.save();
+        c.translate(bx2, by);
+        badge(s, [0, 0], size);
+        c.restore();
+        c.font = `${Math.round(size * 0.16)}px sans-serif`;
+        c.textAlign = "center";
+        c.fillText("\u{1F4A6}", px + size * 0.28 + Math.sin(t * 5 + i) * 4, groundY - size * 0.25);
+        c.fillStyle = "#fff";
+        c.font = "900 18px Nunito, sans-serif";
+        c.fillText(`${s.pts} pts`, px, groundY + 34);
+      });
+    }
+    [0, 1, 2].forEach((i) => {
+      c.fillStyle = i === sl ? "#fff" : "rgba(255,255,255,.4)";
+      c.beginPath();
+      c.arc(viewW / 2 - 24 + i * 24, H - 16, 7, 0, 7);
+      c.fill();
+    });
+  }
   function scRenderEnd() {
-    document.body.classList.remove("scfull");
     const rows = sc.students.slice().sort((a, b) => b.pts - a.pts || a.no - b.no), tot = Math.max(1, sc.done || 0);
     const pod = rows.slice(0, 3);
     $("#scPodium").innerHTML = [1, 0, 2].map((k) => pod[k] ? `<div class="scpod p${k + 1}"><div class="scmed">${["\u{1F947}", "\u{1F948}", "\u{1F949}"][k]}</div><b>${esc(scLabel(pod[k]))}</b><span>${pod[k].pts} / ${tot}</span><i></i></div>` : "").join("");
@@ -22539,7 +22777,20 @@ onmessage = function(e){ var m = e.data, out = [];
     if (i < 0 || i >= n) return;
     scOpenEdit(sc.students[i].no);
   }
+  let scSwX = null;
   function wireScan() {
+    const rc = $("#scRace");
+    rc.addEventListener("pointerdown", (e) => {
+      scSwX = e.clientX;
+    });
+    rc.addEventListener("pointerup", (e) => {
+      if (scSwX != null && game && game.phase === "end") {
+        const dx = e.clientX - scSwX;
+        if (dx < -60) scEndSlide(1);
+        else if (dx > 60) scEndSlide(-1);
+      }
+      scSwX = null;
+    });
     $("#scRace").addEventListener("click", scRaceTap);
     ["#scPrint", "#scPick", "#scLink", "#scEdit"].forEach((id) => document.body.appendChild($(id)));
     $("#scStart").onclick = scStart;
@@ -22640,6 +22891,7 @@ onmessage = function(e){ var m = e.data, out = [];
       o.ga = Object.assign({}, sc.answers);
     }
     if (game.phase === "end") {
+      o.slide = sc.endSlide || 0;
       o.top = sc.students.slice().sort((a, b) => b.pts - a.pts).slice(0, 3).map((s) => scLabel(s) + " \xB7 " + s.pts);
     }
     return o;
@@ -22687,6 +22939,11 @@ onmessage = function(e){ var m = e.data, out = [];
       else if (c === "goto") scGoto(m.k);
       else if (c === "audio" && live) scPlayAudio(m.r || 1);
       else if (c === "pop" && live) scSetPop(sc.pop === "big" ? "mini" : "big");
+      else if (c === "txt" && live) {
+        sc.showTxt = !sc.showTxt;
+        scSetPop("big");
+      } else if (c === "eprev") scEndSlide(-1);
+      else if (c === "enext") scEndSlide(1);
       else if (c === "end" && live) scFinish();
       scSyncLast = "";
       scSync(true);
