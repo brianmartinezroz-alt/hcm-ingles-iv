@@ -55,6 +55,7 @@ html,body{margin:0;background:#1B1440;color:#fff;font-family:Nunito,system-ui,-a
 #cxLBody{display:grid;gap:8px}
 .cx-li{display:flex;gap:10px;align-items:center;text-align:left;font:800 16px system-ui,sans-serif;background:#fff;color:#2B2366;border:0;border-radius:14px;padding:12px}
 .cx-li b{flex:none;width:30px;height:30px;border-radius:50%;background:#2B2366;color:#fff;display:grid;place-items:center}
+.rmsmall{font-size:14px;color:#6B6394}
 #camUI{position:fixed;top:0;left:0;right:0;bottom:0;z-index:200;background:#000;overflow:hidden}
 #camUI[hidden]{display:none}
 #camV{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
@@ -4640,6 +4641,24 @@ function vib(ms) {
   } catch (e) {
   }
 }
+function reconnect() {
+  if (!RM.code) return;
+  const keep = RM.st;
+  try {
+    rtStop();
+  } catch (e) {
+  }
+  rtStart("phone", RM.code, onMsg);
+  RM.st = keep;
+  rtSend({ t: "hello" });
+  conn();
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && RT.role && rtStatus() !== "p2p") reconnect();
+});
+window.addEventListener("online", () => {
+  if (RT.role) reconnect();
+});
 function boot() {
   const q = new URLSearchParams(location.search).get("c");
   const code = q && /^\d{4}$/.test(q) ? q : lsGet("scanrace.code");
@@ -4647,7 +4666,11 @@ function boot() {
   else showCode();
   setInterval(() => {
     conn();
-    if (RM.code && (!RM.st || performance.now() - RT.lastIn > 15e3)) rtSend({ t: "hello" });
+    if (RM.code && RT.role && (!RM.st || performance.now() - RT.lastIn > 15e3)) rtSend({ t: "hello" });
+    if (RM.code && RT.role && performance.now() - RT.lastIn > 4e4 && performance.now() - (RM.lastRe || 0) > 3e4) {
+      RM.lastRe = performance.now();
+      reconnect();
+    }
   }, 3e3);
 }
 function showCode(err) {
@@ -4724,7 +4747,7 @@ function status() {
 function render() {
   const s = RM.st;
   let body = "";
-  if (!s) body = `<div class="cx-card">Abre <b>\u{1F4F7} Scan Race</b> en la pantalla del sal\xF3n con el c\xF3digo <b>${esc(RM.code)}</b>.</div>`;
+  if (!s) body = `<div class="cx-card">Buscando la pantalla con el c\xF3digo <b>${esc(RM.code)}</b>\u2026<br><span class="rmsmall">Si cambiaste de pantalla, escribe su c\xF3digo nuevo.</span></div><button class="cb go big" id="cxNew">\u{1F522} Escribir otro c\xF3digo</button>`;
   else if (s.phase === "none") body = `<div class="cx-card">\u2705 Pantalla encontrada. Ah\xED elige <b>\u{1F4F7} Scan Race</b> y un set.</div>`;
   else if (s.phase === "lobby") body = `<button class="cb go huge" data-c="start">\u{1F3C1} Arrancar carrera</button>`;
   else if (s.phase === "end") body = `<div class="cx-card"><h2>\u{1F3C6} \xA1Termin\xF3!</h2>${(s.top || []).map((t, i) => `<p class="cx-top">${["\u{1F947}", "\u{1F948}", "\u{1F949}"][i]} ${esc(t)}</p>`).join("")}<p class="rmsmall">Pantalla: ${["\u{1F3C6} Podio", "\u{1F605} Mortero", "\u{1F4CA} Calificaciones"][s.slide || 0]}</p></div>
@@ -4744,12 +4767,14 @@ function render() {
     <div id="cxStat" class="cx-stat"></div><div class="cx-body">${body}</div>
     <div id="cxList" class="cx-list" hidden><div class="cx-lhead"><b>\u{1F4CB} \xBFCu\xE1l sigue?</b><button class="cb small" id="cxLClose">Cerrar</button></div><div id="cxLBody"></div></div>`;
   $("#cxCode").onclick = () => {
-    if (confirm("\xBFCambiar el c\xF3digo de la pantalla?")) {
-      lsSet("scanrace.code", "");
-      if (RT.role) rtStop();
-      RM.st = null;
-      showCode();
-    }
+    if (RT.role) rtStop();
+    RM.st = null;
+    showCode();
+  };
+  if ($("#cxNew")) $("#cxNew").onclick = () => {
+    if (RT.role) rtStop();
+    RM.st = null;
+    showCode();
   };
   $("#cxLClose").onclick = () => {
     $("#cxList").hidden = true;
