@@ -64,6 +64,14 @@ html,body{margin:0;background:#1B1440;color:#fff;font-family:Nunito,system-ui,-a
 .qrmsg{position:relative;color:#FFD21A;font:800 16px system-ui,sans-serif;text-align:center}
 #qrUI .cb{position:relative;width:100%}
 .cx-sel{width:100%;font:800 17px system-ui,sans-serif;padding:12px;border-radius:14px;border:3px solid #fff;background:#3B3458;color:#fff}
+.cx-nums{display:flex;flex-wrap:wrap;gap:6px}
+.cx-num{min-width:52px;height:52px;font:900 20px system-ui,sans-serif;border-radius:14px;border:3px solid #fff;background:#22C55E;color:#fff}
+.cx-ehead{display:flex;justify-content:space-between;align-items:center;font-size:22px}
+.cx-erow{margin:4px 0}.cx-erow b{display:block;margin:6px 0 4px}
+.cx-echips{display:flex;flex-wrap:wrap;gap:6px}
+.cx-chip{min-width:48px;height:48px;font-size:24px;border-radius:12px;border:3px solid #6B6394;background:#3B3458;color:#fff}
+.cx-chip.on{border-color:#FFD21A;background:#7B4DFF}
+.cx-chip i{display:inline-block;width:26px;height:26px;border-radius:50%;border:2px solid #fff;vertical-align:middle}
 #camUI{position:fixed;top:0;left:0;right:0;bottom:0;z-index:200;background:#000;overflow:hidden}
 #camUI[hidden]{display:none}
 #camV{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
@@ -5611,7 +5619,8 @@ function onMsg(m) {
     if (!RM.st || RM.st.qi !== m.qi || m.phase !== "q") {
       if (!RM.st || RM.st.qi !== m.qi) RM.ans = {};
     }
-    const changed = !RM.st || RM.st.phase !== m.phase || m.phase === "none" && !$("#cxSet") || RM.st.qi !== m.qi || RM.st.total !== m.total || m.phase === "pick" && RM.st.reg !== m.reg || RM.st.slide !== m.slide;
+    const changed = !RM.st || RM.st.phase !== m.phase || m.phase === "none" && !$("#cxSet") || m.phase === "lobby" && (RM.st.setId !== m.setId || RM.st.all !== m.all) || m.phase === "pick" && RM.edit != null && JSON.stringify((RM.st.looks || {})[RM.edit]) !== JSON.stringify((m.looks || {})[RM.edit]) || m.phase === "pick" && (RM.st.roster || []).length !== (m.roster || []).length || RM.st.qi !== m.qi || RM.st.total !== m.total || m.phase === "pick" && RM.st.reg !== m.reg || RM.st.slide !== m.slide;
+    if (m.phase !== "pick") RM.edit = null;
     RM.st = m;
     if (m.phase !== "q" && m.phase !== "pick" && CAM.on) camClose();
     if (changed) render();
@@ -5648,10 +5657,15 @@ function render() {
   else if (s.phase === "none") body = `<div class="cx-card">\u2705 \xA1Pantalla conectada! Elige el set y dale Empezar.</div>
       <select id="cxSet" class="cx-sel">${(s.sets || []).map((o) => `<option value="${esc(o.id)}"${o.id === lsGet("scanrace.set") ? " selected" : ""}>${esc(o.x)}</option>`).join("")}</select>
       <button class="cb go huge" id="cxOpen">\u{1F3C1} Empezar</button>`;
-  else if (s.phase === "lobby") body = `<button class="cb go huge" data-c="start">\u{1F3C1} Arrancar carrera</button>`;
-  else if (s.phase === "end") body = `<div class="cx-card"><h2>\u{1F3C6} \xA1Termin\xF3!</h2>${(s.top || []).map((t, i) => `<p class="cx-top">${["\u{1F947}", "\u{1F948}", "\u{1F949}"][i]} ${esc(t)}</p>`).join("")}<p class="rmsmall">Pantalla: ${["\u{1F3C6} Podio", "\u{1F605} Mortero", "\u{1F4CA} Calificaciones"][s.slide || 0]}</p></div>
+  else if (s.phase === "lobby") body = `<div class="cx-card"><b>\u{1F4DA} Tema</b></div>
+      <select id="cxSet2" class="cx-sel">${(s.sets || []).map((o) => `<option value="${esc(o.id)}"${o.id === s.setId ? " selected" : ""}>${esc(o.x)}</option>`).join("")}</select>
+      <select id="cxQn" class="cx-sel">${[5, 10, 15, 20].filter((k) => k < (s.all || 99)).map((k) => `<option value="${k}"${s.qn === k ? " selected" : ""}>${k} preguntas</option>`).join("")}<option value="0"${!s.qn ? " selected" : ""}>Todas (${s.all || ""})</option></select>
+      <button class="cb go huge" data-c="start">\u{1F3C1} Arrancar carrera</button>`;
+  else if (s.phase === "end") body = `<div class="cx-card"><h2>\u{1F3C6} \xA1Termin\xF3!</h2>${(s.top || []).map((t, i) => `<p class="cx-top">${["\u{1F947}", "\u{1F948}", "\u{1F949}"][i]} ${esc(t)}</p>`).join("")}<p class="rmsmall">Pantalla: ${["\u{1F3C6} Podio", "\u{1F605} Los \xFAltimos", "\u{1F4CA} Calificaciones"][s.slide || 0]}</p></div>
       <div class="cx-grid"><button class="cb big" data-c="eprev">\u25C0 Atr\xE1s</button><button class="cb go big" data-c="enext">Siguiente \u25B6</button></div>`;
-  else if (s.phase === "pick") body = `<div class="cx-card"><b>\u{1F3C3} Registro de corredores</b><br>Escanea a todos (cualquier letra). Despu\xE9s personal\xEDzalos en la pantalla.<br><b>${s.reg || 0}</b> registrados</div>
+  else if (s.phase === "pick" && RM.edit != null && s.looks && s.looks[RM.edit]) body = editBody(s);
+  else if (s.phase === "pick") body = `<div class="cx-card"><b>\u{1F3C3} Registro de corredores</b><br>Escanea a todos (cualquier letra). Toca un n\xFAmero para personalizarlo.<br><b>${s.reg || 0}</b> registrados</div>
+      ${(s.roster || []).length ? `<div class="cx-nums">${s.roster.map((no) => `<button class="cx-num" data-no="${no}">${no}</button>`).join("")}</div>` : ""}
       <button class="cb scan huge" data-c="scan">\u{1F4F7} Escanear para registrar</button>
       <div class="cx-grid"><button class="cb" data-c="rand">\u{1F3B2} Todos al azar</button><button class="cb" data-c="pop">\u{1FA9F} Ventana</button></div>
       <button class="cb go big" data-c="go">\u{1F3C1} \xA1Arrancar la carrera!</button>`;
@@ -5680,6 +5694,17 @@ function render() {
       if (!RM.st) render();
     }, 6e3);
   };
+  document.querySelectorAll(".cx-num").forEach((b) => b.onclick = () => {
+    RM.edit = +b.dataset.no;
+    cmd("look", { no: RM.edit, k: "show" });
+    render();
+  });
+  if (RM.edit != null && $("#cxEOk")) wireEdit();
+  if ($("#cxSet2")) $("#cxSet2").onchange = (e) => {
+    lsSet("scanrace.set", e.target.value);
+    cmd("open", { set: e.target.value });
+  };
+  if ($("#cxQn")) $("#cxQn").onchange = (e) => cmd("qn", { v: +e.target.value });
   if ($("#cxOpen")) $("#cxOpen").onclick = () => {
     const v = $("#cxSet").value;
     lsSet("scanrace.set", v);
@@ -5712,6 +5737,44 @@ function render() {
   });
   conn();
   status();
+}
+const PH_SP = ["\u{1F9D1}", "\u{1F436}", "\u{1F431}", "\u{1F43B}", "\u{1F430}", "\u{1F98A}", "\u{1F43C}", "\u{1F438}", "\u{1F427}", "\u{1F981}", "\u{1F435}", "\u{1F42F}"], PH_HAT = ["\u2716\uFE0F", "\u{1F9E2}", "\u{1F396}\uFE0F", "\u{1FA96}", "\u{1F451}", "\u{1F920}", "\u{1F94B}", "\u{1F385}"], PH_GL = ["\u2716\uFE0F", "\u{1F576}\uFE0F", "\u{1F453}", "\u2B50", "\u{1F97D}"], PH_SHIRT = [350, 210, 45, 130, 280, 20, 180, 0];
+function editBody(s) {
+  const no = RM.edit, L = s.looks[no], i = (s.roster || []).indexOf(no);
+  const row = (t, k, arr, cur, f) => `<div class="cx-erow"><b>${t}</b><div class="cx-echips">${arr.map((x, j) => {
+    const v = k === "shirt" ? x : j;
+    return `<button class="cx-chip${cur === v ? " on" : ""}" data-k="${k}" data-v="${v}">${f ? f(x) : x}</button>`;
+  }).join("")}</div></div>`;
+  return `<div class="cx-card cx-ehead"><button class="cb small" id="cxEPrev">\u25C0</button><b>Corredor ${no}</b><button class="cb small" id="cxENext">\u25B6</button></div>
+    ${row("Animal", "sp", PH_SP, L[0])}${row("Gorra", "hat", s.hats && s.hats.length === PH_HAT.length ? s.hats : PH_HAT, L[1])}${row("Gafas", "gl", PH_GL, L[2])}${row("Color", "shirt", PH_SHIRT, L[3], (h) => `<i style="background:hsl(${h},75%,52%)"></i>`)}
+    <div class="cx-grid"><button class="cb" id="cxERand">\u{1F3B2} Aleatorio</button><button class="cb go" id="cxEOk">\u2714 Listo</button></div>`;
+}
+function wireEdit() {
+  const s = RM.st;
+  if (!s || RM.edit == null) return;
+  const ro = s.roster || [], i = ro.indexOf(RM.edit);
+  document.querySelectorAll(".cx-chip").forEach((b) => b.onclick = () => {
+    cmd("look", { no: RM.edit, k: b.dataset.k, v: +b.dataset.v });
+    const L = s.looks[RM.edit];
+    L[{ sp: 0, hat: 1, gl: 2, shirt: 3 }[b.dataset.k]] = +b.dataset.v;
+    render();
+  });
+  $("#cxERand").onclick = () => cmd("look", { no: RM.edit, k: "rand" });
+  $("#cxEOk").onclick = () => {
+    cmd("lookdone");
+    RM.edit = null;
+    render();
+  };
+  $("#cxEPrev").onclick = () => {
+    RM.edit = ro[(i - 1 + ro.length) % ro.length];
+    cmd("look", { no: RM.edit, k: "show" });
+    render();
+  };
+  $("#cxENext").onclick = () => {
+    RM.edit = ro[(i + 1) % ro.length];
+    cmd("look", { no: RM.edit, k: "show" });
+    render();
+  };
 }
 function showList(items) {
   const b = $("#cxLBody");
