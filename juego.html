@@ -21238,7 +21238,8 @@ onmessage = function(e){ var m = e.data, out = [];
     scSync();
   }
   function scRenderLobby() {
-    $("#scSetTitle").textContent = `${game.set.title} \xB7 ${game.order.length} preguntas de opci\xF3n m\xFAltiple`;
+    $("#scSetTitle").innerHTML = `<select id="scSetSel" class="scsel" style="max-width:100%">${scSetsForPhone().map((o) => `<option value="${esc(o.id)}"${o.id === cfg.setId ? " selected" : ""}>${esc(o.x)}</option>`).join("")}</select> <span class="hint">${game.order.length} preguntas</span>`;
+    $("#scSetSel").onchange = (e) => scOpenFromPhone(e.target.value);
     $("#scKind").value = sc.kind;
     scKindNote();
     const all = game.order.length;
@@ -21666,6 +21667,43 @@ onmessage = function(e){ var m = e.data, out = [];
       c.fill();
       c.stroke();
       scRR(c, hx + hr * 0.4, top + u * 0.95, u * 2, u * 0.45, u * 0.2);
+      c.fill();
+      c.stroke();
+    } else if (hat === "birrete") {
+      c.fillStyle = "#1F1F2E";
+      c.beginPath();
+      c.arc(hx, top + u * 1.3, hr * 0.9, Math.PI, 0);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.beginPath();
+      c.moveTo(hx - hr * 1.4, top + u * 0.1);
+      c.lineTo(hx, top - u * 0.9);
+      c.lineTo(hx + hr * 1.4, top + u * 0.1);
+      c.lineTo(hx, top + u * 1);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.strokeStyle = "#FFD21A";
+      c.beginPath();
+      c.moveTo(hx, top + u * 0.05);
+      c.lineTo(hx + hr * 1.1, top + u * 0.6);
+      c.lineTo(hx + hr * 1.1, top + u * 2);
+      c.stroke();
+      c.strokeStyle = dk;
+    } else if (hat === "audif") {
+      c.strokeStyle = "#2B2366";
+      c.lineWidth = u * 0.55;
+      c.beginPath();
+      c.arc(hx, top + u * 1.6, hr * 1.05, Math.PI * 1.05, -0.05);
+      c.stroke();
+      c.fillStyle = "#FF4F6D";
+      c.strokeStyle = dk;
+      c.lineWidth = Math.max(1, u * 0.22);
+      scRR(c, hx - hr * 1.25, top + u * 1.2, u * 1.1, u * 1.9, u * 0.4);
+      c.fill();
+      c.stroke();
+      scRR(c, hx + hr * 1.25 - u * 1.1, top + u * 1.2, u * 1.1, u * 1.9, u * 0.4);
       c.fill();
       c.stroke();
     } else if (hat === "quepi") {
@@ -22175,6 +22213,7 @@ onmessage = function(e){ var m = e.data, out = [];
   const scZoneCv = {};
   function scZone(z) {
     if (scZoneCv[z]) return scZoneCv[z];
+    if (window.SC48) return scZone48(z);
     const W = 1e3, H = 430, y0 = 420, cv = document.createElement("canvas");
     cv.width = W;
     cv.height = H;
@@ -22476,6 +22515,266 @@ onmessage = function(e){ var m = e.data, out = [];
     }
     return cv;
   }
+  const SC48 = !!window.SC48;
+  const SC_ZONES48 = [
+    { name: "\u{1F3EB} Entrada de la Secu 48", ground: "#CFC6B6", edge: "#8C8577" },
+    { name: "\u{1F1F2}\u{1F1FD} Patio c\xEDvico", ground: "#C9C2B5", edge: "#8E877A" },
+    { name: "\u{1F3EB} Salones", ground: "#7A7F8C", edge: "#5C9E45" },
+    { name: "\u{1F4DA} Biblioteca", ground: "#80858F", edge: "#5C9E45" },
+    { name: "\u{1F52C} Laboratorio", ground: "#76808A", edge: "#5C9E45" },
+    { name: "\u{1F355} Cooperativa", ground: "#9B8A74", edge: "#5C9E45" },
+    { name: "\u{1F3A8} Taller de artes", ground: "#8C7FA6", edge: "#5C9E45" },
+    { name: "\u{1F3C0} Cancha", ground: "#3E7FC1", edge: "#3E8E41" },
+    { name: "\u{1F389} Salida \xB7 \xA1META!", ground: "#C2553A", edge: "#3E8E41" }
+  ];
+  if (SC48) {
+    SC_ZONES.length = 0;
+    SC_ZONES48.forEach((z) => SC_ZONES.push(z));
+    SC_SP[0][1] = "\u{1F9D1} Alumno";
+    SC_HAT[2] = ["birrete", "\u{1F393} Birrete"];
+    SC_HAT[3] = ["audif", "\u{1F3A7} Aud\xEDfonos"];
+  }
+  function scZone48(z) {
+    const W = 1e3, H = 430, y0 = 420, cv = document.createElement("canvas");
+    cv.width = W;
+    cv.height = H;
+    const m = cv.getContext("2d");
+    scZoneCv[z] = cv;
+    const INKc = "#2B2366";
+    m.lineJoin = "round";
+    const sign = (x, y, txt, bg) => {
+      m.font = "900 22px Nunito, sans-serif";
+      const tw = m.measureText(txt).width + 24;
+      m.fillStyle = bg || "#fff";
+      m.strokeStyle = INKc;
+      m.lineWidth = 3;
+      m.beginPath();
+      if (m.roundRect) m.roundRect(x - tw / 2, y - 20, tw, 36, 10);
+      else m.rect(x - tw / 2, y - 20, tw, 36);
+      m.fill();
+      m.stroke();
+      m.fillStyle = INKc;
+      m.textAlign = "center";
+      m.textBaseline = "middle";
+      m.fillText(txt, x, y - 1);
+      m.textBaseline = "alphabetic";
+    };
+    const bld = (x, w, h, col, roof) => {
+      m.fillStyle = col;
+      m.strokeStyle = INKc;
+      m.lineWidth = 3;
+      m.fillRect(x, y0 - h, w, h);
+      m.strokeRect(x, y0 - h, w, h);
+      if (roof) {
+        m.fillStyle = roof;
+        m.fillRect(x - 10, y0 - h - 14, w + 20, 16);
+        m.strokeRect(x - 10, y0 - h - 14, w + 20, 16);
+      }
+      m.fillStyle = "#BFE3FF";
+      for (let yy = y0 - h + 20; yy < y0 - 60; yy += 52) for (let xx = x + 18; xx < x + w - 40; xx += 58) {
+        m.fillRect(xx, yy, 38, 30);
+        m.strokeRect(xx, yy, 38, 30);
+      }
+    };
+    const door = (x, w) => {
+      m.fillStyle = "#6B4423";
+      m.fillRect(x, y0 - 70, w, 70);
+      m.strokeRect(x, y0 - 70, w, 70);
+    };
+    const tree = (x, s) => {
+      m.save();
+      m.translate(x, y0);
+      m.scale(s, s);
+      m.fillStyle = "#6B4423";
+      m.fillRect(-7, -60, 14, 60);
+      m.fillStyle = "#3E8E41";
+      m.beginPath();
+      m.arc(0, -85, 40, 0, 7);
+      m.arc(-28, -60, 28, 0, 7);
+      m.arc(28, -60, 28, 0, 7);
+      m.fill();
+      m.restore();
+    };
+    const kid = (x, col) => {
+      m.fillStyle = col;
+      m.fillRect(x - 6, y0 - 34, 12, 18);
+      m.fillStyle = "#2B2366";
+      m.fillRect(x - 6, y0 - 16, 5, 16);
+      m.fillRect(x + 1, y0 - 16, 5, 16);
+      m.fillStyle = "#E0AC7E";
+      m.beginPath();
+      m.arc(x, y0 - 42, 7, 0, 7);
+      m.fill();
+    };
+    if (z === 0) {
+      tree(60, 1);
+      bld(130, 740, 230, "#E9D9B5", "#B23A3A");
+      door(450, 100);
+      m.fillStyle = "#2B2366";
+      m.fillRect(260, y0 - 300, 480, 54);
+      m.fillStyle = "#FFD21A";
+      m.font = "900 24px Nunito, sans-serif";
+      m.textAlign = "center";
+      m.fillText("ESC. SEC. DIURNA No. 48", 500, y0 - 278);
+      m.font = "800 17px Nunito, sans-serif";
+      m.fillText("\u201CJuan Ruiz de Alarc\xF3n y Mendoza\u201D", 500, y0 - 255);
+      m.strokeStyle = "#2B2366";
+      m.lineWidth = 3;
+      for (let x = 880; x < 1e3; x += 14) {
+        m.beginPath();
+        m.moveTo(x, y0);
+        m.lineTo(x, y0 - 90);
+        m.stroke();
+      }
+      m.beginPath();
+      m.moveTo(876, y0 - 90);
+      m.lineTo(1e3, y0 - 90);
+      m.stroke();
+      ["#FF4F6D", "#4DA8FF", "#3FBF4F"].forEach((c, i) => kid(330 + i * 26, c));
+    } else if (z === 1) {
+      m.fillStyle = "#9C9AB0";
+      m.strokeStyle = INKc;
+      m.lineWidth = 3;
+      m.fillRect(497, y0 - 330, 6, 330);
+      m.strokeRect(497, y0 - 330, 6, 330);
+      [["#006847", 0], ["#FFFFFF", 1], ["#CE1126", 2]].forEach(([c, i]) => {
+        m.fillStyle = c;
+        m.fillRect(503 + i * 46, y0 - 326, 46, 84);
+      });
+      m.fillStyle = "#8B5A2B";
+      m.beginPath();
+      m.arc(572, y0 - 284, 11, 0, 7);
+      m.fill();
+      m.strokeRect(503, y0 - 326, 138, 84);
+      m.fillStyle = "#D6CDBD";
+      m.fillRect(380, y0 - 26, 240, 26);
+      m.strokeRect(380, y0 - 26, 240, 26);
+      for (let i = 0; i < 14; i++) kid(120 + i * 24, ["#FFFFFF", "#4DA8FF"][i % 2]);
+      for (let i = 0; i < 10; i++) kid(660 + i * 28, ["#FFFFFF", "#4DA8FF"][i % 2]);
+      tree(60, 0.9);
+      tree(960, 0.9);
+      sign(500, y0 - 360, "\u{1F1F2}\u{1F1FD} Honores a la bandera");
+    } else if (z === 2) {
+      bld(80, 380, 250, "#F2C9A0", "#4E6B9E");
+      bld(540, 380, 250, "#F2C9A0", "#4E6B9E");
+      door(240, 60);
+      door(700, 60);
+      sign(500, y0 - 40, "\u{1F3EB} 2\xB0A \xB7 2\xB0B \xB7 3\xB0D");
+    } else if (z === 3) {
+      bld(150, 700, 220, "#C9B6E8", "#6B4FA0");
+      door(470, 60);
+      for (let i = 0; i < 10; i++) {
+        m.fillStyle = ["#FF4F6D", "#4DA8FF", "#FFD21A", "#3FBF4F", "#B06BFF"][i % 5];
+        m.fillRect(200 + i * 20, y0 - 120, 16, 50);
+        m.strokeRect(200 + i * 20, y0 - 120, 16, 50);
+      }
+      sign(500, y0 - 255, "\u{1F4DA} BIBLIOTECA");
+    } else if (z === 4) {
+      bld(180, 640, 230, "#CFEFE6", "#2E8B7A");
+      door(470, 60);
+      m.fillStyle = "#7EE0A1";
+      m.strokeStyle = INKc;
+      m.lineWidth = 3;
+      m.beginPath();
+      m.moveTo(700, y0 - 150);
+      m.lineTo(740, y0 - 150);
+      m.lineTo(760, y0 - 90);
+      m.lineTo(680, y0 - 90);
+      m.closePath();
+      m.fill();
+      m.stroke();
+      m.fillStyle = "#fff";
+      m.fillRect(708, y0 - 180, 24, 30);
+      m.strokeRect(708, y0 - 180, 24, 30);
+      sign(500, y0 - 265, "\u{1F52C} LABORATORIO");
+    } else if (z === 5) {
+      tree(70, 1);
+      m.fillStyle = "#F5E6C8";
+      m.strokeStyle = INKc;
+      m.lineWidth = 3;
+      m.fillRect(220, y0 - 150, 560, 150);
+      m.strokeRect(220, y0 - 150, 560, 150);
+      for (let i = 0; i < 10; i++) {
+        m.fillStyle = i % 2 ? "#fff" : "#FF4F6D";
+        m.beginPath();
+        m.moveTo(210 + i * 58, y0 - 150);
+        m.lineTo(268 + i * 58, y0 - 150);
+        m.lineTo(268 + i * 58, y0 - 190);
+        m.lineTo(210 + i * 58, y0 - 190);
+        m.closePath();
+        m.fill();
+        m.stroke();
+      }
+      m.fillStyle = "#8B5A2B";
+      m.fillRect(240, y0 - 80, 520, 20);
+      m.font = "34px sans-serif";
+      m.textAlign = "center";
+      ["\u{1F355}", "\u{1F32E}", "\u{1F964}", "\u{1F36A}", "\u{1F34C}", "\u{1F9C3}"].forEach((e, i) => m.fillText(e, 280 + i * 85, y0 - 92));
+      for (let i = 0; i < 5; i++) kid(330 + i * 40, ["#FFFFFF", "#4DA8FF"][i % 2]);
+      sign(500, y0 - 215, "\u{1F355} COOPERATIVA");
+      tree(930, 1);
+    } else if (z === 6) {
+      bld(160, 680, 220, "#FFE3B0", "#E07A2E");
+      door(470, 60);
+      m.font = "60px sans-serif";
+      m.textAlign = "center";
+      m.fillText("\u{1F3A8}", 260, y0 - 110);
+      m.fillText("\u{1F3AD}", 740, y0 - 110);
+      m.fillText("\u{1F3B8}", 640, y0 - 110);
+      sign(500, y0 - 255, "\u{1F3A8} TALLER DE ARTES");
+    } else if (z === 7) {
+      m.strokeStyle = INKc;
+      m.lineWidth = 4;
+      [140, 860].forEach((x, i) => {
+        m.fillStyle = "#9C9AB0";
+        m.fillRect(x - 4, y0 - 260, 8, 260);
+        m.fillStyle = "#fff";
+        m.fillRect(x - 40 + (i ? -20 : 20), y0 - 290, 80, 56);
+        m.strokeRect(x - 40 + (i ? -20 : 20), y0 - 290, 80, 56);
+        m.strokeStyle = "#FF5A1F";
+        m.beginPath();
+        m.ellipse(x + (i ? -30 : 30), y0 - 232, 22, 6, 0, 0, 7);
+        m.stroke();
+        m.strokeStyle = INKc;
+      });
+      m.font = "48px sans-serif";
+      m.textAlign = "center";
+      m.fillText("\u{1F3C0}", 500, y0 - 180);
+      for (let i = 0; i < 8; i++) kid(330 + i * 48, ["#FFFFFF", "#4DA8FF"][i % 2]);
+      sign(500, y0 - 330, "\u{1F3C0} CANCHA");
+    } else {
+      tree(60, 1);
+      tree(940, 1);
+      m.fillStyle = "#E9D9B5";
+      m.strokeStyle = INKc;
+      m.lineWidth = 3;
+      [300, 680].forEach((x) => {
+        m.fillRect(x, y0 - 240, 40, 240);
+        m.strokeRect(x, y0 - 240, 40, 240);
+      });
+      m.fillStyle = "#2B2366";
+      m.fillRect(280, y0 - 290, 440, 56);
+      m.fillStyle = "#FFD21A";
+      m.font = "900 32px Nunito, sans-serif";
+      m.textAlign = "center";
+      m.fillText("\u{1F389} \xA1SALIDA! \xB7 META \u{1F3C1}", 500, y0 - 252);
+      ["#FF4F6D", "#4DA8FF", "#FFD21A", "#3FBF4F", "#B06BFF", "#FF8A3D"].forEach((c, i) => {
+        const bx2 = 240 + i * 20 + (i > 2 ? 440 : 0), by = y0 - 330 - i % 3 * 26;
+        m.strokeStyle = "#2B2366";
+        m.lineWidth = 1.5;
+        m.beginPath();
+        m.moveTo(bx2, by + 24);
+        m.lineTo(bx2 + (i > 2 ? -30 : 30), y0 - 290);
+        m.stroke();
+        m.fillStyle = c;
+        m.beginPath();
+        m.ellipse(bx2, by, 16, 20, 0, 0, 7);
+        m.fill();
+        m.stroke();
+      });
+    }
+    return cv;
+  }
   function scFar(c, W, base, off, col) {
     c.fillStyle = col;
     c.beginPath();
@@ -22756,7 +23055,7 @@ onmessage = function(e){ var m = e.data, out = [];
     if (sl === 2) scRenderEnd();
     $("#scPop").className = "scpop big scendtitle";
     $("#scPop").onclick = null;
-    $("#scPop").innerHTML = sl === 0 ? `<div class="scendh">\u{1F3C6} \xA1Ganadores!</div>` : sl === 1 ? `<div class="scendh">\u{1F605} \xA1A mortero, cadetes!</div>` : `<div class="scendh">\u{1F4CA} Calificaciones</div>`;
+    $("#scPop").innerHTML = sl === 0 ? `<div class="scendh">\u{1F3C6} \xA1Ganadores!</div>` : sl === 1 ? `<div class="scendh">${window.SC48 ? "\u{1F40C} \xA1Los m\xE1s lentos!" : "\u{1F605} \xA1A mortero, cadetes!"}</div>` : `<div class="scendh">\u{1F4CA} Calificaciones</div>`;
     $("#scDock").innerHTML = `<button class="scd" data-d="prev" ${sl === 0 ? "disabled" : ""}>\u25C0<i>Atr\xE1s</i></button><button class="scd go" data-d="next" ${sl === 2 ? "disabled" : ""}>\u25B6<i>Siguiente</i></button><button class="scd" data-d="home">\u{1F3E0}<i>Salir</i></button>`;
     $("#scDock").querySelectorAll("button").forEach((b) => b.onclick = () => {
       const d = b.dataset.d;
@@ -22772,7 +23071,7 @@ onmessage = function(e){ var m = e.data, out = [];
     sky.addColorStop(1, sl === 1 ? "#E6F2FF" : "#FF9F7A");
     c.fillStyle = sky;
     c.fillRect(0, 0, W, groundY);
-    const zc = scZone(sl === 1 ? 6 : 8), sc2 = Math.min((groundY - 80) / zc.height, viewW / zc.width * 1), dw = zc.width * sc2, dh = zc.height * sc2;
+    const zc = scZone(sl === 1 ? window.SC48 ? 7 : 6 : 8), sc2 = Math.min((groundY - 80) / zc.height, viewW / zc.width * 1), dw = zc.width * sc2, dh = zc.height * sc2;
     c.globalAlpha = 0.9;
     c.drawImage(zc, (viewW - dw) / 2, groundY - dh + 4, dw, dh);
     c.globalAlpha = 1;
@@ -22858,6 +23157,53 @@ onmessage = function(e){ var m = e.data, out = [];
       }
     } else {
       const m = g.mort, n = Math.max(1, m.length), size = Math.min(190, (viewW - 220) / n * 1.5, H * 0.32);
+      if (window.SC48) {
+        const px0 = viewW - 110, py0 = groundY - size * 0.48;
+        c.save();
+        c.translate(px0, py0);
+        c.scale(-1, 1);
+        scDrawRunner(c, { sp: 0, hat: 0, gl: 2, shoe: 3, shirt: 300, skin: 0 }, size * 1.05, t, false);
+        c.restore();
+        c.fillStyle = "#fff";
+        c.strokeStyle = "#2B2366";
+        c.lineWidth = 3;
+        scRR(c, px0 - 280, py0 - size * 0.95, 260, 64, 18);
+        c.fill();
+        c.stroke();
+        c.fillStyle = "#2B2366";
+        c.font = "900 24px Nunito, sans-serif";
+        c.textAlign = "center";
+        c.fillText(Math.sin(t * 2) > 0 ? "\xA1\xC9chenle ganas! \u{1F4AA}" : "\xA1La pr\xF3xima s\xED! \u{1F4E3}", px0 - 150, py0 - size * 0.95 + 42);
+        if (!m.length) {
+          c.fillStyle = "#fff";
+          c.font = "900 40px Nunito, sans-serif";
+          c.fillText("\xA1Nadie se qued\xF3 atr\xE1s! \u{1F389}", viewW / 2, groundY - 60);
+        }
+        m.forEach((s, i) => {
+          const px = 80 + (viewW - 320) * (i + 0.5) / n, bob = Math.abs(Math.sin(t * 1.5 + i)) * size * 0.03;
+          c.save();
+          c.translate(px, groundY - size * 0.48 + bob);
+          c.rotate(0.12);
+          const bp = scDrawRunner(c, s.look, size, t * 0.25, true);
+          badge(s, bp, size);
+          c.restore();
+          c.font = `${Math.round(size * 0.28)}px sans-serif`;
+          c.textAlign = "center";
+          c.fillText("\u{1F40C}", px + size * 0.45, groundY - size * 0.04);
+          c.font = `${Math.round(size * 0.16)}px sans-serif`;
+          c.fillText("\u{1F4A6}", px + size * 0.3, groundY - size * 0.85);
+          c.fillStyle = "#fff";
+          c.font = "900 18px Nunito, sans-serif";
+          c.fillText(`${s.pts} pts`, px, groundY + 34);
+        });
+        [0, 1, 2].forEach((i) => {
+          c.fillStyle = i === sl ? "#fff" : "rgba(255,255,255,.4)";
+          c.beginPath();
+          c.arc(viewW / 2 - 24 + i * 24, H - 16, 7, 0, 7);
+          c.fill();
+        });
+        return;
+      }
       const sx = viewW - 110, sy = groundY - size * 0.48;
       c.save();
       c.translate(sx, sy);
@@ -23087,7 +23433,7 @@ onmessage = function(e){ var m = e.data, out = [];
     if (s) s.textContent = on ? "\u2705 Conectado" : "\u23F3 Esperando al celular\u2026";
   }
   function scOpenFromPhone(setId) {
-    if (game && game.mode === "scan" && view === "play" && game.phase !== "end") {
+    if (game && game.mode === "scan" && view === "play" && game.phase !== "end" && !(game.phase === "lobby" && setId && setId !== cfg.setId)) {
       scSyncLast = "";
       scSync(true);
       return;
@@ -23110,7 +23456,7 @@ onmessage = function(e){ var m = e.data, out = [];
     scSync(true);
   }
   function scSetsForPhone() {
-    return allSets().filter((s) => s.questions.some((q) => q.type === "mc" || q.type === "tf")).slice(0, 30).map((s) => ({ id: s.id, x: (s.title || "").slice(0, 60) }));
+    return allSets().filter((s) => s.questions.some((q) => q.type === "mc" || q.type === "tf")).slice(0, 40).map((s) => ({ id: s.id, x: (s.title || "").slice(0, 70) }));
   }
   function scStatePayload() {
     const base = { t: "st" };
@@ -23118,9 +23464,18 @@ onmessage = function(e){ var m = e.data, out = [];
     const o = Object.assign(base, { phase: game.phase, kind: sc.kind, n: scMaxCards(sc.kind), reg: sc.students.length, roster: sc.students.map((s) => s.no), title: (game.set.title || "").slice(0, 80), total: game.order.length, qi: sc.qi });
     if (game.phase === "pick") {
       o.ga = {};
+      o.looks = {};
       sc.students.forEach((s) => {
         o.ga[s.no] = 0;
+        o.looks[s.no] = [s.look.sp, s.look.hat, s.look.gl, s.look.shirt];
       });
+      o.hats = SC_HAT.map((h) => (h[1].match(/^\S+/) || ["\u2716\uFE0F"])[0].replace("Nada", "\u2716\uFE0F"));
+    }
+    if (game.phase === "lobby") {
+      o.sets = scSetsForPhone();
+      o.setId = cfg.setId;
+      o.qn = cfg.scanQn;
+      o.all = game.order.length;
     }
     if (game.phase === "q" || game.phase === "reveal") {
       const q = scQ();
@@ -23172,8 +23527,31 @@ onmessage = function(e){ var m = e.data, out = [];
       const c = m.c, live = game.phase === "q" || game.phase === "reveal";
       if (c === "start" && game.phase === "lobby") scStart();
       else if ((c === "go" || c === "reveal" || c === "next") && game.phase === "pick") scGo();
-      else if (c === "rand" && game.phase === "pick") scAllRandom();
-      else if (c === "reveal") scReveal();
+      else if (c === "rand" && game.phase === "pick") {
+        scAllRandom();
+        if (scEditNo && !$("#scEdit").hidden) scRenderEdit();
+      } else if (c === "look" && game.phase === "pick") {
+        const st = scStu(+m.no);
+        if (st) {
+          if (m.k === "show") {
+          } else if (m.k === "rand") st.look = scRandLook();
+          else if (["sp", "hat", "gl", "shirt"].includes(m.k)) {
+            st.look[m.k] = +m.v;
+            if (m.k === "shirt") st.look.shoe = Math.max(0, SC_SHIRT.indexOf(+m.v)) % SC_SHOE.length;
+          }
+          scEditNo = st.no;
+          scRenderEdit();
+          $("#scEdit").hidden = false;
+          scEditAnim();
+          scRenderPop();
+        }
+      } else if (c === "lookdone") {
+        $("#scEdit").hidden = true;
+        scRenderPop();
+      } else if (c === "qn" && game.phase === "lobby") {
+        cfg.scanQn = +m.v;
+        scRenderLobby();
+      } else if (c === "reveal") scReveal();
       else if (c === "next") {
         if (game.phase === "reveal") scNext();
       } else if (c === "skip") scSkip();
