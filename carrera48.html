@@ -19510,6 +19510,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     });
     return m;
   })();
+  const WG_TURN = (no) => (no - 1) % 4;
   function wgRot(b) {
     const d = [];
     for (let i = 0; i < 4; i++) {
@@ -19537,7 +19538,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     for (let r = 0; r < 4; r++) {
       if (r) b = wgRot(b);
       const no = WG_MAP[wgVal(b)];
-      if (no) return { no, corners: det.rotate2(cand, 4 - r) };
+      if (no) return { no, corners: det.rotate2(cand, (8 - r - WG_TURN(no)) % 4) };
     }
     return null;
   }
@@ -20611,6 +20612,8 @@ function scDetect(det, img){
 // codes = 16 data bits, rows top->bottom, 1 = white, read with the letter A on top.
 const WG_CODES = [34443,39689,43827,29571,65095,45672,10037,7702,8483,39793,6376,41072,12940,43782,5924,59128,11583,18100,29706,397,26591,48581,1281,7202,35746,59177,13857,37570,34204,36943,6451,21346,50487,30909,42143,19022,60970,56569,44716,63592,31342,35691,62135,32729,65190,4624,27890,57376,2694,39346,7688,1229,4724,46594,40792,2211,2555,25637,16648,60044];
 const WG_MAP = (()=>{ const m = {}; WG_CODES.forEach((c,i)=>{ m[c] = i+1; }); return m; })();
+// Wayground prints the letters turned a quarter more on each card: P1 A-up, P2 B-up, P3 C-up, P4 D-up, P5 A-up\u2026 (checked with photos of 24 real cards)
+const WG_TURN = no=>(no - 1) % 4;
 function wgRot(b){ const d = []; for (let i=0;i<4;i++){ d[i] = []; for (let j=0;j<4;j++) d[i][j] = b[3-j][i]; } return d; }
 function wgVal(b){ let v = 0; for (let i=0;i<4;i++) for (let j=0;j<4;j++) v = v*2 + b[i][j]; return v; }
 // read a warped (thresholded) square as a 6x6 Wayground marker; returns {no, corners} or null
@@ -20619,7 +20622,7 @@ function wgRead(det, img, cand){
   for (let i=0;i<6;i++){ const inc = (i===0 || i===5) ? 1 : 5;
     for (let j=0;j<6;j+=inc) if (CV.countNonZero(img, {x:j*w, y:i*w, width:w, height:w}) > minZ) return null; }
   let b = []; for (let i=0;i<4;i++){ b[i] = []; for (let j=0;j<4;j++) b[i][j] = CV.countNonZero(img, {x:(j+1)*w, y:(i+1)*w, width:w, height:w}) > minZ ? 1 : 0; }
-  for (let r=0;r<4;r++){ if (r) b = wgRot(b); const no = WG_MAP[wgVal(b)]; if (no) return {no, corners: det.rotate2(cand, 4 - r)}; }
+  for (let r=0;r<4;r++){ if (r) b = wgRot(b); const no = WG_MAP[wgVal(b)]; if (no) return {no, corners: det.rotate2(cand, (8 - r - WG_TURN(no)) % 4)}; }
   return null;
 }
 // detect markers of the chosen card kind ("wg" Wayground Q-cards, "tr" Tile Rush cards); returns [{no, corners}]
@@ -21700,7 +21703,30 @@ onmessage = function(e){ var m = e.data, out = [];
     const hat = SC_HAT[L.hat] ? SC_HAT[L.hat][0] : "none", top = hy - hr;
     c.strokeStyle = dk;
     c.lineWidth = Math.max(1, u * 0.22);
-    if (hat === "gorra") {
+    if (hat === "boina") {
+      c.save();
+      c.fillStyle = "#C1121F";
+      c.beginPath();
+      c.ellipse(hx - hr * 0.42, top + u * 0.55, hr * 1.18, u * 1, -0.32, 0, 7);
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#8E0E18";
+      c.beginPath();
+      c.ellipse(hx, top + u * 1.55, hr * 0.98, u * 0.42, 0, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#FFD21A";
+      c.beginPath();
+      c.arc(hx + hr * 0.5, top + u * 1.05, u * 0.42, 0, 7);
+      c.fill();
+      c.lineWidth = Math.max(1, u * 0.12);
+      c.stroke();
+      c.strokeStyle = "#8E6B00";
+      c.beginPath();
+      c.arc(hx + hr * 0.5, top + u * 1, u * 0.22, Math.PI, 0);
+      c.stroke();
+      c.restore();
+    } else if (hat === "gorra") {
       c.fillStyle = shirt;
       c.beginPath();
       c.arc(hx, top + u * 1.2, hr * 0.98, Math.PI, 0);
