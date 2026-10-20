@@ -21431,12 +21431,14 @@ onmessage = function(e){ var m = e.data, out = [];
     ["tigre", "\u{1F42F} Tigre", "#FF8C2A", "#1A1530"]
   ];
   const SC_HAT = [["none", "Nada"], ["gorra", "\u{1F9E2} Gorra"], ["quepi", "\u{1F396}\uFE0F Quep\xED"], ["casco", "\u{1FA96} Casco"], ["corona", "\u{1F451} Corona"], ["sombrero", "\u{1F920} Sombrero"], ["banda", "\u{1F94B} Banda"], ["gorro", "\u{1F385} Gorro"]];
+  if (!window.SC48) SC_HAT.push(["boina", "\u{1F534} Boina roja"]);
+  const SC_BOINA = SC_HAT.length - 1;
   const SC_GL = [["none", "Nada"], ["sol", "\u{1F576}\uFE0F De sol"], ["redondos", "\u{1F453} Redondos"], ["estrella", "\u2B50 Estrellas"], ["visor", "\u{1F97D} Visor"]];
   const SC_SHOE = ["#FF4F6D", "#4DA8FF", "#FFD21A", "#22C55E", "#FFFFFF", "#1A1530", "#B06BFF", "#FF8A3D"];
   const SC_SHIRT = [350, 210, 45, 130, 280, 20, 180, 0];
   function scRandLook() {
     const R = (n) => Math.floor(Math.random() * n);
-    return { sp: R(SC_SP.length), hat: R(SC_HAT.length), gl: Math.random() < 0.45 ? 0 : 1 + R(SC_GL.length - 1), shoe: R(SC_SHOE.length), shirt: SC_SHIRT[R(SC_SHIRT.length)], skin: R(3) };
+    return { sp: R(SC_SP.length), hat: window.SC48 ? R(SC_HAT.length) : SC_BOINA, gl: Math.random() < 0.45 ? 0 : 1 + R(SC_GL.length - 1), shoe: R(SC_SHOE.length), shirt: SC_SHIRT[R(SC_SHIRT.length)], skin: R(3) };
   }
   function scDrawRunner(c, L, size, t, run, noLegs) {
     const u = size / 10.5, sp = SC_SP[L.sp] ? SC_SP[L.sp][0] : "cadete", dk = "#1A1530";
@@ -21701,7 +21703,30 @@ onmessage = function(e){ var m = e.data, out = [];
     const hat = SC_HAT[L.hat] ? SC_HAT[L.hat][0] : "none", top = hy - hr;
     c.strokeStyle = dk;
     c.lineWidth = Math.max(1, u * 0.22);
-    if (hat === "gorra") {
+    if (hat === "boina") {
+      c.save();
+      c.fillStyle = "#C1121F";
+      c.beginPath();
+      c.ellipse(hx - hr * 0.42, top + u * 0.55, hr * 1.18, u * 1, -0.32, 0, 7);
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#8E0E18";
+      c.beginPath();
+      c.ellipse(hx, top + u * 1.55, hr * 0.98, u * 0.42, 0, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#FFD21A";
+      c.beginPath();
+      c.arc(hx + hr * 0.5, top + u * 1.05, u * 0.42, 0, 7);
+      c.fill();
+      c.lineWidth = Math.max(1, u * 0.12);
+      c.stroke();
+      c.strokeStyle = "#8E6B00";
+      c.beginPath();
+      c.arc(hx + hr * 0.5, top + u * 1, u * 0.22, Math.PI, 0);
+      c.stroke();
+      c.restore();
+    } else if (hat === "gorra") {
       c.fillStyle = shirt;
       c.beginPath();
       c.arc(hx, top + u * 1.2, hr * 0.98, Math.PI, 0);

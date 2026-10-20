@@ -5763,7 +5763,7 @@ function editBody(s) {
     return `<button class="cx-chip${cur === v ? " on" : ""}" data-k="${k}" data-v="${v}">${f ? f(x) : x}</button>`;
   }).join("")}</div></div>`;
   return `<div class="cx-card cx-ehead"><button class="cb small" id="cxEPrev">\u25C0</button><b>Corredor ${no}</b><button class="cb small" id="cxENext">\u25B6</button></div>
-    ${row("Animal", "sp", PH_SP, L[0])}${row("Gorra", "hat", s.hats && s.hats.length === PH_HAT.length ? s.hats : PH_HAT, L[1])}${row("Gafas", "gl", PH_GL, L[2])}${row("Color", "shirt", PH_SHIRT, L[3], (h) => `<i style="background:hsl(${h},75%,52%)"></i>`)}
+    ${row("Animal", "sp", PH_SP, L[0])}${row("Gorra", "hat", s.hats && s.hats.length >= PH_HAT.length ? s.hats : PH_HAT, L[1])}${row("Gafas", "gl", PH_GL, L[2])}${row("Color", "shirt", PH_SHIRT, L[3], (h) => `<i style="background:hsl(${h},75%,52%)"></i>`)}
     <div class="cx-grid"><button class="cb" id="cxERand">\u{1F3B2} Aleatorio</button><button class="cb go" id="cxEOk">\u2714 Listo</button></div>`;
 }
 function wireEdit() {
