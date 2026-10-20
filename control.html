@@ -87,6 +87,10 @@ html,body{margin:0;background:#1B1440;color:#fff;font-family:Nunito,system-ui,-a
 #camUI .cambtn{flex:1;font:900 22px system-ui,sans-serif;padding:18px 8px;border-radius:18px;border:3px solid #fff;color:#fff;cursor:pointer}
 #camUI .cambtn.fin{background:#3B3458}#camUI .cambtn.chk{background:#22C55E}
 #camUI .cammsg{position:absolute;top:40%;left:0;right:0;text-align:center;color:#FFD21A;font:800 18px system-ui,sans-serif;padding:20px}
+#camUI .camzoom{position:absolute;right:10px;top:38%;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:3}
+#camUI .camzoom button{width:58px;height:58px;border-radius:50%;border:3px solid #fff;background:rgba(27,20,64,.75);color:#fff;font:900 30px system-ui,sans-serif;line-height:1;cursor:pointer}
+#camUI .camzoom b{color:#fff;font:900 18px system-ui,sans-serif;background:rgba(0,0,0,.55);border-radius:10px;padding:2px 8px}
+#camV{transform-origin:50% 50%}
 
 .cx-read{text-align:center}.cx-read b{display:block;font-size:72px;line-height:1.1;color:#2B2366}
 </style>
@@ -4939,18 +4943,60 @@ function camEnsureUI() {
     <div class="camtop"><b id="camCount">0 / 0</b><span id="camHint">Apunta a las tarjetas</span></div>
     <div class="camchips" id="camChips"></div>
     <div class="cambot"><button id="camFin" class="cambtn fin">\u25A0 Finalizar</button><button id="camChk" class="cambtn chk">\u2714 Checar</button></div>
-    <div class="cammsg" id="camMsg"></div>`;
+    <div class="cammsg" id="camMsg"></div>
+    <div class="camzoom"><button id="camZin" aria-label="Acercar">\uFF0B</button><b id="camZl">1x</b><button id="camZout" aria-label="Alejar">\uFF0D</button></div>`;
   document.body.appendChild(d);
   document.getElementById("camFin").onclick = () => {
     const o = CAM.opts;
     camClose();
     o && o.onFinish && o.onFinish();
   };
+  document.getElementById("camZin").onclick = () => camZoom(1);
+  document.getElementById("camZout").onclick = () => camZoom(-1);
   document.getElementById("camChk").onclick = () => {
     const o = CAM.opts;
     camClose();
     o && o.onCheck && o.onCheck();
   };
+}
+CAM.zoom = (() => {
+  try {
+    return Math.max(1, Math.min(4, +localStorage.getItem("scanrace.zoom") || 1));
+  } catch (e) {
+    return 1;
+  }
+})();
+const CAM_Z = [1, 1.5, 2, 2.5, 3, 4];
+function camZoom(d) {
+  let i = CAM_Z.indexOf(CAM.zoom);
+  if (i < 0) i = 0;
+  i = Math.max(0, Math.min(CAM_Z.length - 1, i + d));
+  CAM.zoom = CAM_Z[i];
+  try {
+    localStorage.setItem("scanrace.zoom", CAM.zoom);
+  } catch (e) {
+  }
+  camApplyZoom();
+  if (navigator.vibrate) try {
+    navigator.vibrate(15);
+  } catch (e) {
+  }
+}
+function camApplyZoom() {
+  const v = document.getElementById("camV"), l = document.getElementById("camZl");
+  if (l) l.textContent = CAM.zoom + "x";
+  CAM.hwZoom = false;
+  try {
+    const tr = CAM.stream && CAM.stream.getVideoTracks()[0], cp = tr && tr.getCapabilities ? tr.getCapabilities() : {};
+    if (cp && cp.zoom && cp.zoom.max > 1) {
+      const z = Math.max(cp.zoom.min || 1, Math.min(cp.zoom.max, CAM.zoom));
+      tr.applyConstraints({ advanced: [{ zoom: z }] }).catch(() => {
+      });
+      CAM.hwZoom = true;
+    }
+  } catch (e) {
+  }
+  if (v) v.style.transform = CAM.hwZoom || CAM.zoom === 1 ? "" : `scale(${CAM.zoom})`;
 }
 function camWorker() {
   if (CAM.worker !== null) return CAM.worker;
@@ -5001,6 +5047,7 @@ async function camOpen(opts) {
     v.srcObject = CAM.stream;
     await v.play();
     CAM.on = true;
+    camApplyZoom();
     camWorker();
     cancelAnimationFrame(CAM.raf);
     CAM.raf = requestAnimationFrame(camTick);
@@ -5079,14 +5126,16 @@ function camTick() {
   const v = document.getElementById("camV"), o = document.getElementById("camO");
   if (!v.videoWidth) return;
   if (!CAM.busy) {
-    const pw = Math.min(1280, v.videoWidth), ph = Math.round(v.videoHeight * pw / v.videoWidth);
+    const dz = CAM.hwZoom ? 1 : CAM.zoom, cwv = v.videoWidth / dz, chv = v.videoHeight / dz, cx0 = (v.videoWidth - cwv) / 2, cy0 = (v.videoHeight - chv) / 2;
+    const pw = Math.round(Math.min(1280, Math.max(640, cwv))), ph = Math.round(chv * pw / cwv);
     if (!CAM.grab) CAM.grab = document.createElement("canvas");
     if (CAM.grab.width !== pw || CAM.grab.height !== ph) {
       CAM.grab.width = pw;
       CAM.grab.height = ph;
     }
+    CAM.crop = { x: cx0, y: cy0, w: cwv, z: dz };
     const g = CAM.grab.getContext("2d");
-    g.drawImage(v, 0, 0, pw, ph);
+    g.drawImage(v, cx0, cy0, cwv, chv, 0, 0, pw, ph);
     const img = g.getImageData(0, 0, pw, ph);
     const wk = camWorker();
     if (wk) {
@@ -5102,7 +5151,7 @@ function camTick() {
           ms = scDetectCards(CAM.det, img, CAM.opts.kind);
         } catch (e) {
         }
-        camResults(ms.map((k2) => ({ no: k2.no, a: scAnswer(k2.corners), c: k2.corners.map((p) => [p.x, p.y]) })), pw, ph);
+        camResults(ms.map((k) => ({ no: k.no, a: scAnswer(k.corners), c: k.corners.map((p) => [p.x, p.y]) })), pw, ph);
       }
     }
   }
@@ -5116,13 +5165,17 @@ function camTick() {
   c.clearRect(0, 0, cw, ch);
   const age = performance.now() - CAM.resT;
   if (age > 700 || !CAM.res.length) return;
-  const sc = Math.max(cw / v.videoWidth, ch / v.videoHeight), ox = (cw - v.videoWidth * sc) / 2, oy = (ch - v.videoHeight * sc) / 2, k = v.videoWidth / CAM.resW * sc;
+  const sc = Math.max(cw / v.videoWidth, ch / v.videoHeight), ox = (cw - v.videoWidth * sc) / 2, oy = (ch - v.videoHeight * sc) / 2, cr = CAM.crop || { x: 0, y: 0, w: v.videoWidth, z: 1 }, kk = cr.w / CAM.resW;
+  const mapP = (p) => {
+    const X = ox + (cr.x + p[0] * kk) * sc, Y = oy + (cr.y + p[1] * kk) * sc;
+    return [cw / 2 + (X - cw / 2) * cr.z, ch / 2 + (Y - ch / 2) * cr.z];
+  };
   c.globalAlpha = Math.max(0, 1 - age / 700);
   const cor = CAM.opts.cor, hasCor = cor != null && cor >= 0;
   CAM.res.forEach((m) => {
     if (m.no > CAM.opts.n || CAM.opts.roster && !CAM.opts.allowNew && CAM.opts.roster.indexOf(m.no) < 0) return;
     const col = !hasCor ? "#3FBF4F" : m.a === cor ? "#3FBF4F" : "#FF3B5C";
-    const pts = m.c.map((p) => [ox + p[0] * k, oy + p[1] * k]);
+    const pts = m.c.map(mapP);
     c.beginPath();
     pts.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]));
     c.closePath();

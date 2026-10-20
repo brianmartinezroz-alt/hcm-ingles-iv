@@ -406,6 +406,10 @@ body.scfull{overflow:hidden}
 #camUI .cambtn{flex:1;font:900 22px system-ui,sans-serif;padding:18px 8px;border-radius:18px;border:3px solid #fff;color:#fff;cursor:pointer}
 #camUI .cambtn.fin{background:#3B3458}#camUI .cambtn.chk{background:#22C55E}
 #camUI .cammsg{position:absolute;top:40%;left:0;right:0;text-align:center;color:#FFD21A;font:800 18px system-ui,sans-serif;padding:20px}
+#camUI .camzoom{position:absolute;right:10px;top:38%;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:3}
+#camUI .camzoom button{width:58px;height:58px;border-radius:50%;border:3px solid #fff;background:rgba(27,20,64,.75);color:#fff;font:900 30px system-ui,sans-serif;line-height:1;cursor:pointer}
+#camUI .camzoom b{color:#fff;font:900 18px system-ui,sans-serif;background:rgba(0,0,0,.55);border-radius:10px;padding:2px 8px}
+#camV{transform-origin:50% 50%}
 
 @media print{
   body.scprinting > *:not(#scPrint){display:none !important}
@@ -428,6 +432,12 @@ body.scfull{overflow:hidden}
 .scastat{display:flex;gap:16px;justify-content:center;margin-top:8px;font:900 18px Nunito,sans-serif}
 .scastat .ok{color:#16A34A}.scastat .no{color:#E23B3B}.scastat .zz{color:#6B6890}
 .sctime.go{background:#22C55E!important;color:#fff!important}
+.scansbar{position:absolute;left:12px;right:118px;bottom:10px;z-index:2;display:flex;gap:10px;align-items:center;background:rgba(27,20,64,.82);border-radius:16px;padding:7px 12px}
+.scansbar[hidden]{display:none}
+.scabn{flex:none;color:#fff;font:900 20px Nunito,sans-serif;background:#2B2366;border:2px solid #fff;border-radius:12px;padding:2px 10px}
+.scachips{display:flex;flex-wrap:wrap;gap:5px;max-height:84px;overflow:hidden}
+.scachips span{min-width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.18);color:#d8d4f0;display:grid;place-items:center;font:900 17px Nunito,sans-serif;padding:0 4px}
+.scachips span.on{background:#22C55E;color:#fff;box-shadow:0 0 0 2px #fff inset}
 
 </style>
 
@@ -20668,18 +20678,60 @@ function scDetectCards(det, img, kind){
     <div class="camtop"><b id="camCount">0 / 0</b><span id="camHint">Apunta a las tarjetas</span></div>
     <div class="camchips" id="camChips"></div>
     <div class="cambot"><button id="camFin" class="cambtn fin">\u25A0 Finalizar</button><button id="camChk" class="cambtn chk">\u2714 Checar</button></div>
-    <div class="cammsg" id="camMsg"></div>`;
+    <div class="cammsg" id="camMsg"></div>
+    <div class="camzoom"><button id="camZin" aria-label="Acercar">\uFF0B</button><b id="camZl">1x</b><button id="camZout" aria-label="Alejar">\uFF0D</button></div>`;
     document.body.appendChild(d);
     document.getElementById("camFin").onclick = () => {
       const o = CAM.opts;
       camClose();
       o && o.onFinish && o.onFinish();
     };
+    document.getElementById("camZin").onclick = () => camZoom(1);
+    document.getElementById("camZout").onclick = () => camZoom(-1);
     document.getElementById("camChk").onclick = () => {
       const o = CAM.opts;
       camClose();
       o && o.onCheck && o.onCheck();
     };
+  }
+  CAM.zoom = (() => {
+    try {
+      return Math.max(1, Math.min(4, +localStorage.getItem("scanrace.zoom") || 1));
+    } catch (e) {
+      return 1;
+    }
+  })();
+  const CAM_Z = [1, 1.5, 2, 2.5, 3, 4];
+  function camZoom(d) {
+    let i = CAM_Z.indexOf(CAM.zoom);
+    if (i < 0) i = 0;
+    i = Math.max(0, Math.min(CAM_Z.length - 1, i + d));
+    CAM.zoom = CAM_Z[i];
+    try {
+      localStorage.setItem("scanrace.zoom", CAM.zoom);
+    } catch (e) {
+    }
+    camApplyZoom();
+    if (navigator.vibrate) try {
+      navigator.vibrate(15);
+    } catch (e) {
+    }
+  }
+  function camApplyZoom() {
+    const v = document.getElementById("camV"), l = document.getElementById("camZl");
+    if (l) l.textContent = CAM.zoom + "x";
+    CAM.hwZoom = false;
+    try {
+      const tr = CAM.stream && CAM.stream.getVideoTracks()[0], cp = tr && tr.getCapabilities ? tr.getCapabilities() : {};
+      if (cp && cp.zoom && cp.zoom.max > 1) {
+        const z = Math.max(cp.zoom.min || 1, Math.min(cp.zoom.max, CAM.zoom));
+        tr.applyConstraints({ advanced: [{ zoom: z }] }).catch(() => {
+        });
+        CAM.hwZoom = true;
+      }
+    } catch (e) {
+    }
+    if (v) v.style.transform = CAM.hwZoom || CAM.zoom === 1 ? "" : `scale(${CAM.zoom})`;
   }
   function camWorker() {
     if (CAM.worker !== null) return CAM.worker;
@@ -20730,6 +20782,7 @@ onmessage = function(e){ var m = e.data, out = [];
       v.srcObject = CAM.stream;
       await v.play();
       CAM.on = true;
+      camApplyZoom();
       camWorker();
       cancelAnimationFrame(CAM.raf);
       CAM.raf = requestAnimationFrame(camTick);
@@ -20808,14 +20861,16 @@ onmessage = function(e){ var m = e.data, out = [];
     const v = document.getElementById("camV"), o = document.getElementById("camO");
     if (!v.videoWidth) return;
     if (!CAM.busy) {
-      const pw = Math.min(1280, v.videoWidth), ph = Math.round(v.videoHeight * pw / v.videoWidth);
+      const dz = CAM.hwZoom ? 1 : CAM.zoom, cwv = v.videoWidth / dz, chv = v.videoHeight / dz, cx0 = (v.videoWidth - cwv) / 2, cy0 = (v.videoHeight - chv) / 2;
+      const pw = Math.round(Math.min(1280, Math.max(640, cwv))), ph = Math.round(chv * pw / cwv);
       if (!CAM.grab) CAM.grab = document.createElement("canvas");
       if (CAM.grab.width !== pw || CAM.grab.height !== ph) {
         CAM.grab.width = pw;
         CAM.grab.height = ph;
       }
+      CAM.crop = { x: cx0, y: cy0, w: cwv, z: dz };
       const g = CAM.grab.getContext("2d");
-      g.drawImage(v, 0, 0, pw, ph);
+      g.drawImage(v, cx0, cy0, cwv, chv, 0, 0, pw, ph);
       const img = g.getImageData(0, 0, pw, ph);
       const wk = camWorker();
       if (wk) {
@@ -20831,7 +20886,7 @@ onmessage = function(e){ var m = e.data, out = [];
             ms = scDetectCards(CAM.det, img, CAM.opts.kind);
           } catch (e) {
           }
-          camResults(ms.map((k2) => ({ no: k2.no, a: scAnswer(k2.corners), c: k2.corners.map((p) => [p.x, p.y]) })), pw, ph);
+          camResults(ms.map((k) => ({ no: k.no, a: scAnswer(k.corners), c: k.corners.map((p) => [p.x, p.y]) })), pw, ph);
         }
       }
     }
@@ -20845,13 +20900,17 @@ onmessage = function(e){ var m = e.data, out = [];
     c.clearRect(0, 0, cw, ch);
     const age = performance.now() - CAM.resT;
     if (age > 700 || !CAM.res.length) return;
-    const sc2 = Math.max(cw / v.videoWidth, ch / v.videoHeight), ox = (cw - v.videoWidth * sc2) / 2, oy = (ch - v.videoHeight * sc2) / 2, k = v.videoWidth / CAM.resW * sc2;
+    const sc2 = Math.max(cw / v.videoWidth, ch / v.videoHeight), ox = (cw - v.videoWidth * sc2) / 2, oy = (ch - v.videoHeight * sc2) / 2, cr = CAM.crop || { x: 0, y: 0, w: v.videoWidth, z: 1 }, kk = cr.w / CAM.resW;
+    const mapP = (p) => {
+      const X = ox + (cr.x + p[0] * kk) * sc2, Y = oy + (cr.y + p[1] * kk) * sc2;
+      return [cw / 2 + (X - cw / 2) * cr.z, ch / 2 + (Y - ch / 2) * cr.z];
+    };
     c.globalAlpha = Math.max(0, 1 - age / 700);
     const cor = CAM.opts.cor, hasCor = cor != null && cor >= 0;
     CAM.res.forEach((m) => {
       if (m.no > CAM.opts.n || CAM.opts.roster && !CAM.opts.allowNew && CAM.opts.roster.indexOf(m.no) < 0) return;
       const col = !hasCor ? "#3FBF4F" : m.a === cor ? "#3FBF4F" : "#FF3B5C";
-      const pts = m.c.map((p) => [ox + p[0] * k, oy + p[1] * k]);
+      const pts = m.c.map(mapP);
       c.beginPath();
       pts.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]));
       c.closePath();
@@ -21446,13 +21505,25 @@ onmessage = function(e){ var m = e.data, out = [];
     let fur = SC_SP[L.sp] ? SC_SP[L.sp][2] : "#E0AC7E", fur2 = SC_SP[L.sp] ? SC_SP[L.sp][3] : "#C68B59";
     if (sp === "cadete") fur = ["#F1C9A0", "#E0AC7E", "#A86B45"][L.skin || 0];
     const shirt = `hsl(${L.shirt},75%,52%)`, shorts = sp === "cadete" ? "#2E3B2A" : "#2B2366", shoe = SC_SHOE[L.shoe] || "#fff";
-    const ph = run ? t * 11 : 0, a = Math.sin(ph) * 0.85, bob = run ? Math.abs(Math.sin(ph)) * u * 0.5 : 0;
+    const ph = run ? t * 12 : 0, a = Math.sin(ph) * (run ? 1 : 0.85), bob = run ? Math.abs(Math.sin(ph)) * u * 0.7 : 0;
     c.save();
     c.translate(0, -bob);
+    if (run) {
+      c.translate(0, u * 1.6);
+      c.rotate(0.13);
+      c.translate(0, -u * 1.6);
+    }
     c.lineCap = "round";
     c.lineJoin = "round";
     const leg = (ang, back) => {
       const hx2 = 0, hy2 = u * 1.6, kx = hx2 + Math.sin(ang) * u * 2.1, ky = hy2 + Math.cos(ang) * u * 2.1, bend = Math.max(0, -ang) * 1.2 + 0.25, fx = kx + Math.sin(ang - bend) * u * 2.1, fy = ky + Math.cos(ang - bend) * u * 2.1;
+      c.strokeStyle = dk;
+      c.lineWidth = u * 1.45;
+      c.beginPath();
+      c.moveTo(hx2, hy2);
+      c.lineTo(kx, ky);
+      c.lineTo(fx, fy);
+      c.stroke();
       c.strokeStyle = back ? shade3c(fur, 0.8) : fur;
       c.lineWidth = u * 1.05;
       c.beginPath();
@@ -21471,6 +21542,13 @@ onmessage = function(e){ var m = e.data, out = [];
     };
     const arm = (ang, back) => {
       const sx = u * 0.2, sy = -u * 1.2, ex = sx + Math.sin(ang) * u * 1.7, ey = sy + Math.cos(ang) * u * 1.7, hx2 = ex + Math.sin(ang + 1.3) * u * 1.4, hy2 = ey + Math.cos(ang + 1.3) * u * 1.4;
+      c.strokeStyle = dk;
+      c.lineWidth = u * 1.35;
+      c.beginPath();
+      c.moveTo(sx, sy);
+      c.lineTo(ex, ey);
+      c.lineTo(hx2, hy2);
+      c.stroke();
       c.strokeStyle = back ? shade3c(shirt, 0.8) : shirt;
       c.lineWidth = u * 0.95;
       c.beginPath();
@@ -21482,6 +21560,13 @@ onmessage = function(e){ var m = e.data, out = [];
       c.beginPath();
       c.moveTo(ex, ey);
       c.lineTo(hx2, hy2);
+      c.stroke();
+      c.fillStyle = back ? shade3c(fur, 0.8) : fur;
+      c.strokeStyle = dk;
+      c.lineWidth = Math.max(1, u * 0.2);
+      c.beginPath();
+      c.arc(hx2, hy2, u * 0.5, 0, 7);
+      c.fill();
       c.stroke();
     };
     if (sp !== "cadete" && sp !== "rana" && sp !== "pinguino") {
@@ -21524,6 +21609,7 @@ onmessage = function(e){ var m = e.data, out = [];
     c.fillStyle = "rgba(255,255,255,.5)";
     c.fillRect(-u * 1.45, -u * 0.4, u * 2.9, u * 0.35);
     if (!noLegs) leg(a, false);
+    arm(-a, false);
     const hx = u * 0.45, hy = -u * 4, hr = u * 1.85;
     if (sp === "leon") {
       c.fillStyle = fur2;
@@ -22053,6 +22139,7 @@ onmessage = function(e){ var m = e.data, out = [];
       } else el.onclick = () => scSetPop("big");
       return;
     }
+    scRenderAnsBar();
     if (!(game.phase === "q" || game.phase === "reveal")) return;
     const q = scQ(), opts = scOpts(q), cor = scCorrect(q), rev = game.phase === "reveal", got = Object.keys(sc.answers).length;
     const counts = [0, 0, 0, 0];
@@ -22093,6 +22180,22 @@ onmessage = function(e){ var m = e.data, out = [];
       el.onclick = () => scSetPop("big");
     }
     scTimeEl();
+  }
+  function scRenderAnsBar() {
+    let bar = document.getElementById("scAnsBar");
+    const st = $("#scStage");
+    if (!st) return;
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.id = "scAnsBar";
+      bar.className = "scansbar";
+      st.appendChild(bar);
+    }
+    const show2 = !window.SC48 && game && game.phase === "q" && sc && sc.students.length;
+    bar.hidden = !show2;
+    if (!show2) return;
+    const got = Object.keys(sc.answers).length;
+    bar.innerHTML = `<b class="scabn">${sc.reading ? "\u{1F4D6}" : "\u{1F4CB}"} ${got} / ${sc.students.length}</b><div class="scachips">${sc.students.map((s) => `<span class="${sc.answers[s.no] != null ? "on" : ""}">${s.no}</span>`).join("")}</div>`;
   }
   function scRenderDock() {
     if (game.phase === "pick") {
@@ -22160,6 +22263,10 @@ onmessage = function(e){ var m = e.data, out = [];
     } catch (e) {
     }
     if (sc.reading) scEndRead(true);
+    if (!window.SC48) {
+      const tt = $("#scToast");
+      if (tt) tt.classList.remove("show");
+    }
     const q = scQ(), cor = scCorrect(q);
     game.phase = "reveal";
     clearInterval(scTimerId);
@@ -22894,7 +23001,7 @@ onmessage = function(e){ var m = e.data, out = [];
     // 3+ misses in a row: lands sitting in a puddle and takes a while to get up
     { name: "charco", piv: "f", hit: 0.5, up: 3.1, sfx: "splash", puddle: "#4DA8FF", big: true, kf: [[0, 0, 0, 0, 1], [0.25, -0.5, 0.08, -0.2, 1], [0.5, -0.4, 0.12, 0, 0.6], [0.6, -0.3, 0.12, -0.04, 0.68], [0.7, -0.4, 0.12, 0, 0.6], [3.1, -0.4, 0.12, 0, 0.6], [3.6, -0.1, 0.05, -0.1, 1.05], [3.9, 0, 0, 0, 0.95], [4.1, 0, 0, 0, 1]] }
   ];
-  const SC_FALL_STRONG = [0, 2, 3, 6], SC_FALL_PUDDLE = 8;
+  const SC_FALL_STRONG = [0, 2, 3, 6], SC_FALL_PUDDLE = 8, SC_PRE = 0.9;
   const scEase = (x) => x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
   const scFallEnd = (f) => SC_FALLS[f.k].kf[SC_FALLS[f.k].kf.length - 1][0] / (f.ts || 1);
   function scPickFall(s) {
@@ -23031,10 +23138,19 @@ onmessage = function(e){ var m = e.data, out = [];
     });
     if (sleepers.length) setTimeout(() => scSfx("snore"), 300);
     if (sleepers.length) setTimeout(() => scSfx("wake"), 3500);
-    if (fallers.length && fallers.length <= 2) {
+    sc._usedBy = [];
+    if (fallers.length) {
+      const pickF = fallers.slice().sort(() => Math.random() - 0.5).slice(0, 2), winners = sc.students.filter((s) => s.shown < s.pts);
       const endAt = Math.max(...fallers.map((s) => s.fall.t0 + scFallEnd(s.fall) * 1e3));
-      sc.replay = { t0: endAt + 250, list: fallers.map((s) => ({ no: s.no, look: s.look, f: { k: s.fall.k, ts: s.fall.ts, lvl: s.fall.lvl, t0: 0 } })), slow: 0.45 };
-      sc.replay.dur = Math.max(...sc.replay.list.map((o) => scFallEnd(o.f))) / sc.replay.slow + 0.6;
+      sc.replay = { t0: endAt + 250, slow: 0.45, list: pickF.map((s) => {
+        const used = sc._usedBy = sc._usedBy || [];
+        let pool = (winners.length ? winners : sc.students).filter((x) => x.no !== s.no && used.indexOf(x.no) < 0);
+        if (!pool.length) pool = (winners.length ? winners : sc.students).filter((x) => x.no !== s.no);
+        const by = pool[Math.floor(Math.random() * pool.length)] || null, act = Math.random() < 0.5 ? "pie" : "zape";
+        if (by) used.push(by.no);
+        return { no: s.no, look: s.look, by: by ? { no: by.no, look: by.look } : null, act, f: { k: act === "zape" ? [0, 4, 6][Math.floor(Math.random() * 3)] : [0, 3, 4][Math.floor(Math.random() * 3)], ts: 1, lvl: 1, t0: 0 } };
+      }) };
+      sc.replay.dur = (SC_PRE + Math.max(...sc.replay.list.map((o) => scFallEnd(o.f)))) / sc.replay.slow + 0.6;
     } else sc.replay = null;
     return { fallers, sleepers };
   }
@@ -23206,6 +23322,10 @@ onmessage = function(e){ var m = e.data, out = [];
       c.restore();
     }
   }
+  function scFur(L) {
+    const sp = SC_SP[L.sp] ? SC_SP[L.sp][0] : "cadete";
+    return sp === "cadete" ? ["#F1C9A0", "#E0AC7E", "#A86B45"][L.skin || 0] : SC_SP[L.sp][2] || "#E0AC7E";
+  }
   function scDrawReplay(c, W, H, viewW, now) {
     const R = sc.replay;
     if (!R) return;
@@ -23215,7 +23335,8 @@ onmessage = function(e){ var m = e.data, out = [];
       sc.replay = null;
       return;
     }
-    const a = Math.min(1, el * 4, (R.dur - el) * 4), bw = Math.min(460, viewW * 0.42), bh = bw * 0.62, bx2 = viewW - bw - 18, by = H - bh - 64;
+    const a = Math.min(1, el * 4, (R.dur - el) * 4), n = R.list.length, bw = Math.min(n > 1 ? 640 : 480, viewW * (n > 1 ? 0.56 : 0.44)), bh = Math.min(330, bw * (n > 1 ? 0.5 : 0.66)), bx2 = viewW - bw - 18, by = H - bh - 64 - (!window.SC48 && game.phase === "q" ? 62 : 0);
+    const se = el * R.slow;
     c.save();
     c.globalAlpha = a;
     c.fillStyle = "#2B2366";
@@ -23226,47 +23347,146 @@ onmessage = function(e){ var m = e.data, out = [];
     c.clip();
     const g = c.createLinearGradient(0, by, 0, by + bh);
     g.addColorStop(0, "#9FD3FF");
-    g.addColorStop(0.68, "#E6F4FF");
-    g.addColorStop(0.68, "#CFC6B6");
+    g.addColorStop(0.7, "#E6F4FF");
+    g.addColorStop(0.7, "#CFC6B6");
     g.addColorStop(1, "#B9AE9A");
     c.fillStyle = g;
     c.fillRect(bx2, by, bw, bh);
-    const n = R.list.length, rs = Math.min(bh * 0.62, bw / n * 0.7);
+    const cw = bw / n, rs = Math.min(bh * 0.5, cw * 0.36);
     R.list.forEach((o, i) => {
-      const P = scFallPoseAt(o.f, el * R.slow * (o.f.ts || 1));
-      const sx = bx2 + bw * (i + 0.5) / n - rs * 0.25, yy = by + bh * 0.68 - rs * 0.42;
-      const fake = { no: o.no, look: o.look };
-      if (P && !P.wait) {
-        const bp = scDrawFallen(c, fake, P, sx, yy, rs, performance.now() - el * 1e3 * (1 - R.slow));
-      } else {
+      const x0 = bx2 + cw * i, gy = by + bh * 0.7, yy = gy - rs * 0.44, vx = x0 + cw * 0.62, cxp = x0 + cw * 0.28, fe = se - SC_PRE, hitT = SC_PRE - 0.15;
+      if (i) {
+        c.fillStyle = "rgba(43,35,102,.25)";
+        c.fillRect(x0 - 1, by, 2, bh);
+      }
+      if (o.by) {
         c.save();
-        c.translate(sx, yy);
-        scDrawRunner(c, o.look, rs, 0, false);
+        c.translate(cxp, yy);
+        if (o.act === "pie") {
+          const out = Math.min(1, Math.max(0, (se - (SC_PRE - 0.45)) / 0.35)) * (se < SC_PRE + 1.4 ? 1 : Math.max(0, 1 - (se - SC_PRE - 1.4) / 0.4));
+          scDrawRunner(c, o.by.look, rs, 0, false);
+          const u = rs / 10.5;
+          c.lineCap = "round";
+          c.strokeStyle = "#1A1530";
+          c.lineWidth = u * 1.45;
+          c.beginPath();
+          c.moveTo(0, u * 1.6);
+          c.lineTo(u * 1.6 + out * u * 3.6, u * 3.9);
+          c.stroke();
+          c.strokeStyle = scFur(o.by.look);
+          c.lineWidth = u * 1.05;
+          c.beginPath();
+          c.moveTo(0, u * 1.6);
+          c.lineTo(u * 1.6 + out * u * 3.6, u * 3.9);
+          c.stroke();
+          c.fillStyle = "#fff";
+          c.strokeStyle = "#1A1530";
+          c.lineWidth = Math.max(1, u * 0.25);
+          scRR(c, u * 1.2 + out * u * 3.6, u * 3.4, u * 1.8, u * 0.9, u * 0.4);
+          c.fill();
+          c.stroke();
+        } else {
+          const sw = Math.min(1, Math.max(0, (se - (SC_PRE - 0.5)) / 0.4));
+          scDrawRunner(c, o.by.look, rs, 0, false);
+          const u = rs / 10.5, ang = -2.4 + sw * 1.9, sx0 = u * 0.6, sy0 = -u * 1.4, ex = sx0 + Math.cos(ang) * u * 3.4, ey = sy0 + Math.sin(ang) * u * 3.4;
+          c.lineCap = "round";
+          c.strokeStyle = "#1A1530";
+          c.lineWidth = u * 1.35;
+          c.beginPath();
+          c.moveTo(sx0, sy0);
+          c.lineTo(ex, ey);
+          c.stroke();
+          c.strokeStyle = scFur(o.by.look);
+          c.lineWidth = u * 0.95;
+          c.beginPath();
+          c.moveTo(sx0, sy0);
+          c.lineTo(ex, ey);
+          c.stroke();
+          c.font = `${Math.round(u * 2.2)}px sans-serif`;
+          c.textAlign = "center";
+          c.textBaseline = "middle";
+          c.fillText("\u{1F590}\uFE0F", ex, ey);
+          c.textBaseline = "alphabetic";
+        }
+        c.restore();
+        c.fillStyle = "#fff";
+        c.strokeStyle = "#2B2366";
+        c.lineWidth = 3;
+        c.beginPath();
+        c.arc(cxp - rs * 0.1, by + 30, 18, 0, 7);
+        c.fill();
+        c.stroke();
+        c.fillStyle = "#2B2366";
+        c.font = "900 17px Nunito, sans-serif";
+        c.textAlign = "center";
+        c.textBaseline = "middle";
+        c.fillText(o.by.no, cxp - rs * 0.1, by + 31);
+        c.textBaseline = "alphabetic";
+      }
+      const fake = { no: o.no, look: o.look };
+      if (fe < 0) {
+        const run = Math.min(1, se / SC_PRE), px = vx - (1 - run) * cw * 0.18;
+        c.save();
+        c.translate(px, yy);
+        scDrawRunner(c, o.look, rs, se * 2.2, true);
+        c.restore();
+      } else {
+        const P = scFallPoseAt(o.f, fe);
+        if (P && !P.wait) scDrawFallen(c, fake, P, vx, yy, rs, performance.now() - el * 1e3 * (1 - R.slow));
+        else {
+          c.save();
+          c.translate(vx, yy);
+          scDrawRunner(c, o.look, rs, 0, false);
+          c.restore();
+        }
+      }
+      if (o.act === "zape" && se > hitT && se < hitT + 0.6) {
+        const k = (se - hitT) / 0.6;
+        c.save();
+        c.globalAlpha = 1 - k;
+        c.font = `900 ${Math.round(rs * 0.22)}px Nunito, sans-serif`;
+        c.fillStyle = "#E23B3B";
+        c.strokeStyle = "#fff";
+        c.lineWidth = 5;
+        c.textAlign = "center";
+        c.strokeText("\xA1PAF!", vx, yy - rs * 0.9 - k * rs * 0.2);
+        c.fillText("\xA1PAF!", vx, yy - rs * 0.9 - k * rs * 0.2);
         c.restore();
       }
       c.fillStyle = "#fff";
       c.strokeStyle = "#2B2366";
       c.lineWidth = 3;
       c.beginPath();
-      c.arc(sx - rs * 0.45, by + 34, 20, 0, 7);
+      c.arc(vx + rs * 0.1, by + 30, 18, 0, 7);
       c.fill();
       c.stroke();
       c.fillStyle = "#2B2366";
-      c.font = "900 20px Nunito, sans-serif";
+      c.font = "900 17px Nunito, sans-serif";
       c.textAlign = "center";
       c.textBaseline = "middle";
-      c.fillText(o.no, sx - rs * 0.45, by + 35);
+      c.fillText(o.no, vx + rs * 0.1, by + 31);
+      c.textBaseline = "alphabetic";
+      const cap = o.by ? o.act === "pie" ? `\u{1F9B6} P${o.by.no} le puso el pie a P${o.no}` : `\u{1F590}\uFE0F P${o.by.no} le dio un zape a P${o.no}` : `\u{1F4AB} P${o.no} se tropez\xF3 solito`;
+      c.font = `900 ${n > 1 ? 15 : 18}px Nunito, sans-serif`;
+      const tw = Math.min(cw - 16, c.measureText(cap).width + 18);
+      c.fillStyle = "rgba(255,255,255,.95)";
+      scRR(c, x0 + (cw - tw) / 2, gy + 10, tw, 30, 12);
+      c.fill();
+      c.fillStyle = "#2B2366";
+      c.textAlign = "center";
+      c.textBaseline = "middle";
+      c.fillText(cap, x0 + cw / 2, gy + 25, cw - 24);
       c.textBaseline = "alphabetic";
     });
     c.restore();
     c.fillStyle = "#E23B3B";
-    scRR(c, bx2 + 12, by + bh - 40, 250, 30, 12);
+    scRR(c, bx2 + 12, by + bh - 36, 250, 28, 12);
     c.fill();
     c.fillStyle = "#fff";
-    c.font = "900 17px Nunito, sans-serif";
+    c.font = "900 16px Nunito, sans-serif";
     c.textAlign = "left";
     c.textBaseline = "middle";
-    c.fillText((Math.floor(now / 500) % 2 ? "\u{1F534}" : "\u26AA") + " REPETICI\xD3N \xB7 c\xE1mara lenta", bx2 + 22, by + bh - 25);
+    c.fillText((Math.floor(now / 500) % 2 ? "\u{1F534}" : "\u26AA") + " REPETICI\xD3N \xB7 c\xE1mara lenta", bx2 + 22, by + bh - 22);
     c.textBaseline = "alphabetic";
     c.restore();
   }
@@ -23389,7 +23609,7 @@ onmessage = function(e){ var m = e.data, out = [];
       c.fillText(label, x, roadTop + 18);
       c.textBaseline = "alphabetic";
     }
-    const rs = Math.max(50, Math.min(laneH * 2.5, 180)), qphase = game.phase === "q";
+    const rs = window.SC48 ? Math.max(50, Math.min(laneH * 2.5, 180)) : Math.max(64, Math.min(laneH * 3.1, 240)), qphase = game.phase === "q";
     sc.students.forEach((s, i) => {
       if (s.p == null) s.p = 0;
       s.p += (Math.min(s.shown, total) - s.p) * 0.045;
@@ -23459,8 +23679,18 @@ onmessage = function(e){ var m = e.data, out = [];
           c.fill();
         }
       }
+      if (!falling && !ZP && !window.SC48) {
+        const tt = t * 12 + i * 0.37 * 12;
+        c.fillStyle = "rgba(190,170,130,.35)";
+        for (let j = 0; j < 3; j++) {
+          const ph = (tt / 6.283 + j / 3) % 1;
+          c.beginPath();
+          c.arc(-rs * 0.2 - ph * rs * 0.45, rs * 0.43 - ph * rs * 0.06, rs * (0.03 + ph * 0.05), 0, 7);
+          c.fill();
+        }
+      }
       const bp = scDrawRunner(c, s.look, rs, falling || ZP ? 0 : t + i * 0.37, !(falling || ZP));
-      const answered = qphase && sc.answers[s.no] != null, br = Math.max(15, rs * 0.17);
+      const answered = window.SC48 && (qphase && sc.answers[s.no] != null), br = Math.max(15, rs * 0.17);
       c.beginPath();
       c.arc(bp[0], bp[1], br, 0, 7);
       c.fillStyle = answered ? "#22C55E" : "#fff";
@@ -23511,13 +23741,14 @@ onmessage = function(e){ var m = e.data, out = [];
     const kc = Math.floor((cam + viewW * 0.5 - start2) / U), zn = kc < 0 ? 0 : kc >= total ? 8 : scZoneOf(kc, total);
     c.font = "900 20px Nunito, sans-serif";
     const nm = "\u{1F4CD} " + SC_ZONES[zn].name, nw = c.measureText(nm).width + 28;
+    const zb = !window.SC48 && game.phase === "q" ? 62 : 0;
     c.fillStyle = "rgba(43,35,102,.85)";
-    scRR(c, 14, H - 50, nw, 38, 14);
+    scRR(c, 14, H - 50 - zb, nw, 38, 14);
     c.fill();
     c.fillStyle = "#fff";
     c.textAlign = "left";
     c.textBaseline = "middle";
-    c.fillText(nm, 28, H - 31);
+    c.fillText(nm, 28, H - 31 - zb);
     c.textBaseline = "alphabetic";
     scRaceRaf = requestAnimationFrame(scRaceLoop);
   }
