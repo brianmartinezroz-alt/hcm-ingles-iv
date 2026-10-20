@@ -88,6 +88,7 @@ html,body{margin:0;background:#1B1440;color:#fff;font-family:Nunito,system-ui,-a
 #camUI .cambtn.fin{background:#3B3458}#camUI .cambtn.chk{background:#22C55E}
 #camUI .cammsg{position:absolute;top:40%;left:0;right:0;text-align:center;color:#FFD21A;font:800 18px system-ui,sans-serif;padding:20px}
 
+.cx-read{text-align:center}.cx-read b{display:block;font-size:72px;line-height:1.1;color:#2B2366}
 </style>
 </head>
 <body>
@@ -5416,16 +5417,19 @@ function rtSend(m, key) {
   } catch (e) {
   }
   const open = rtOpenConns();
-  if (open.length) {
-    open.forEach((c) => {
-      try {
-        c.send(s);
-      } catch (e) {
-      }
-    });
-    return;
-  }
-  RT.mq.forEach((q) => q.send("tilerush/" + RT.code + "/" + mine, s));
+  open.forEach((c) => {
+    try {
+      c.send(s);
+    } catch (e) {
+    }
+  });
+  RT.mq.forEach((q) => {
+    try {
+      q.send("tilerush/" + RT.code + "/" + mine, s);
+    } catch (e) {
+    }
+  });
+  if (open.length) return;
   if (rtMqOpen()) return;
   if (!key) {
     rtPost(s);
@@ -5621,9 +5625,13 @@ function onMsg(m) {
     }
     const changed = !RM.st || RM.st.phase !== m.phase || m.phase === "none" && !$("#cxSet") || m.phase === "lobby" && (RM.st.setId !== m.setId || RM.st.all !== m.all) || m.phase === "pick" && RM.edit != null && JSON.stringify((RM.st.looks || {})[RM.edit]) !== JSON.stringify((m.looks || {})[RM.edit]) || m.phase === "pick" && (RM.st.roster || []).length !== (m.roster || []).length || RM.st.qi !== m.qi || RM.st.total !== m.total || m.phase === "pick" && RM.st.reg !== m.reg || RM.st.slide !== m.slide;
     if (m.phase !== "pick") RM.edit = null;
+    const wasRead = RM.readEnd > performance.now();
+    RM.readEnd = m.phase === "q" && m.readMs ? performance.now() + m.readMs : 0;
+    const readChanged = wasRead !== RM.readEnd > performance.now();
     RM.st = m;
     if (m.phase !== "q" && m.phase !== "pick" && CAM.on) camClose();
-    if (changed) render();
+    if (m.phase === "q" && !RM.readEnd && Object.keys(RM.ans).some((k) => !m.ga || m.ga[k] !== RM.ans[k]) && performance.now() - RM.sendT > 1500) sendAns(true);
+    if (changed || readChanged) render();
     else status();
     return;
   }
@@ -5669,13 +5677,18 @@ function render() {
       <button class="cb scan huge" data-c="scan">\u{1F4F7} Escanear para registrar</button>
       <div class="cx-grid"><button class="cb" data-c="rand">\u{1F3B2} Todos al azar</button><button class="cb" data-c="pop">\u{1FA9F} Ventana</button></div>
       <button class="cb go big" data-c="go">\u{1F3C1} \xA1Arrancar la carrera!</button>`;
+  else if (s.phase === "q" && RM.readEnd > performance.now()) body = `<div class="cx-card cx-read">\u{1F4D6} Tiempo de lectura<br><b id="cxReadN">${Math.ceil((RM.readEnd - performance.now()) / 1e3)}</b><span class="rmsmall">Los cadetes leen la pregunta. Al terminar podr\xE1s escanear.</span></div>
+      <button class="cb go big" data-c="readskip">\u23E9 Ya pueden contestar</button>
+      <button class="cb end" data-c="end">\u{1F3C1} Terminar carrera</button>`;
   else if (s.phase === "q") body = `<button class="cb scan huge" data-c="scan">\u{1F4F7} Escanear</button>
       <button class="cb chk big" data-c="reveal">\u2714 Checar respuestas</button>
       <div class="cx-grid">${s.audio ? `<button class="cb" data-c="audio">\u{1F50A} Audio</button>` : ""}<button class="cb" data-c="more">${RM.more ? "\u2715 Cerrar" : "\u22EF M\xE1s"}</button></div>
-      ${RM.more ? `<div class="cx-grid">${s.audio ? `<button class="cb" data-c="slow">\u{1F422} Lento</button><button class="cb" data-c="txt">\u{1F4DD} Texto</button>` : ""}<button class="cb" data-c="skip">\u23ED Saltar</button><button class="cb" data-c="mix">\u{1F500} Mezclar</button><button class="cb" data-c="list">\u{1F4CB} Elegir</button><button class="cb" data-c="pop">\u{1FA9F} Pregunta</button><button class="cb end" data-c="end">\u{1F3C1} Terminar</button></div>` : ""}`;
+      ${RM.more ? `<div class="cx-grid">${s.audio ? `<button class="cb" data-c="slow">\u{1F422} Lento</button><button class="cb" data-c="txt">\u{1F4DD} Texto</button>` : ""}<button class="cb" data-c="skip">\u23ED Saltar</button><button class="cb" data-c="mix">\u{1F500} Mezclar</button><button class="cb" data-c="list">\u{1F4CB} Elegir</button><button class="cb" data-c="pop">\u{1FA9F} Pregunta</button></div>` : ""}
+      <button class="cb end" data-c="end">\u{1F3C1} Terminar carrera</button>`;
   else if (s.phase === "reveal") body = `<button class="cb go huge" data-c="next">${s.qi + 1 >= s.total ? "\u{1F3C6} Resultados" : "\u25B6 Siguiente"}</button>
       <div class="cx-grid">${s.audio ? `<button class="cb" data-c="audio">\u{1F50A} Audio</button>` : ""}<button class="cb" data-c="more">${RM.more ? "\u2715 Cerrar" : "\u22EF M\xE1s"}</button></div>
-      ${RM.more ? `<div class="cx-grid">${s.audio ? `<button class="cb" data-c="txt">\u{1F4DD} Texto</button>` : ""}<button class="cb" data-c="pop">\u{1FA9F} Pregunta</button><button class="cb" data-c="mix">\u{1F500} Mezclar</button><button class="cb" data-c="list">\u{1F4CB} Elegir</button><button class="cb end" data-c="end">\u{1F3C1} Terminar</button></div>` : ""}`;
+      ${RM.more ? `<div class="cx-grid">${s.audio ? `<button class="cb" data-c="txt">\u{1F4DD} Texto</button>` : ""}<button class="cb" data-c="pop">\u{1FA9F} Pregunta</button><button class="cb" data-c="mix">\u{1F500} Mezclar</button><button class="cb" data-c="list">\u{1F4CB} Elegir</button></div>` : ""}
+      <button class="cb end" data-c="end">\u{1F3C1} Terminar carrera</button>`;
   $("#app").innerHTML = `<div class="cx-head"><span id="cxConn" class="cx-conn">\u25CB</span><span><button id="cxQRh" class="cx-codebtn">\u{1F4F7} QR</button> <button id="cxCode" class="cx-codebtn">\u{1F522} ${esc(RM.code)}</button></span></div>
     <div id="cxStat" class="cx-stat"></div><div class="cx-body">${body}</div>
     <div id="cxList" class="cx-list" hidden><div class="cx-lhead"><b>\u{1F4CB} \xBFCu\xE1l sigue?</b><button class="cb small" id="cxLClose">Cerrar</button></div><div id="cxLBody"></div></div>`;
@@ -5732,7 +5745,11 @@ function render() {
     else if (c === "slow") cmd("audio", { r: 0.75 });
     else if (c === "list") rtSend({ t: "list" });
     else if (c === "end") {
-      if (confirm("\xBFTerminar la carrera?")) cmd("end");
+      if (confirm("\xBFTerminar la carrera y ver resultados?")) cmd("end");
+    } else if (c === "reveal") {
+      const st = RM.st;
+      sendAns(true);
+      cmd("reveal", st ? { qi: st.qi, a: Object.assign({}, RM.ans) } : {});
     } else cmd(c);
   });
   conn();
@@ -5796,6 +5813,7 @@ function sendAns(now) {
 function scan() {
   const s = RM.st;
   if (!s || s.phase !== "q" && s.phase !== "pick") return;
+  if (s.phase === "q" && RM.readEnd > performance.now()) return;
   rtSend({ t: "scan" });
   const pick = s.phase === "pick";
   const got = Object.assign({}, s.ga || {}, RM.ans);
@@ -5821,7 +5839,7 @@ function scan() {
     },
     onCheck: () => {
       sendAns(true);
-      setTimeout(() => cmd(pick ? "go" : "reveal"), 450);
+      setTimeout(() => cmd(pick ? "go" : "reveal", pick ? {} : { qi: s.qi, a: Object.assign({}, RM.ans) }), 450);
       render();
     }
   });
@@ -5829,6 +5847,15 @@ function scan() {
 setInterval(() => {
   if (RM.dirty && CAM.on) sendAns();
 }, 700);
+setInterval(() => {
+  if (!RM.readEnd) return;
+  const left = RM.readEnd - performance.now(), el = document.getElementById("cxReadN");
+  if (left <= 0) {
+    RM.readEnd = 0;
+    vib(60);
+    render();
+  } else if (el) el.textContent = Math.ceil(left / 1e3);
+}, 250);
 boot();
 </script>
 </body>

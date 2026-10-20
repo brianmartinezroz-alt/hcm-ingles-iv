@@ -419,6 +419,15 @@ body.scfull{overflow:hidden}
   body.scprinting .scno{font-size:20px;font-weight:900;color:#000}
   @page{size:letter portrait;margin:1cm}
 }
+.scpop.ans{top:14px;left:50%;right:auto;transform:translateX(-50%);width:min(760px,calc(100% - 150px));border-radius:24px;padding:12px 20px 12px;cursor:pointer;animation:scansin .45s cubic-bezier(.2,1.6,.4,1)}
+@keyframes scansin{0%{transform:translateX(-50%) scale(.4);opacity:0}100%{transform:translateX(-50%);opacity:1}}
+.scah{font:900 16px Nunito,sans-serif;color:#16A34A;text-align:center;margin-bottom:6px}
+.scabody{display:flex;align-items:center;gap:14px;justify-content:center}
+.scabig{flex:none;width:64px;height:64px;border-radius:18px;background:var(--oc);color:#fff;font:900 40px Nunito,sans-serif;display:flex;align-items:center;justify-content:center;border:var(--stroke);box-shadow:0 4px 0 var(--ink)}
+.scatxt{font:900 clamp(20px,2.6vw,34px) Nunito,sans-serif;color:var(--ink);line-height:1.15}
+.scastat{display:flex;gap:16px;justify-content:center;margin-top:8px;font:900 18px Nunito,sans-serif}
+.scastat .ok{color:#16A34A}.scastat .no{color:#E23B3B}.scastat .zz{color:#6B6890}
+.sctime.go{background:#22C55E!important;color:#fff!important}
 
 </style>
 
@@ -21137,16 +21146,19 @@ onmessage = function(e){ var m = e.data, out = [];
     } catch (e) {
     }
     const open = rtOpenConns();
-    if (open.length) {
-      open.forEach((c) => {
-        try {
-          c.send(s);
-        } catch (e) {
-        }
-      });
-      return;
-    }
-    RT.mq.forEach((q) => q.send("tilerush/" + RT.code + "/" + mine, s));
+    open.forEach((c) => {
+      try {
+        c.send(s);
+      } catch (e) {
+      }
+    });
+    RT.mq.forEach((q) => {
+      try {
+        q.send("tilerush/" + RT.code + "/" + mine, s);
+      } catch (e) {
+      }
+    });
+    if (open.length) return;
     if (rtMqOpen()) return;
     if (!key) {
       rtPost(s);
@@ -21289,6 +21301,9 @@ onmessage = function(e){ var m = e.data, out = [];
     renderScan();
   }
   function scGoQ(msg) {
+    sc.students.forEach((s) => {
+      s.shown = s.pts;
+    });
     sc.answers = {};
     sc.showTxt = false;
     sc.more = false;
@@ -21297,12 +21312,32 @@ onmessage = function(e){ var m = e.data, out = [];
     sc.pop = "big";
     sc.popT = performance.now();
     sc.msg = msg || "";
-    sc.secs = game.timer || 0;
+    if (!window.SC48) {
+      sc.secs = SC_READ;
+      sc.reading = true;
+      sc.readEnd = performance.now() + SC_READ * 1e3;
+    } else sc.secs = game.timer || 0;
     renderScan();
     scTick();
     scPlayAudio(1);
     beep(520, 0.08);
     setTimeout(() => beep(780, 0.1), 90);
+  }
+  const SC_READ = 15;
+  function scEndRead(silent) {
+    if (!sc || !sc.reading) return;
+    sc.reading = false;
+    sc.readEnd = 0;
+    clearInterval(scTimerId);
+    if (!silent) {
+      jingle([660, 880, 1320], 90, 0.12);
+      scToast("\u270B \xA1Ahora s\xED! Levanten su tarjeta");
+    }
+    if (game.phase === "q") {
+      scRenderPop();
+      scRenderDock();
+    }
+    scSync(true);
   }
   function scNext() {
     if (game.phase === "q" && sc.qi >= 0) return scSkip();
@@ -21314,6 +21349,12 @@ onmessage = function(e){ var m = e.data, out = [];
     scGoQ();
   }
   function scFinish() {
+    if (sc) sc.students.forEach((s) => {
+      s.shown = s.pts;
+    });
+    if (sc) {
+      sc.reading = false;
+    }
     game.phase = "end";
     game.over = true;
     if (sc) sc.endSlide = 0;
@@ -21911,12 +21952,19 @@ onmessage = function(e){ var m = e.data, out = [];
       if (scLeft <= 5 && scLeft > 0) beep(880, 0.06);
       if (scLeft <= 0) {
         clearInterval(scTimerId);
-        beep(300, 0.4);
+        if (sc.reading) scEndRead();
+        else beep(300, 0.4);
       }
     }, 1e3);
   }
   function scTimeEl() {
     document.querySelectorAll(".sctime").forEach((el) => {
+      if (!window.SC48 && game.phase === "q") {
+        el.textContent = sc.reading ? `\u{1F4D6} Lean \xB7 ${Math.max(0, scLeft)}s` : "\u270B \xA1A contestar!";
+        el.classList.toggle("warn", !!sc.reading && scLeft <= 5);
+        el.classList.toggle("go", !sc.reading);
+        return;
+      }
       el.textContent = sc.secs && game.phase === "q" ? Math.max(0, scLeft) + "s" : "";
       el.classList.toggle("warn", sc.secs && scLeft <= 5);
     });
@@ -21987,6 +22035,16 @@ onmessage = function(e){ var m = e.data, out = [];
     });
     const head = `<div class="scph"><b>Pregunta ${sc.qi + 1} / ${game.order.length}</b><span class="sctime"></span><span class="scgot">\u{1F4CB} ${got} / ${sc.n}</span></div>`;
     const big = sc.pop === "big", txt = q.tts && (sc.showTxt || rev) ? `<div class="sctx">\u{1F4DD} \u201C${esc(q.tts)}\u201D</div>` : "";
+    if (rev && sc.pop === "ans") {
+      const ok = Object.values(sc.answers).filter((a) => a === cor).length, bad = got - ok, none = Math.max(0, sc.students.length - got);
+      el.className = "scpop ans";
+      el.innerHTML = `<div class="scah">\u2705 Respuesta correcta \xB7 Pregunta ${sc.qi + 1} / ${game.order.length}</div>
+      <div class="scabody"><span class="scabig" style="--oc:${SC_COL[cor]}">${SC_L[cor]}</span><span class="scatxt">${esc(opts[cor] || "")}</span></div>
+      <div class="scastat"><b class="ok">\u2714 ${ok}</b><b class="no">\u2718 ${bad}</b>${none ? `<b class="zz">\u{1F634} ${none}</b>` : ""}</div>`;
+      el.onclick = () => scSetPop("big");
+      scTimeEl();
+      return;
+    }
     el.className = "scpop " + (big ? "big" : "mini") + (rev ? " rev" : "");
     if (big) {
       el.innerHTML = head + `<div class="scqt">${esc(q.q)}</div>${(q.audio || q.tts) && !rev ? `<div class="scaud"><button class="btn" data-r="1">\u{1F50A} Escuchar</button><button class="btn" data-r="0.75">\u{1F422} Lento</button>${q.tts ? `<button class="btn" data-t="1">\u{1F4DD} ${sc.showTxt ? "Ocultar texto" : "Ver texto"}</button>` : ""}</div>` : ""}${txt}
@@ -22024,10 +22082,12 @@ onmessage = function(e){ var m = e.data, out = [];
       return;
     }
     const rev = game.phase === "reveal", last = sc.qi + 1 >= game.order.length, q = scQ(), aud = !!(q.audio || q.tts), more = !!sc.more;
-    $("#scDock").innerHTML = (rev ? `<button class="scd go" data-d="next">${last ? "\u{1F3C6}" : "\u25B6"}<i>${last ? "Final" : "Siguiente"}</i></button>` : `<button class="scd go" data-d="reveal">\u2714<i>Checar</i></button><button class="scd" data-d="cam">\u{1F4F7}<i>C\xE1mara</i></button>`) + (aud ? `<button class="scd" data-d="audio">\u{1F50A}<i>Audio</i></button>` : "") + `<button class="scd${more ? " on" : ""}" data-d="more">${more ? "\u2715" : "\u22EF"}<i>${more ? "Cerrar" : "M\xE1s"}</i></button>` + (more ? (rev ? "" : `<button class="scd" data-d="skip">\u23ED<i>Saltar</i></button>`) + `<button class="scd" data-d="mix">\u{1F500}<i>Mezclar</i></button><button class="scd" data-d="pick">\u{1F4CB}<i>Elegir</i></button><button class="scd" data-d="pop">\u{1FA9F}<i>Pregunta</i></button><button class="scd end" data-d="end">\u{1F3C1}<i>Terminar</i></button><button class="scd" data-d="home">\u{1F3E0}<i>Salir</i></button>` : "");
+    $("#scDock").innerHTML = (rev ? `<button class="scd go" data-d="next">${last ? "\u{1F3C6}" : "\u25B6"}<i>${last ? "Final" : "Siguiente"}</i></button>` : sc.reading ? `<button class="scd go" data-d="readskip">\u23E9<i>Ya pueden</i></button>` : `<button class="scd go" data-d="reveal">\u2714<i>Checar</i></button><button class="scd" data-d="cam">\u{1F4F7}<i>C\xE1mara</i></button>`) + (window.SC48 ? "" : `<button class="scd end" data-d="end">\u{1F3C1}<i>Terminar</i></button>`) + (aud ? `<button class="scd" data-d="audio">\u{1F50A}<i>Audio</i></button>` : "") + `<button class="scd${more ? " on" : ""}" data-d="more">${more ? "\u2715" : "\u22EF"}<i>${more ? "Cerrar" : "M\xE1s"}</i></button>` + (more ? (rev ? "" : `<button class="scd" data-d="skip">\u23ED<i>Saltar</i></button>`) + `<button class="scd" data-d="mix">\u{1F500}<i>Mezclar</i></button><button class="scd" data-d="pick">\u{1F4CB}<i>Elegir</i></button><button class="scd" data-d="pop">\u{1FA9F}<i>Pregunta</i></button><button class="scd end" data-d="end">\u{1F3C1}<i>Terminar</i></button><button class="scd" data-d="home">\u{1F3E0}<i>Salir</i></button>` : "");
     $("#scDock").querySelectorAll("button").forEach((b) => b.onclick = () => {
       const d = b.dataset.d;
+      if (d === "end" && !window.SC48 && !confirm("\xBFTerminar la carrera y ver resultados?")) return;
       if (d === "next") scNext();
+      else if (d === "readskip") scEndRead();
       else if (d === "reveal") scReveal();
       else if (d === "cam") scLocalCam();
       else if (d === "skip") scSkip();
@@ -22073,6 +22133,7 @@ onmessage = function(e){ var m = e.data, out = [];
       camClose();
     } catch (e) {
     }
+    if (sc.reading) scEndRead(true);
     const q = scQ(), cor = scCorrect(q);
     game.phase = "reveal";
     clearInterval(scTimerId);
@@ -22096,14 +22157,14 @@ onmessage = function(e){ var m = e.data, out = [];
     if (hot) lines.push(`\u{1F525} ${scLabel(hot)} lleva ${hot.streak} seguidas`);
     if (miss.length) lines.push(miss.length > 1 ? `\u{1F4AB} ${miss.length} se tropezaron` : `\u{1F4AB} ${scLabel(miss[0])} se tropez\xF3`);
     sc.msg = lines.join("   ") || "Nadie respondi\xF3 \u{1F997}";
-    sc.pop = "big";
+    sc.pop = window.SC48 ? "big" : "ans";
     sc.popT = performance.now();
     hits.length ? jingle([660, 880, 1100], 90, 0.12) : beep(220, 0.3);
     renderScan();
     const qi = sc.qi;
     setTimeout(() => {
       if (!sc || sc.qi !== qi || game.phase !== "reveal") return;
-      scSetPop("mini");
+      if (window.SC48) scSetPop("mini");
       const TR = scStartTrips(qi);
       sc.students.forEach((s) => {
         if (s.shown < s.pts) {
@@ -22112,9 +22173,9 @@ onmessage = function(e){ var m = e.data, out = [];
         s.shown = s.pts;
       });
       if (TR && TR.sleepers.length) sc.msg += `   \u{1F634} ${TR.sleepers.length > 1 ? TR.sleepers.length + " se quedaron dormidos" : scLabel(TR.sleepers[0]) + " se qued\xF3 dormido"}`;
-      scToast(sc.msg);
+      if (window.SC48) scToast(sc.msg);
       if (hits.length) jingle([523, 659, 784, 1047], 80, 0.1);
-    }, 3800);
+    }, window.SC48 ? 3800 : 700);
   }
   function scMergeAnswers(qi, a) {
     if (sc && game.phase === "pick") {
@@ -22133,6 +22194,7 @@ onmessage = function(e){ var m = e.data, out = [];
       return;
     }
     if (!sc || game.phase !== "q" || qi !== sc.qi) return;
+    if (sc.reading) return;
     let fresh = 0;
     Object.keys(a).forEach((k) => {
       const no = +k;
@@ -22163,6 +22225,10 @@ onmessage = function(e){ var m = e.data, out = [];
       return;
     }
     if (game.phase !== "q") return;
+    if (sc.reading) {
+      scToast("\u{1F4D6} Todav\xEDa es tiempo de lectura");
+      return;
+    }
     scSetPop("mini");
     camOpen({
       kind: sc.kind,
@@ -23908,6 +23974,7 @@ onmessage = function(e){ var m = e.data, out = [];
       o.audio = !!(q.audio || q.tts);
       o.cor = scCorrect(q);
       o.ga = Object.assign({}, sc.answers);
+      if (game.phase === "q" && sc.reading) o.readMs = Math.max(0, Math.round(sc.readEnd - performance.now()));
     }
     if (game.phase === "end") {
       o.slide = sc.endSlide || 0;
@@ -23977,8 +24044,14 @@ onmessage = function(e){ var m = e.data, out = [];
       } else if (c === "qn" && game.phase === "lobby") {
         cfg.scanQn = +m.v;
         scRenderLobby();
-      } else if (c === "reveal") scReveal();
-      else if (c === "next") {
+      } else if (c === "readskip" && game.phase === "q") scEndRead();
+      else if (c === "reveal") {
+        if (game.phase === "q" && m.a && m.qi === sc.qi) {
+          if (sc.reading) scEndRead(true);
+          scMergeAnswers(m.qi, m.a);
+        }
+        scReveal();
+      } else if (c === "next") {
         if (game.phase === "reveal") scNext();
       } else if (c === "skip") scSkip();
       else if (c === "mix" && live) scShuffle();
