@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Inglés HCM · Versión de prueba</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--crema:#F2EDE0;--crema2:#EAE4D4;--papel:#FAF8F2;--tinta:#1C1510;--tinta2:#4A3F35;
+ --tenue:#8A7A6A;--linea:#DDD5C4;--vino:#8B1A2A;--vino-h:#6B1020;--vino-s:#F5E8EA;
+ --oro:#C9A84C;--oro-s:#FDF6E3;--verde:#3F7A46;--verde-s:#E8F0E8;
+ --display:'Libre Baskerville',Georgia,serif;--body:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace}
+body{background:var(--crema);font-family:var(--body);color:var(--tinta);line-height:1.55;
+ -webkit-font-smoothing:antialiased;padding-bottom:40px}
+.bar{background:var(--tinta);color:var(--papel);padding:14px 18px;display:flex;align-items:center;gap:12px;
+ position:sticky;top:0;z-index:20;border-bottom:3px solid var(--oro)}
+.bar .esc{width:34px;height:34px;border-radius:50%;background:transparent;border:2px solid var(--oro);
+ color:var(--oro);display:flex;align-items:center;justify-content:center;font-size:16px;flex:0 0 34px}
+.bar .t{font-family:var(--display);font-size:16px;line-height:1.15}
+.bar .t span{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.22em;
+ text-transform:uppercase;color:var(--oro);margin-top:2px}
+.bar .pr{margin-left:auto;font-family:var(--mono);font-size:11px;color:#C8BBA4}
+.wrap{max-width:640px;margin:0 auto;padding:18px 16px 0}
+.aviso{background:var(--oro-s);border:1px solid var(--oro);border-left:4px solid var(--vino);
+ border-radius:10px;padding:13px 15px;font-size:13.5px;color:var(--tinta2);margin-bottom:20px}
+.aviso b{color:var(--tinta)}
+h1{font-family:var(--display);font-size:27px;line-height:1.2;margin-bottom:8px}
+.sub{color:var(--tinta2);font-size:15.5px;margin-bottom:22px}
+.kick{font-family:var(--mono);font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;
+ color:var(--vino);font-weight:700;margin-bottom:9px}
+.tema{display:block;width:100%;text-align:left;background:var(--papel);border:1px solid var(--linea);
+ border-radius:13px;padding:16px 17px;margin-bottom:11px;cursor:pointer;font:inherit;color:inherit;
+ transition:transform .12s,border-color .12s}
+.tema:active{transform:scale(.985)}
+.tema .n{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--tenue);text-transform:uppercase}
+.tema .ti{font-family:var(--display);font-size:18px;margin:3px 0 2px}
+.tema .de{font-size:13.5px;color:var(--tinta2)}
+.tema .ej{font-family:var(--mono);font-size:10.5px;color:var(--oro);margin-top:7px}
+.card{background:var(--papel);border:1px solid var(--linea);border-radius:14px;padding:20px 18px;margin-bottom:14px}
+.lbl{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+ color:var(--tenue);margin-bottom:12px}
+.qtxt{font-family:var(--display);font-size:22px;line-height:1.4;margin-bottom:8px}
+.qes{color:var(--tinta2);font-size:14.5px;margin-bottom:16px}
+.ctx{background:var(--crema);border-left:3px solid var(--oro);padding:11px 13px;border-radius:0 8px 8px 0;
+ font-size:14.5px;color:var(--tinta2);margin-bottom:14px}
+.hueco{display:inline-block;min-width:92px;border-bottom:3px dashed var(--vino);margin:0 4px}
+.ops{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+.op{background:var(--crema);border:1.5px solid var(--linea);border-radius:10px;padding:13px 15px;
+ font:inherit;font-size:16px;color:var(--tinta);text-align:left;cursor:pointer;transition:all .12s}
+.op:active{transform:scale(.99)}
+.op.ok{background:var(--verde-s);border-color:var(--verde);color:var(--verde);font-weight:600}
+.op.no{background:var(--vino-s);border-color:var(--vino);color:var(--vino)}
+.op[disabled]{cursor:default}
+.piezas{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.pz{background:var(--crema);border:1.5px solid var(--linea);border-radius:8px;padding:9px 13px;
+ font:inherit;font-size:15.5px;cursor:pointer;color:var(--tinta)}
+.pz.usada{opacity:.3;pointer-events:none}
+.armado{min-height:52px;background:var(--crema);border:1.5px dashed var(--linea);border-radius:10px;
+ padding:11px 13px;font-family:var(--display);font-size:17.5px;display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.armado .vac{color:var(--tenue);font-family:var(--body);font-size:14px;font-style:italic}
+.armado span{background:var(--papel);border:1px solid var(--linea);border-radius:6px;padding:2px 8px}
+.btn{display:block;width:100%;background:var(--tinta);color:var(--papel);border:0;border-radius:11px;
+ padding:15px;font:inherit;font-size:16px;font-weight:600;cursor:pointer;margin-top:14px}
+.btn:active{transform:scale(.99)}
+.btn.oro{background:var(--oro);color:var(--tinta)}
+.btn.g{background:transparent;color:var(--tinta2);border:1.5px solid var(--linea);font-weight:400}
+.oir{display:flex;gap:9px;margin:4px 0 14px;flex-wrap:wrap}
+.oirb{background:var(--vino);color:#fff;border:0;border-radius:10px;padding:12px 16px;font:inherit;
+ font-size:15px;font-weight:600;cursor:pointer;flex:1;min-width:130px}
+.oirb.alt{background:transparent;color:var(--tinta2);border:1.5px solid var(--linea);font-weight:400}
+.tx{width:100%;border:1.5px solid var(--linea);border-radius:10px;padding:13px;font:inherit;
+ font-size:16px;background:var(--crema);color:var(--tinta);margin-top:6px}
+.res{margin-top:14px;border-radius:10px;padding:13px 15px;font-size:14.5px}
+.res.ok{background:var(--verde-s);border:1px solid var(--verde);color:#2E5A33}
+.res.no{background:var(--vino-s);border:1px solid var(--vino);color:var(--vino-h)}
+.res b{display:block;margin-bottom:3px}
+.prog{display:flex;gap:4px;justify-content:center;margin:14px 0 18px;align-items:center}
+.prog i{width:22px;height:5px;border-radius:3px;background:var(--linea);display:block}
+.prog i.on{background:var(--vino)}
+.prog i.aqui{background:var(--vino);width:34px;box-shadow:0 0 0 3px var(--vino-s)}
+.prog i.corte{width:1px;height:11px;background:var(--tenue);opacity:.45;border-radius:0}
+.fase{display:flex;align-items:center;gap:10px;background:var(--vino-s);border:1px solid var(--linea);
+ border-left:4px solid var(--vino);border-radius:10px;padding:9px 13px;margin-bottom:12px}
+.fase .ic{font-size:17px}
+.fase b{display:block;font-size:13.5px}
+.fase span{display:block;font-size:11.5px;color:var(--tenue)}
+.fase .n{margin-left:auto;font-weight:700;color:var(--vino);font-size:15px}
+.fin{text-align:center;padding:10px 0}
+.fin .big{font-family:var(--display);font-size:52px;color:var(--vino);line-height:1}
+.fin .et{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--tenue);margin-top:6px}
+.tabla{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:10px}
+.tabla th{text-align:left;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+ color:var(--tenue);padding:0 8px 8px 0;border-bottom:2px solid var(--linea)}
+.tabla td{padding:9px 8px 9px 0;border-bottom:1px solid var(--linea);color:var(--tinta2)}
+.tabla td:first-child{font-weight:600;color:var(--tinta)}
+.pill{display:inline-block;font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:999px;
+ border:1px solid var(--linea);color:var(--tinta2)}
+.pie{text-align:center;font-size:12px;color:var(--tenue);margin:26px 0 10px;line-height:1.6}
+.cinta{background:var(--vino);color:#fff;text-align:center;font-family:var(--mono);font-size:10.5px;
+ letter-spacing:.2em;text-transform:uppercase;padding:7px}
+@media(min-width:680px){ .qtxt{font-size:25px} }
+</style></head>
+<body>
+<div class="cinta">Versión de prueba · muestra para el mando</div>
+<div class="bar">
+  <div class="esc">&#10035;</div>
+  <div class="t">Inglés · Heroico Colegio Militar<span>Plataforma de repaso</span></div>
+  <div class="pr" id="pr"></div>
+</div>
+<div class="wrap" id="app"></div>
+
+<script>
+var APP=document.getElementById('app'), PR=document.getElementById('pr');
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function norm(s){return String(s||'').toLowerCase().replace(/[^a-z0-9áéíóúñü ]/gi,'').replace(/\s+/g,' ').trim();}
+function parecido(a,b){
+  a=norm(a);b=norm(b); if(!a||!b)return 0; if(a===b)return 100;
+  var pa=a.split(' '),pb=b.split(' '),n=0,usado={};
+  for(var i=0;i<pb.length;i++){ for(var j=0;j<pa.length;j++){
+    if(!usado[j]&&pa[j]===pb[i]){usado[j]=1;n++;break;} } }
+  return Math.round(n/Math.max(pa.length,pb.length)*100);
+}
+/* ── voz: la del navegador; si no hay, se enseña el texto ── */
+var VOZ=null;
+function cargarVoz(){ try{ var v=speechSynthesis.getVoices()||[];
+  VOZ=v.filter(function(x){return /^en/i.test(x.lang);})[0]||null; }catch(e){} }
+try{ cargarVoz(); if(window.speechSynthesis) speechSynthesis.onvoiceschanged=cargarVoz; }catch(e){}
+function decir(txt,lento){
+  try{
+    if(!window.speechSynthesis) return false;
+    speechSynthesis.cancel();
+    var u=new SpeechSynthesisUtterance(txt);
+    u.lang='en-US'; u.rate=lento?0.65:0.92; if(VOZ)u.voice=VOZ;
+    speechSynthesis.speak(u); return true;
+  }catch(e){ return false; }
+}
+
+/* ══════════ CONTENIDO · 3 temas del programa ══════════ */
+var TEMAS=[
+{
+ id:1, titulo:"I'd like to open an account", sub:"Present progressive · banca",
+ items:[
+  {k:'regla',f:1,titulo:'Present progressive para planes ya hechos',
+   regla:"Con 'be + verbo-ing' se habla de un plan ya confirmado, aunque sea para después.",
+   bien:"I'm meeting the captain tomorrow.", mal:"I meet the captain tomorrow.",
+   porque:"El plan ya está acordado, por eso va en progresivo y no en presente simple."},
+  {k:'hablar',f:2,en:"I'd like to open a savings account.",es:"Quisiera abrir una cuenta de ahorros."},
+  {k:'hueco',f:3,antes:"I'd like ",despues:" a savings account.",
+   es:"Quisiera abrir una cuenta de ahorros.",ops:["to open","opening","open"],ok:0,
+   nota:"Después de 'would like' va el verbo con 'to'."},
+  {k:'ordenar',f:3,es:"Necesito hacer un depósito de quinientos pesos.",
+   piezas:["I","need","to","make","a","deposit"],frase:"I need to make a deposit"},
+  {k:'dosc',f:4,audio:"I'd like to open an account.",
+   a:"I'd like to open an account.",b:"I'd like to close an account.",ok:0,
+   nota:"'Open' y 'close' son lo contrario; en el banco cambia todo."},
+  {k:'opcion',f:3,ctx:"En la ventanilla del banco, el cajero le pregunta al cadete qué necesita.",
+   q:"Good morning. How can I help you?",
+   ops:["I'd like to open an account, please.","I like open an account, please.",
+        "I am liking to open account.","I would like open an account."],ok:0},
+  {k:'prod',f:5,ctx:"Está en la ventanilla del banco.",
+   q:"What would you like to do today, and what are you doing tomorrow?",
+   guia:"Diga o escriba 3 frases: qué cuenta quiere abrir, cuánto va a depositar y qué hará mañana."}
+ ]
+},
+{
+ id:2, titulo:"The cake is delicious", sub:"Because · verbos copulativos",
+ items:[
+  {k:'regla',f:1,titulo:"Because + sujeto y verbo · taste, look, smell, sound, feel",
+   regla:"'Because' siempre va seguido de sujeto + verbo. Los verbos copulativos van con adjetivo, nunca con adverbio.",
+   bien:"The cake tastes good because it has fresh butter.",
+   mal:"The cake tastes well because of it has butter.",
+   porque:"'Tastes' pide adjetivo (good), y 'because' pide sujeto + verbo."},
+  {k:'hablar',f:2,en:"It smells good because it's fresh.",es:"Huele bien porque está fresco."},
+  {k:'hueco',f:3,antes:"The coffee ",despues:" bitter this morning.",
+   es:"El café sabe amargo esta mañana.",ops:["tastes","tastes like","is tasting"],ok:0,
+   nota:"Con adjetivo va 'tastes' solo. 'Tastes like' pide un sustantivo."},
+  {k:'idea',f:4,audio:"This cake is delicious. It tastes sweet but not too sweet, and it smells like oranges. I think it is so good because the cook used real butter and fresh eggs.",
+   q:"¿De qué se trata lo que oyó?",
+   ops:["Explica por qué el pastel está bueno.","Pide la receta del pastel.","Se queja del sabor del pastel."],ok:0},
+  {k:'transf',f:3,origen:"The cake is delicious. It has fresh butter.",
+   pide:"Únalas en una sola frase con 'because'.",
+   meta:"The cake is delicious because it has fresh butter."},
+  {k:'opcion',f:3,ctx:"Un compañero le pregunta por la comida del comedor.",
+   q:"How was the food today?",
+   ops:["The soup tasted salty because it had too much salt.",
+        "The soup tasted saltily because of it had salt.",
+        "The soup is tasting salty because of salt.",
+        "The soup tasted salty because of it was salty."],ok:0},
+  {k:'prod',f:5,ctx:"Un compañero le pregunta por la comida del comedor.",
+   q:"How was the food today, and why?",
+   guia:"Diga o escriba 3 frases con 'because' y con taste / look / smell / feel."}
+ ]
+},
+{
+ id:3, titulo:"He was talking when he hit the car", sub:"Past progressive + when",
+ items:[
+  {k:'regla',f:1,titulo:"Past progressive + when + pasado simple",
+   regla:"La acción larga va en 'was/were + verbo-ing'. Lo que la interrumpe va en pasado simple con 'when'.",
+   bien:"He was talking on the phone when he hit the car.",
+   mal:"He talked on the phone when he hitted the car.",
+   porque:"La acción en curso va en progresivo; la interrupción, en pasado simple. 'Hit' no lleva -ed."},
+  {k:'hablar',f:2,en:"What were you doing when the accident happened?",
+   es:"¿Qué estabas haciendo cuando ocurrió el accidente?"},
+  {k:'dosc',f:4,audio:"He was talking when he hit the car.",
+   a:"He was talking when he hit the car.",b:"He was walking when he hit the car.",ok:0,
+   nota:"'Talking' y 'walking' se oyen casi igual; cambia toda la historia."},
+  {k:'ordenar',f:3,es:"Estaba manejando muy rápido cuando la policía lo detuvo.",
+   piezas:["He","was","driving","too","fast","when","the","police","stopped","him"],
+   frase:"He was driving too fast when the police stopped him"},
+  {k:'hueco',f:3,antes:"She ",despues:" on the phone when she crashed.",
+   es:"Ella estaba hablando por teléfono cuando chocó.",
+   ops:["was talking","talked","is talking"],ok:0,
+   nota:"La acción que ya estaba pasando va en pasado progresivo."},
+  {k:'opcion',f:3,ctx:"El cadete reporta un accidente que vio en la carretera.",
+   q:"What happened on Highway 15?",
+   ops:["A driver was talking on his phone when he hit another car.",
+        "A driver talked on his phone when he was hitting another car.",
+        "A driver is talking on his phone when he hit another car.",
+        "A driver was talking on his phone when he was hit another car."],ok:0},
+  {k:'prod',f:5,ctx:"Reporta un accidente que vio ayer.",
+   q:"What happened? What were you doing when it happened?",
+   guia:"Cuente el accidente en 3 o 4 frases usando 'I was ...ing when ...'."}
+ ]
+}];
+
+var FASES=[null,
+ {ic:'&#128218;',n:'Presentación',e:'le presento el tema'},
+ {ic:'&#127897;&#65039;',n:'Práctica · Speaking',e:'lo dice usted'},
+ {ic:'&#128295;',n:'Práctica · Grammar',e:'la forma correcta'},
+ {ic:'&#127911;',n:'Práctica · Listening',e:'lo oye'},
+ {ic:'&#128640;',n:'Producción',e:'ahora úselo usted'}];
+
+var T=null, it=0, aciertos=0, intentos=0;
+
+/* ═══════════ pantallas ═══════════ */
+function inicio(){
+  T=null; PR.textContent='';
+  var h='<div class="aviso"><b>Esto es una muestra.</b> Tres temas del programa de Idioma Extranjero IV, '+
+    'con ejercicios de todos los tipos. La plataforma completa tiene <b>diecinueve lecciones</b> por año '+
+    'y lleva el registro de cada cadete. Aquí no se guarda ningún dato.</div>'+
+    '<div class="kick">Versión de prueba</div>'+
+    '<h1>Pruebe la plataforma</h1>'+
+    '<div class="sub">Escoja un tema. Son seis o siete ejercicios, unos tres minutos. '+
+    'Se puede hacer desde el teléfono, la tableta o la computadora.</div>';
+  TEMAS.forEach(function(t,i){
+    h+='<button class="tema" data-t="'+i+'">'+
+      '<div class="n">Tema '+(i+1)+' de 3</div>'+
+      '<div class="ti">'+esc(t.titulo)+'</div>'+
+      '<div class="de">'+esc(t.sub)+'</div>'+
+      '<div class="ej">'+t.items.length+' ejercicios &middot; gramática, escucha, habla y producción</div>'+
+      '</button>';
+  });
+  h+='<button class="btn g" id="verpanel" style="margin-top:18px">Ver lo que ve el maestro</button>'+
+     '<div class="pie">Heroico Colegio Militar &middot; Coordinación de Idiomas<br>'+
+     'Muestra preparada para el mando. No requiere instalación ni cuenta.</div>';
+  APP.innerHTML=h;
+  APP.querySelectorAll('.tema').forEach(function(b){
+    b.onclick=function(){ T=TEMAS[+b.dataset.t]; it=0; aciertos=0; intentos=0; paso(); };
+  });
+  document.getElementById('verpanel').onclick=panel;
+  window.scrollTo(0,0);
+}
+
+function barra(){
+  var h='<div class="prog">',prev=null;
+  T.items.forEach(function(x,i){
+    if(prev!==null&&x.f!==prev)h+='<i class="corte"></i>';
+    h+='<i class="'+(i<it?'on':(i===it?'aqui':''))+'"></i>'; prev=x.f;
+  });
+  return h+'</div>';
+}
+function cabFase(x){
+  var f=FASES[x.f],mismos=T.items.filter(function(y){return y.f===x.f;}).length;
+  var cual=T.items.slice(0,it+1).filter(function(y){return y.f===x.f;}).length;
+  return '<div class="fase"><span class="ic">'+f.ic+'</span><div><b>'+f.n+'</b>'+
+    '<span>'+f.e+' &middot; '+cual+' de '+mismos+'</span></div><span class="n">'+x.f+'<small>/5</small></span></div>';
+}
+function sigue(txt){
+  return '<button class="btn" id="sig">'+(txt||'Siguiente')+'</button>';
+}
+function ligarSig(){
+  var b=document.getElementById('sig');
+  if(b) b.onclick=function(){ it++; paso(); };
+}
+
+function paso(){
+  try{ speechSynthesis.cancel(); }catch(e){}
+  if(it>=T.items.length) return cierre();
+  PR.textContent=(it+1)+' / '+T.items.length;
+  var x=T.items[it], h=barra()+cabFase(x)+'<div class="card">';
+
+  if(x.k==='regla'){
+    h+='<div class="lbl">La regla &middot; léala una vez</div>'+
+      '<div class="qtxt">'+esc(x.titulo)+'</div>'+
+      '<div class="qes">'+esc(x.regla)+'</div>'+
+      '<div class="res ok"><b>Así sí</b>'+esc(x.bien)+'</div>'+
+      '<div class="res no" style="margin-top:9px"><b>Así no</b>'+esc(x.mal)+'</div>'+
+      '<div class="qes" style="margin-top:14px">'+esc(x.porque)+'</div>'+
+      '<div class="oir"><button class="oirb" data-oir="'+esc(x.bien)+'">&#128266; Oír el ejemplo</button></div>'+
+      '</div>'+sigue('Entendido');
+    APP.innerHTML=h; ligarOir(); ligarSig(); return fin();
+  }
+
+  if(x.k==='hablar'){
+    h+='<div class="lbl">Escuche y dígalo en voz alta</div>'+
+      '<div class="qtxt">'+esc(x.en)+'</div>'+
+      '<div class="qes">'+esc(x.es)+'</div>'+
+      '<div class="oir"><button class="oirb" data-oir="'+esc(x.en)+'">&#128266; Escuchar</button>'+
+      '<button class="oirb alt" data-oir="'+esc(x.en)+'" data-lento="1">&#128034; Más lento</button></div>'+
+      '<div class="qes" style="font-size:13.5px">Dígala en voz alta. Si quiere, escríbala aquí y le digo qué tan cerca quedó.</div>'+
+      '<input class="tx" id="dijo" placeholder="Escriba lo que dijo (opcional)" autocomplete="off">'+
+      '<div id="res"></div></div>'+
+      '<button class="btn oro" id="rev">Revisar</button>'+sigue('Ya la dije &middot; siguiente');
+    APP.innerHTML=h; ligarOir(); ligarSig();
+    document.getElementById('rev').onclick=function(){
+      var v=document.getElementById('dijo').value;
+      if(!norm(v)) return;
+      var p=parecido(x.en,v); intentos++; if(p>=70)aciertos++;
+      document.getElementById('res').innerHTML='<div class="res '+(p>=70?'ok':'no')+'">'+
+        '<b>'+(p>=70?'Muy bien · '+p+'%':'Casi · '+p+'%')+'</b>Lo correcto: '+esc(x.en)+'</div>';
+    };
+    return fin();
+  }
+
+  if(x.k==='hueco'){
+    h+='<div class="lbl">Llene el hueco</div>'+
+      '<div class="qtxt">'+esc(x.antes)+'<span class="hueco"></span>'+esc(x.despues)+'</div>'+
+      '<div class="qes">'+esc(x.es)+'</div><div class="ops" id="ops">'+
+      x.ops.map(function(o,i){return '<button class="op" data-i="'+i+'">'+esc(o)+'</button>';}).join('')+
+      '</div><div id="res"></div></div>';
+    APP.innerHTML=h; opciones(x); return fin();
+  }
+
+  if(x.k==='opcion'){
+    h+='<div class="lbl">Opción múltiple &middot; tipo examen</div>'+
+      (x.ctx?'<div class="ctx">'+esc(x.ctx)+'</div>':'')+
+      '<div class="qtxt">'+esc(x.q)+'</div>'+
+      '<div class="qes">¿Cuál es la respuesta correcta?</div><div class="ops" id="ops">'+
+      x.ops.map(function(o,i){return '<button class="op" data-i="'+i+'">'+esc(o)+'</button>';}).join('')+
+      '</div><div id="res"></div></div>';
+    APP.innerHTML=h; opciones(x); return fin();
+  }
+
+  if(x.k==='dosc'){
+    h+='<div class="lbl">Escuche y escoja la que oyó</div>'+
+      '<div class="qes">Las dos se parecen mucho. Escúchela las veces que quiera.</div>'+
+      '<div class="oir"><button class="oirb" data-oir="'+esc(x.audio)+'">&#128266; Escuchar</button>'+
+      '<button class="oirb alt" data-oir="'+esc(x.audio)+'" data-lento="1">&#128034; Más lento</button></div>'+
+      '<div class="ops" id="ops">'+
+      ['a','b'].map(function(k,i){return '<button class="op" data-i="'+i+'">'+esc(x[k])+'</button>';}).join('')+
+      '</div><div id="res"></div></div>';
+    APP.innerHTML=h; ligarOir(); opciones(x); return fin();
+  }
+
+  if(x.k==='idea'){
+    h+='<div class="lbl">Escuche y diga de qué se trata</div>'+
+      '<div class="qes">No tiene que entender cada palabra. Solo la idea general.</div>'+
+      '<div class="oir"><button class="oirb" data-oir="'+esc(x.audio)+'">&#128266; Escuchar</button>'+
+      '<button class="oirb alt" data-oir="'+esc(x.audio)+'" data-lento="1">&#128034; Más lento</button></div>'+
+      '<div class="qtxt" style="font-size:19px">'+esc(x.q)+'</div><div class="ops" id="ops">'+
+      x.ops.map(function(o,i){return '<button class="op" data-i="'+i+'">'+esc(o)+'</button>';}).join('')+
+      '</div><div id="res"></div></div>';
+    APP.innerHTML=h; ligarOir(); opciones(x); return fin();
+  }
+
+  if(x.k==='ordenar'){
+    var mez=x.piezas.slice();
+    for(var i=mez.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t2=mez[i];mez[i]=mez[j];mez[j]=t2;}
+    h+='<div class="lbl">Ordene la frase &middot; toque las palabras</div>'+
+      '<div class="qes">'+esc(x.es)+'</div>'+
+      '<div class="armado" id="arm"><span class="vac">Toque las palabras de abajo</span></div>'+
+      '<div class="piezas" id="pz">'+mez.map(function(w,i){
+        return '<button class="pz" data-w="'+esc(w)+'" data-i="'+i+'">'+esc(w)+'</button>';}).join('')+
+      '</div><div id="res"></div>'+
+      '<button class="btn g" id="borrar" style="margin-top:12px">Borrar y empezar</button></div>';
+    APP.innerHTML=h;
+    var puestas=[];
+    function pintar(){
+      var a=document.getElementById('arm');
+      a.innerHTML=puestas.length?puestas.map(function(w){return '<span>'+esc(w)+'</span>';}).join('')
+        :'<span class="vac">Toque las palabras de abajo</span>';
+      if(puestas.length===x.piezas.length){
+        var dicho=puestas.join(' '), bien=norm(dicho)===norm(x.frase);
+        intentos++; if(bien)aciertos++;
+        document.getElementById('res').innerHTML='<div class="res '+(bien?'ok':'no')+'">'+
+          '<b>'+(bien?'Correcto':'No es el orden')+'</b>'+esc(x.frase)+'.</div>'+sigue();
+        APP.querySelectorAll('.pz').forEach(function(b){b.classList.add('usada');});
+        ligarSig();
+      }
+    }
+    APP.querySelectorAll('.pz').forEach(function(b){
+      b.onclick=function(){ if(b.classList.contains('usada'))return;
+        b.classList.add('usada'); puestas.push(b.dataset.w); pintar(); };
+    });
+    document.getElementById('borrar').onclick=function(){
+      puestas=[]; APP.querySelectorAll('.pz').forEach(function(b){b.classList.remove('usada');});
+      document.getElementById('res').innerHTML=''; pintar();
+    };
+    return fin();
+  }
+
+  if(x.k==='transf'){
+    h+='<div class="lbl">Cambie la frase</div>'+
+      '<div class="qtxt">'+esc(x.origen)+'</div>'+
+      '<div class="ctx">'+esc(x.pide)+'</div>'+
+      '<input class="tx" id="tr" placeholder="Escriba la frase nueva" autocomplete="off">'+
+      '<div id="res"></div></div>'+
+      '<button class="btn oro" id="rev">Revisar</button>';
+    APP.innerHTML=h;
+    document.getElementById('rev').onclick=function(){
+      var v=document.getElementById('tr').value; if(!norm(v))return;
+      var p=parecido(x.meta,v); intentos++; if(p>=75)aciertos++;
+      document.getElementById('res').innerHTML='<div class="res '+(p>=75?'ok':'no')+'">'+
+        '<b>'+(p>=75?'Correcto · '+p+'%':'Cerca · '+p+'%')+'</b>Así queda: '+esc(x.meta)+'</div>'+sigue();
+      ligarSig(); this.style.display='none';
+    };
+    return fin();
+  }
+
+  if(x.k==='prod'){
+    h+='<div class="lbl">Su turno &middot; lo que pueda</div>'+
+      '<div class="ctx">'+esc(x.ctx)+'</div>'+
+      '<div class="qtxt">'+esc(x.q)+'</div>'+
+      '<div class="qes">'+esc(x.guia)+'</div>'+
+      '<div class="oir"><button class="oirb" data-oir="'+esc(x.q)+'">&#128266; Oír la pregunta</button></div>'+
+      '<textarea class="tx" id="pd" rows="4" placeholder="Escriba o diga su respuesta…"></textarea>'+
+      '<div id="res"></div></div>'+
+      '<button class="btn oro" id="rev">Registrar</button>'+sigue('Terminar');
+    APP.innerHTML=h; ligarOir(); ligarSig();
+    document.getElementById('rev').onclick=function(){
+      var v=document.getElementById('pd').value.trim();
+      var pal=v?v.split(/\s+/).length:0;
+      document.getElementById('res').innerHTML='<div class="res ok"><b>Registrado</b>'+
+        (pal?pal+' palabras. ':'')+'En la plataforma completa, esto le llega al maestro con la fecha y la hora.</div>';
+    };
+    return fin();
+  }
+  function fin(){ window.scrollTo(0,0); }
+}
+
+function opciones(x){
+  var cont=document.getElementById('ops');
+  cont.querySelectorAll('.op').forEach(function(b){
+    b.onclick=function(){
+      var i=+b.dataset.i, bien=(i===x.ok);
+      intentos++; if(bien)aciertos++;
+      cont.querySelectorAll('.op').forEach(function(o){
+        o.disabled=true;
+        if(+o.dataset.i===x.ok) o.classList.add('ok');
+        else if(o===b) o.classList.add('no');
+      });
+      document.getElementById('res').innerHTML='<div class="res '+(bien?'ok':'no')+'">'+
+        '<b>'+(bien?'Correcto':'Esa no era')+'</b>'+
+        esc(x.nota||('La correcta es: '+(x.ops?x.ops[x.ok]:x[['a','b'][x.ok]])))+'</div>'+sigue();
+      ligarSig();
+    };
+  });
+}
+function ligarOir(){
+  APP.querySelectorAll('[data-oir]').forEach(function(b){
+    b.onclick=function(){
+      var t=b.getAttribute('data-oir');
+      if(!decir(t, b.hasAttribute('data-lento'))){
+        var r=document.getElementById('res')||b.parentNode;
+        r.insertAdjacentHTML('afterend','<div class="res no"><b>Este aparato no tiene voz en inglés</b>'+
+          'Lo que se oiría: &ldquo;'+esc(t)+'&rdquo;</div>');
+      }
+    };
+  });
+}
+
+function cierre(){
+  PR.textContent='';
+  var pct=intentos?Math.round(aciertos/intentos*100):0;
+  APP.innerHTML='<div class="card fin">'+
+    '<div class="kick">Tema terminado</div>'+
+    '<div class="big">'+pct+'%</div><div class="et">De aciertos</div>'+
+    '<div class="qes" style="margin-top:18px;text-align:left">'+
+    'Contestó <b>'+aciertos+' de '+intentos+'</b> ejercicios calificables. En la plataforma completa esto '+
+    'se guarda en el expediente del cadete y el maestro lo ve al momento, ejercicio por ejercicio.</div></div>'+
+    '<button class="btn" id="otro">Probar otro tema</button>'+
+    '<button class="btn g" id="verpanel" style="margin-top:10px">Ver lo que ve el maestro</button>'+
+    '<div class="pie">Lo que acaba de hacer es una lección de las diecinueve del ciclo.<br>'+
+    'Un cadete hace esto en diez o quince minutos, desde su teléfono.</div>';
+  document.getElementById('otro').onclick=inicio;
+  document.getElementById('verpanel').onclick=panel;
+  window.scrollTo(0,0);
+}
+
+function panel(){
+  PR.textContent='';
+  var filas=[
+   ['Aguilar Ríos Emiliano','301','Avanzado','3 · He was talking…','172','11','92%'],
+   ['Bautista Lara Sebastián','301','Intermedio','4 · You must obey…','145','14','88%'],
+   ['Carrillo Mena Iker','301','Intermedio','4 · You must obey…','50','5','71%'],
+   ['Domínguez Ávila Santiago','301','Intermedio','5 · Ted can repair…','48','7','85%'],
+   ['Escobar Nava Mateo','301','Intermedio','3 · He was talking…','113','12','87%'],
+   ['Fuentes Olmos Leonardo','301','Básico','4 · You must obey…','103','16','64%']
+  ];
+  APP.innerHTML='<div class="aviso"><b>Así ve el maestro a su grupo.</b> Los nombres de esta muestra '+
+    'son inventados. En la plataforma, cada maestro ve únicamente sus propios grupos, y la coordinación '+
+    've el plantel completo.</div>'+
+    '<div class="kick">Panel del docente · grupo 301</div>'+
+    '<h1 style="font-size:22px">Avance del grupo</h1>'+
+    '<div class="card" style="overflow-x:auto"><table class="tabla"><thead><tr>'+
+    '<th>Cadete</th><th>Nivel</th><th>Lección</th><th>Min</th><th>Ses</th><th>Part.</th></tr></thead><tbody>'+
+    filas.map(function(f){
+      return '<tr><td>'+esc(f[0])+'</td><td><span class="pill">'+esc(f[2])+'</span></td>'+
+        '<td>'+esc(f[3])+'</td><td>'+f[4]+'</td><td>'+f[5]+'</td><td>'+f[6]+'</td></tr>';
+    }).join('')+'</tbody></table></div>'+
+    '<div class="card"><div class="lbl">Y además</div>'+
+    '<div class="qes" style="margin-bottom:0">El maestro puede abrir a un cadete y ver <b>ejercicio por '+
+    'ejercicio</b> en qué se equivocó, y hay una vista <b>en vivo</b> con quién está practicando en este '+
+    'momento. La coordinación compara grupos, años y compañías.</div></div>'+
+    '<button class="btn" id="volver">Volver a los temas</button>';
+  document.getElementById('volver').onclick=inicio;
+  window.scrollTo(0,0);
+}
+
+inicio();
+</script>
+</body></html>
