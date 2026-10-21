@@ -438,6 +438,24 @@ body.scfull{overflow:hidden}
 .scachips{display:flex;flex-wrap:wrap;gap:5px;max-height:84px;overflow:hidden}
 .scachips span{min-width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.18);color:#d8d4f0;display:grid;place-items:center;font:900 17px Nunito,sans-serif;padding:0 4px}
 .scachips span.on{background:#22C55E;color:#fff;box-shadow:0 0 0 2px #fff inset}
+.scpop.big.sm{max-width:820px;padding:10px 16px 8px;border-radius:22px}
+.scpop.sm .scqt{font-size:clamp(18px,1.9vw,28px);margin:4px 0}
+.scpop.sm .scopts{gap:6px;margin:4px 0}
+.scpop.sm .scopt{min-height:40px;padding:6px 8px;border-radius:12px;box-shadow:0 3px 0 var(--ink)}
+.scpop.sm .scopt .scl{width:32px;height:32px;font-size:19px;border-radius:9px}
+.scpop.sm .scopt .sct{font-size:clamp(14px,1.3vw,19px)}
+.scpop.sm .scaud,.scpop.sm .sctx{display:none}
+/* readable question while the race shows (groups of 30+) */
+.scpop.big.sm{max-width:none;padding:10px 18px 8px}
+.scpop.sm .scqt{font-size:clamp(24px,2.6vw,40px);margin:4px 0 6px}
+.scpop.sm .scopt{min-height:48px;padding:7px 10px}
+.scpop.sm .scopt .scl{width:40px;height:40px;font-size:24px}
+.scpop.sm .scopt .sct{font-size:clamp(18px,1.8vw,28px)}
+.scpop.mini{padding:10px 18px;display:block!important}
+.scpop.mini .scph{margin-bottom:2px}
+.scpop.mini .scmq{font-size:clamp(22px,2.4vw,36px);white-space:normal;overflow:visible;line-height:1.2;margin:4px 0 8px}
+.scpop.mini .scmo{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.scpop.mini .scmo span{max-width:none;white-space:normal;font-size:clamp(16px,1.6vw,24px);padding:6px 10px;border-radius:12px}
 
 </style>
 
@@ -21302,6 +21320,10 @@ onmessage = function(e){ var m = e.data, out = [];
     if (ph !== "end") $("#scEnd").hidden = true;
     document.body.classList.toggle("scfull", play && view === "play");
     if (ph === "lobby") scRenderLobby();
+    try {
+      scRenderAnsBar();
+    } catch (e) {
+    }
     if (ph === "end") scRenderEndUI();
     else if (play) {
       scRenderPop();
@@ -21370,6 +21392,7 @@ onmessage = function(e){ var m = e.data, out = [];
     sc.showTxt = false;
     sc.more = false;
     sc.replay = null;
+    sc.popSmall = false;
     game.phase = "q";
     sc.pop = "big";
     sc.popT = performance.now();
@@ -22178,7 +22201,7 @@ onmessage = function(e){ var m = e.data, out = [];
       scTimeEl();
       return;
     }
-    el.className = "scpop " + (big ? "big" : "mini") + (rev ? " rev" : "");
+    el.className = "scpop " + (big ? "big" : "mini") + (rev ? " rev" : "") + (big && sc.popSmall && !rev ? " sm" : "");
     if (big) {
       el.innerHTML = head + `<div class="scqt">${esc(q.q)}</div>${(q.audio || q.tts) && !rev ? `<div class="scaud"><button class="btn" data-r="1">\u{1F50A} Escuchar</button><button class="btn" data-r="0.75">\u{1F422} Lento</button>${q.tts ? `<button class="btn" data-t="1">\u{1F4DD} ${sc.showTxt ? "Ocultar texto" : "Ver texto"}</button>` : ""}</div>` : ""}${txt}
       <div class="scopts">${opts.map((o, i) => `<div class="scopt${rev ? i === cor ? " ok" : " no" : ""}" style="--oc:${SC_COL[i]}"><span class="scl">${SC_L[i]}</span><span class="sct">${esc(o)}</span>${rev ? `<span class="scc"><i style="width:${got ? Math.round(counts[i] / got * 100) : 0}%"></i><b>${counts[i]}</b></span>` : ""}</div>`).join("")}</div>
@@ -22382,7 +22405,11 @@ onmessage = function(e){ var m = e.data, out = [];
       scToast("\u{1F4D6} Todav\xEDa es tiempo de lectura");
       return;
     }
-    scSetPop("mini");
+    if (window.SC48) scSetPop("mini");
+    else {
+      sc.popSmall = true;
+      scSetPop("big");
+    }
     camOpen({
       kind: sc.kind,
       n: scMaxCards(sc.kind),
@@ -23551,6 +23578,14 @@ onmessage = function(e){ var m = e.data, out = [];
     c.textBaseline = "alphabetic";
     c.restore();
   }
+  function scRoadTop(H) {
+    const base = Math.max(230, H * 0.33);
+    if (window.SC48 || !game || !(game.phase === "q" || game.phase === "reveal")) return base;
+    const el = $("#scPop");
+    if (!el || !/\b(mini|sm|ans)\b/.test(el.className)) return base;
+    const b = el.offsetTop + el.offsetHeight;
+    return Math.min(H * 0.6, Math.max(base, b + 34));
+  }
   function scRaceLoop() {
     scRaceRaf = null;
     if (view !== "play" || !game || game.mode !== "scan" || !(game.phase === "q" || game.phase === "reveal" || game.phase === "pick" || game.phase === "end")) return;
@@ -23577,7 +23612,7 @@ onmessage = function(e){ var m = e.data, out = [];
     if (sc.U == null) sc.U = Uwant;
     sc.U += (Uwant - sc.U) * 0.03;
     const U = sc.U, start2 = U * 0.75;
-    const n = Math.max(1, sc.students.length), roadTop = Math.max(230, H * 0.33), roadBot = H - 14, laneH = (roadBot - roadTop) / n;
+    const n = Math.max(1, sc.students.length), roadTop = scRoadTop(H), roadBot = H - 14, laneH = (roadBot - roadTop) / n;
     const lead = leadP, tail = tailP;
     let target = start2 + tail * U - 150;
     if (start2 + lead * U - target > viewW - 140) target = start2 + lead * U - (viewW - 140);
@@ -23802,7 +23837,7 @@ onmessage = function(e){ var m = e.data, out = [];
     const kc = Math.floor((cam + viewW * 0.5 - start2) / U), zn = kc < 0 ? 0 : kc >= total ? 8 : scZoneOf(kc, total);
     c.font = "900 20px Nunito, sans-serif";
     const nm = "\u{1F4CD} " + SC_ZONES[zn].name, nw = c.measureText(nm).width + 28;
-    const zb = !window.SC48 && game.phase === "q" ? 62 : 0;
+    const abar = document.getElementById("scAnsBar"), zb = !window.SC48 && game.phase === "q" && abar && !abar.hidden ? abar.offsetHeight + 18 : 0;
     c.fillStyle = "rgba(43,35,102,.85)";
     scRR(c, 14, H - 50 - zb, nw, 38, 14);
     c.fill();
@@ -23865,7 +23900,7 @@ onmessage = function(e){ var m = e.data, out = [];
     if (sl === 2) scRenderEnd();
     $("#scPop").className = "scpop big scendtitle";
     $("#scPop").onclick = null;
-    $("#scPop").innerHTML = sl === 0 ? `<div class="scendh">\u{1F3C6} \xA1Ganadores!</div>` : sl === 1 ? `<div class="scendh">${window.SC48 ? "\u{1F40C} \xA1Los m\xE1s lentos!" : "\u{1F605} \xA1A mortero, cadetes!"}</div>` : `<div class="scendh">\u{1F4CA} Calificaciones</div>`;
+    $("#scPop").innerHTML = sl === 0 ? `<div class="scendh">\u{1F3C6} \xA1Ganadores!</div>` : sl === 1 ? `<div class="scendh">${window.SC48 ? "\u{1F40C} \xA1Los m\xE1s lentos!" : "\u{1F605} \xA1Mortero, cadetes!"}</div>` : `<div class="scendh">\u{1F4CA} Calificaciones</div>`;
     $("#scDock").innerHTML = `<button class="scd" data-d="prev" ${sl === 0 ? "disabled" : ""}>\u25C0<i>Atr\xE1s</i></button><button class="scd go" data-d="next" ${sl === 2 ? "disabled" : ""}>\u25B6<i>Siguiente</i></button><button class="scd" data-d="home">\u{1F3E0}<i>Salir</i></button>`;
     $("#scDock").querySelectorAll("button").forEach((b) => b.onclick = () => {
       const d = b.dataset.d;
@@ -24029,7 +24064,7 @@ onmessage = function(e){ var m = e.data, out = [];
       c.fillStyle = "#2B2366";
       c.font = "900 26px Nunito, sans-serif";
       c.textAlign = "center";
-      c.fillText(Math.sin(t * 3) > 0 ? "\xA1A MORTERO! \u{1F4E2}" : "\xA1ABAJO! \u{1F4E2}", sx - 125, sy - size * 0.95 + 42);
+      c.fillText(Math.sin(t * 3) > 0 ? "\xA1MORTERO! \u{1F4E2}" : "\xA1ABAJO! \u{1F4E2}", sx - 125, sy - size * 0.95 + 42);
       if (!m.length) {
         c.fillStyle = "#fff";
         c.font = "900 40px Nunito, sans-serif";
@@ -24087,7 +24122,7 @@ onmessage = function(e){ var m = e.data, out = [];
     if (!sc || game.phase !== "pick") return;
     const cv = $("#scRace"), r = cv.getBoundingClientRect(), y = e.clientY - r.top, H = cv.clientHeight, n = sc.students.length;
     if (!n) return;
-    const roadTop = Math.max(230, H * 0.33), laneH = (H - 14 - roadTop) / n, i = Math.floor((y - roadTop) / laneH);
+    const roadTop = scRoadTop(H), laneH = (H - 14 - roadTop) / n, i = Math.floor((y - roadTop) / laneH);
     if (i < 0 || i >= n) return;
     scOpenEdit(sc.students[i].no);
   }
@@ -24327,7 +24362,13 @@ onmessage = function(e){ var m = e.data, out = [];
       return;
     }
     if (m.t === "scan") {
-      if (game.phase === "q") scSetPop("mini");
+      if (game.phase === "q") {
+        if (window.SC48) scSetPop("mini");
+        else {
+          sc.popSmall = true;
+          scSetPop("big");
+        }
+      }
       return;
     }
     if (m.t === "list") {
