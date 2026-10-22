@@ -26342,6 +26342,33 @@ onmessage = function(e){ var m = e.data, out = [];
   function scvZCap() {
     return Math.min(230, Math.max(70, sc.students.length * 7));
   }
+  function scvZLane(S, z, no) {
+    const W = S.W || 1600, pos = S.pos || {};
+    const ks = Object.keys(pos).filter((k) => S.out[k] == null);
+    if (!ks.length) return;
+    let pick = no;
+    if (pick == null) {
+      let tot = 0;
+      const w = ks.map((k) => {
+        const v = 1 + (S.miss && S.miss[k] || 0) * 1.6;
+        tot += v;
+        return v;
+      });
+      let r = Math.random() * tot;
+      for (let i = 0; i < ks.length; i++) {
+        r -= w[i];
+        if (r <= 0) {
+          pick = ks[i];
+          break;
+        }
+      }
+      if (pick == null) pick = ks[ks.length - 1];
+    }
+    const p = pos[pick];
+    if (!p) return;
+    z.lane = pick;
+    z.ly = Math.max(-0.1, Math.min(1.1, 0.5 + (p.x - W / 2) / (W * 1.3) + scvR(-0.025, 0.025)));
+  }
   function scvSpawnZ(S, fx, kind) {
     if (kind !== "super" && S.zs.length >= scvZCap()) return;
     kind = kind || (Math.random() < 0.07 ? "big" : Math.random() < 0.2 ? "cad" : "n");
@@ -26357,6 +26384,7 @@ onmessage = function(e){ var m = e.data, out = [];
       dead: 0,
       kind
     });
+    if (S.pov) scvZLane(S, S.zs[S.zs.length - 1]);
   }
   const SCV_WAVES = { relax: { name: "\u{1F60C} Ronda tranquila", sub: "Pocos zombis\u2026 disfruten mientras dure", col: "#9BE564", every: 9, mult: 1 }, normal: { name: "\u{1F9DF} Oleada", sub: "Ah\xED vienen", col: "#FFD21A", every: 5, mult: 1.35 }, brutal: { name: "\u{1F6A9} \xA1UNA OLEADA ENORME SE ACERCA!", sub: "\xA1Viene un S\xDAPER ZOMBI! Esta ronda est\xE1 cabrona", col: "#FF4F6D", every: 2, mult: 2 } };
   const SCV_WAVE_SEQ = ["relax", "normal", "relax", "brutal", "normal", "relax", "brutal", "normal", "brutal"];
@@ -27060,6 +27088,13 @@ onmessage = function(e){ var m = e.data, out = [];
     const W = $("#scRace").clientWidth, H = $("#scRace").clientHeight, top = scRoadTop(H), U = scvU(W, H), L = scvZLayout(W, H, top, U), now = performance.now(), cor = q ? scCorrect(q) : -1;
     const win = new Set((joke === "all" ? sc.students : joke === "none" ? [] : hits).map((s) => s.no));
     const losers = sc.students.filter((s) => !win.has(s.no) && S.out[s.no] == null);
+    S.miss = S.miss || {};
+    losers.forEach((s) => {
+      S.miss[s.no] = (S.miss[s.no] || 0) + 1;
+    });
+    sc.students.forEach((s) => {
+      if (win.has(s.no) && S.miss[s.no]) S.miss[s.no] = Math.max(0, S.miss[s.no] - 0.3);
+    });
     sc.students.forEach((s) => {
       const W0 = S.wpn[s.no] = S.wpn[s.no] || { k: "fx", cs: 0, ws: 0, until: 0 };
       if (win.has(s.no)) {
@@ -27588,7 +27623,8 @@ onmessage = function(e){ var m = e.data, out = [];
     able.forEach((s) => {
       const w = (S.wpn[s.no] || {}).k || "fx", p = (w === "bazooka" ? 0.45 : w === "pistol" ? 0.6 : 1) / 150;
       if (Math.random() < p) {
-        const tz = near[Math.floor(Math.random() * Math.min(14, near.length))];
+        const mine = S.pov ? near.filter((z) => z.lane == s.no) : [];
+        const tz = mine.length && Math.random() < 0.8 ? mine[0] : near[Math.floor(Math.random() * Math.min(14, near.length))];
         scvZFire(S, s.no, tz, Math.random() < 0.25 ? "head" : "body", W, H, U, L, 0);
       }
     });
@@ -28254,6 +28290,7 @@ onmessage = function(e){ var m = e.data, out = [];
   function scvZPDraw(c, W, H, t, U, top, S) {
     const V = scvZPView(W, H), P = V.proj;
     S.proj = P;
+    S.W = W;
     const now = performance.now(), n = sc.students.length, moving = game.phase === "q" || game.phase === "reveal" || game.phase === "pick", wave = SCV_WAVES[S.wt || "relax"], brutal = S.wt === "brutal";
     c.save();
     if (S.hit > 0) {
@@ -29585,7 +29622,7 @@ onmessage = function(e){ var m = e.data, out = [];
     const S = sc.vs || scvInit();
     if (S.endRun) return true;
     S.endRun = true;
-    const ranked = sc.students.slice().sort((a, b) => (b.pts || 0) - (a.pts || 0)), win = ranked.slice(0, Math.min(3, ranked.length)), nL = Math.min(6, Math.max(0, ranked.length - win.length)), lose = ranked.slice(ranked.length - nL).reverse();
+    const ranked = sc.students.slice().sort((a, b) => (b.pts || 0) - (a.pts || 0)), win = ranked.slice(0, Math.min(3, ranked.length)), rest = ranked.slice(win.length), nL = v === "para" ? Math.min(6, rest.length) : Math.min(10, rest.length, Math.max(3, Math.round(ranked.length * 0.2))), lose = rest.slice(rest.length - nL).reverse(), mid = rest.slice(0, rest.length - nL);
     const ov = document.createElement("div");
     ov.style.cssText = "position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;background:#000";
     const cv = document.createElement("canvas");
@@ -29625,7 +29662,7 @@ onmessage = function(e){ var m = e.data, out = [];
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
       c.clearRect(0, 0, W, H);
       try {
-        (v === "para" ? scvEndPara : scvEndZ)(c, W, H, ms / 1e3, st, S, win, lose);
+        (v === "para" ? scvEndPara : scvEndZ)(c, W, H, ms / 1e3, st, S, win, lose, mid);
       } catch (e) {
         try {
           console.warn("ending", e);
@@ -29638,14 +29675,298 @@ onmessage = function(e){ var m = e.data, out = [];
         c.fillStyle = `rgba(0,0,0,${1 - ms / 500})`;
         c.fillRect(0, 0, W, H);
       }
-      if (ms > 3e4) return finish();
+      if (ms > 48e3) return finish();
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
     return true;
   }
-  function scvEndZ(c, W, H, t, st, S, win, lose) {
-    const U = scvU(W, H), hy = H * 0.5, gy = H * 0.9;
+  function scvMix(a, b, k) {
+    const A = rgbOf(a), B = rgbOf(b);
+    return `rgb(${Math.round(A[0] + (B[0] - A[0]) * k)},${Math.round(A[1] + (B[1] - A[1]) * k)},${Math.round(A[2] + (B[2] - A[2]) * k)})`;
+  }
+  function scvCadetFront(c, s, x, y, sz, t, o) {
+    o = o || {};
+    const u = sz / 10, L0 = s.look || {}, spx = SC_SP[L0.sp], sp = spx ? spx[0] : "cadete", dk = "#1A1530", zb = !!o.zombie;
+    let fur = sp === "cadete" ? ["#F1C9A0", "#E0AC7E", "#A86B45"][L0.skin || 0] : spx[2], fur2 = spx ? spx[3] : fur;
+    if (zb) {
+      fur = scvMix(fur, "#7FB04A", 0.6);
+      fur2 = scvMix(fur2, "#6A9A3A", 0.5);
+    }
+    const pix = o.uni === "pix", uni = pix ? "#7B8762" : zb ? "#B8A880" : "#D6C49B", uni2 = pix ? "#5C664A" : zb ? "#9A8C66" : "#BFA97C", pose = o.pose || "stand", ph = t * (pose === "flail" ? 9 : pose === "zombie" ? 3 : 4) + (+s.no || 1);
+    c.save();
+    c.translate(x, y);
+    c.lineJoin = "round";
+    c.lineCap = "round";
+    c.strokeStyle = dk;
+    c.lineWidth = Math.max(1.5, u * 0.22);
+    const lw = pose === "hang" || pose === "flail" ? Math.sin(ph) * u * 0.5 : pose === "zombie" ? Math.sin(ph) * u * 0.3 : 0;
+    c.fillStyle = uni2;
+    [[-1, lw], [1, -lw]].forEach(([d, sw2]) => {
+      c.save();
+      c.translate(d * u * 0.85, -u * 4.3);
+      c.rotate(sw2 * 0.06);
+      scRR(c, -u * 0.68, 0, u * 1.36, u * 4.1, u * 0.4);
+      c.fill();
+      c.stroke();
+      c.fillStyle = dk;
+      scRR(c, -u * 0.8, u * 3.7, u * 1.6, u * 0.7, u * 0.3);
+      c.fill();
+      c.fillStyle = uni2;
+      c.restore();
+    });
+    c.fillStyle = uni;
+    c.beginPath();
+    c.moveTo(-u * 2.2, -u * 7.6);
+    c.lineTo(u * 2.2, -u * 7.6);
+    c.lineTo(u * 1.85, -u * 3.9);
+    c.lineTo(-u * 1.85, -u * 3.9);
+    c.closePath();
+    c.fill();
+    c.stroke();
+    if (pix) {
+      const cols = ["#5C664A", "#9AA27A", "#4A5238"];
+      for (let i = 0; i < 16; i++) {
+        c.fillStyle = cols[i % 3];
+        c.fillRect(-u * 1.9 + scHash(i * 3 + 1) * u * 3.4, -u * 7.3 + scHash(i * 3 + 2) * u * 3.2, u * 0.55, u * 0.45);
+      }
+    }
+    if (zb) {
+      c.fillStyle = "rgba(110,20,20,.6)";
+      c.beginPath();
+      c.ellipse(u * 0.7, -u * 5.2, u * 0.6, u * 0.9, 0.4, 0, 7);
+      c.fill();
+      c.fillStyle = fur;
+      c.beginPath();
+      c.ellipse(-u * 0.9, -u * 4.6, u * 0.45, u * 0.3, 0, 0, 7);
+      c.fill();
+    }
+    c.fillStyle = dk;
+    c.beginPath();
+    c.moveTo(-u * 0.5, -u * 7.6);
+    c.lineTo(0, -u * 6.6);
+    c.lineTo(u * 0.5, -u * 7.6);
+    c.fill();
+    c.fillStyle = "#3A2E1E";
+    c.fillRect(-u * 1.9, -u * 4.4, u * 3.8, u * 0.5);
+    c.fillStyle = "#C9A227";
+    c.fillRect(-u * 0.3, -u * 4.45, u * 0.6, u * 0.6);
+    c.fillStyle = "#fff";
+    c.beginPath();
+    c.arc(-u * 1, -u * 6, u * 0.75, 0, 7);
+    c.fill();
+    c.stroke();
+    c.fillStyle = "#1B1440";
+    c.font = `900 ${Math.round(u * (String(s.no).length > 1 ? 0.95 : 1.2))}px Nunito, system-ui, sans-serif`;
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    c.fillText(s.no, -u * 1, -u * 5.95);
+    c.textBaseline = "alphabetic";
+    const arm = (pts) => {
+      c.beginPath();
+      pts.forEach((p, i) => i ? c.lineTo(p[0] * u, p[1] * u) : c.moveTo(p[0] * u, p[1] * u));
+      c.strokeStyle = dk;
+      c.lineWidth = u * 1.3;
+      c.stroke();
+      c.strokeStyle = uni;
+      c.lineWidth = u * 0.95;
+      c.stroke();
+      const h = pts[pts.length - 1];
+      c.fillStyle = fur;
+      c.strokeStyle = dk;
+      c.lineWidth = Math.max(1, u * 0.18);
+      c.beginPath();
+      c.arc(h[0] * u, h[1] * u, u * 0.5, 0, 7);
+      c.fill();
+      c.stroke();
+    };
+    const sw = Math.sin(ph) * 0.6;
+    if (pose === "cheer") {
+      arm([[-2, -7.3], [-3.2, -9 + sw * 0.3], [-2.6, -11 + sw * 0.4]]);
+      arm([[2, -7.3], [3.4, -7.6], [3, -9.4 - sw * 0.3]]);
+      c.fillStyle = "#fff";
+    } else if (pose === "hang") {
+      arm([[-2, -7.3], [-1.8, -9.6], [-1.2, -11.8]]);
+      arm([[2, -7.3], [1.8, -9.6], [1.2, -11.8]]);
+    } else if (pose === "flail") {
+      arm([[-2, -7.3], [-3 + sw * 0.5, -9.4], [-2.4 + sw, -11.4]]);
+      arm([[2, -7.3], [3 - sw * 0.5, -9.4], [2.4 - sw, -11.4]]);
+    } else if (pose === "zombie") {
+      arm([[-2, -7.3], [-2.6, -6.2 + sw * 0.3], [-1.4, -7 + sw * 0.5]]);
+      arm([[2, -7.3], [2.6, -6.2 - sw * 0.3], [1.4, -7 - sw * 0.5]]);
+    } else {
+      arm([[-2, -7.3], [-2.5, -5.8], [-2.4, -4.4]]);
+      arm([[2, -7.3], [2.5, -5.8], [2.4, -4.4]]);
+    }
+    const hy = -u * 9 + (pose === "zombie" ? Math.sin(ph) * u * 0.15 : 0), tilt = pose === "zombie" ? 0.2 : pose === "flail" ? Math.sin(ph) * 0.15 : 0;
+    c.save();
+    c.translate(0, hy);
+    c.rotate(tilt);
+    scvEarsBack(c, sp, fur, fur2, u, 0);
+    c.fillStyle = fur;
+    c.strokeStyle = dk;
+    c.lineWidth = Math.max(1.5, u * 0.22);
+    c.beginPath();
+    c.arc(0, 0, u * 1.55, 0, 7);
+    c.fill();
+    c.stroke();
+    if (sp !== "cadete" && sp !== "pinguino" && sp !== "rana") {
+      c.fillStyle = sp === "panda" ? "#fff" : scvMix(fur2, "#ffffff", 0.35);
+      c.beginPath();
+      c.ellipse(0, u * 0.55, u * 0.85, u * 0.65, 0, 0, 7);
+      c.fill();
+      c.fillStyle = dk;
+      c.beginPath();
+      c.ellipse(0, u * 0.25, u * 0.28, u * 0.2, 0, 0, 7);
+      c.fill();
+    }
+    if (sp === "panda") {
+      c.fillStyle = "#1A1530";
+      c.beginPath();
+      c.ellipse(-u * 0.6, -u * 0.25, u * 0.4, u * 0.48, 0.3, 0, 7);
+      c.ellipse(u * 0.6, -u * 0.25, u * 0.4, u * 0.48, -0.3, 0, 7);
+      c.fill();
+    }
+    const face = o.face || "happy", ex = u * 0.6, ey = -u * 0.3;
+    if (face === "dead") {
+      c.strokeStyle = sp === "panda" ? "#fff" : dk;
+      c.lineWidth = Math.max(1.5, u * 0.22);
+      [-1, 1].forEach((d) => {
+        c.beginPath();
+        c.moveTo(d * ex - u * 0.25, ey - u * 0.25);
+        c.lineTo(d * ex + u * 0.25, ey + u * 0.25);
+        c.moveTo(d * ex + u * 0.25, ey - u * 0.25);
+        c.lineTo(d * ex - u * 0.25, ey + u * 0.25);
+        c.stroke();
+      });
+      c.strokeStyle = dk;
+      c.beginPath();
+      c.moveTo(-u * 0.4, u * 1);
+      c.quadraticCurveTo(0, u * 0.8, u * 0.4, u * 1);
+      c.stroke();
+    } else if (face === "zombie") {
+      c.fillStyle = "rgba(255,40,40,.35)";
+      [-1, 1].forEach((d) => {
+        c.beginPath();
+        c.arc(d * ex, ey, u * 0.5, 0, 7);
+        c.fill();
+      });
+      c.fillStyle = "#FF2D2D";
+      [-1, 1].forEach((d) => {
+        c.beginPath();
+        c.arc(d * ex, ey, u * 0.25, 0, 7);
+        c.fill();
+      });
+      c.fillStyle = "#2A0A10";
+      c.beginPath();
+      c.ellipse(0, u * 0.95, u * 0.5, u * 0.3 + Math.abs(Math.sin(ph * 2)) * u * 0.15, 0, 0, 7);
+      c.fill();
+      c.fillStyle = "#EEE";
+      c.fillRect(-u * 0.25, u * 0.7, u * 0.18, u * 0.2);
+      c.fillRect(u * 0.07, u * 0.7, u * 0.18, u * 0.2);
+    } else if (face === "shock") {
+      c.fillStyle = "#fff";
+      [-1, 1].forEach((d) => {
+        c.beginPath();
+        c.arc(d * ex, ey, u * 0.42, 0, 7);
+        c.fill();
+        c.stroke();
+      });
+      c.fillStyle = dk;
+      [-1, 1].forEach((d) => {
+        c.beginPath();
+        c.arc(d * ex, ey, u * 0.16, 0, 7);
+        c.fill();
+      });
+      c.fillStyle = "#2A0A10";
+      c.beginPath();
+      c.ellipse(0, u * 1, u * 0.35, u * 0.42, 0, 0, 7);
+      c.fill();
+    } else {
+      c.fillStyle = sp === "panda" ? "#fff" : dk;
+      [-1, 1].forEach((d) => {
+        c.beginPath();
+        c.arc(d * ex, ey, u * 0.2, 0, 7);
+        c.fill();
+      });
+      c.strokeStyle = dk;
+      c.lineWidth = Math.max(1.5, u * 0.2);
+      c.beginPath();
+      c.arc(0, u * 0.75, u * 0.5, 0.2, Math.PI - 0.2);
+      c.stroke();
+      if (pose === "cheer") {
+        c.fillStyle = "#C0392B";
+        c.beginPath();
+        c.arc(0, u * 0.85, u * 0.35, 0, Math.PI);
+        c.fill();
+      }
+    }
+    const hat = o.hat || "cuartelera";
+    c.strokeStyle = dk;
+    c.lineWidth = Math.max(1.5, u * 0.2);
+    if (hat === "casco") {
+      c.fillStyle = "#556B2F";
+      c.beginPath();
+      c.arc(0, -u * 0.3, u * 1.85, Math.PI, 0);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#4A5238";
+      c.fillRect(-u * 1.9, -u * 0.5, u * 3.8, u * 0.35);
+      c.strokeStyle = "#3A3A2A";
+      c.beginPath();
+      c.moveTo(-u * 1.5, -u * 0.2);
+      c.quadraticCurveTo(0, u * 2, u * 1.5, -u * 0.2);
+      c.stroke();
+    } else if (hat === "boina") {
+      c.fillStyle = "#C1121F";
+      c.beginPath();
+      c.ellipse(-u * 0.35, -u * 1.2, u * 1.9, u * 0.85, -0.25, 0, 7);
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#8E0D17";
+      c.fillRect(-u * 1.55, -u * 0.95, u * 3.1, u * 0.35);
+      c.fillStyle = "#FFD21A";
+      c.beginPath();
+      c.arc(u * 0.9, -u * 1.05, u * 0.35, 0, 7);
+      c.fill();
+      c.stroke();
+    } else {
+      c.fillStyle = "#141414";
+      c.beginPath();
+      c.moveTo(-u * 1.65, -u * 0.7);
+      c.quadraticCurveTo(-u * 0.6, -u * 2.3, u * 0.3, -u * 2);
+      c.quadraticCurveTo(u * 1.2, -u * 1.7, u * 1.65, -u * 0.7);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#C9A227";
+      c.beginPath();
+      c.arc(-u * 0.7, -u * 1.15, u * 0.22, 0, 7);
+      c.fill();
+    }
+    c.restore();
+    c.restore();
+    return [x + u * 0.9, y - u * 6.3];
+  }
+  function scvEndZ(c, W, H, t, st, S, win, lose, mid) {
+    const U = scvU(W, H), scr = Math.floor(t / 12) % 2, tt = t % 12;
+    if (scr === 0) scvEndZPyr(c, W, H, t, st, win, mid, U);
+    else scvEndZLose(c, W, H, t, st, lose, U);
+    if (tt < 0.4 || tt > 11.6) {
+      c.fillStyle = `rgba(0,0,0,${tt < 0.4 ? 1 - tt / 0.4 : (tt - 11.6) / 0.4})`;
+      c.fillRect(0, 0, W, H);
+    }
+    if (!st.nextG || t > st.nextG) {
+      scvGroan(0.3);
+      st.nextG = t + scvR(1, 2.6);
+    }
+    if (!st.nextF || t > st.nextF) {
+      scvShotSnd("far", 0.18);
+      st.nextF = t + scvR(0.3, 1);
+    }
+  }
+  function scvEndBg(c, W, H, hy) {
     let g = c.createLinearGradient(0, 0, 0, hy);
     g.addColorStop(0, "#14060C");
     g.addColorStop(1, "#8A2430");
@@ -29653,7 +29974,7 @@ onmessage = function(e){ var m = e.data, out = [];
     c.fillRect(0, 0, W, hy);
     c.fillStyle = "#F6F0D2";
     c.beginPath();
-    c.arc(W * 0.82, hy * 0.35, Math.min(W, H) * 0.06, 0, 7);
+    c.arc(W * 0.86, hy * 0.3, Math.min(W, H) * 0.05, 0, 7);
     c.fill();
     for (let i = 0; i < 26; i++) {
       const x = i * W / 25 - 10, h = hy * 0.1 + scHash(i + 11) * hy * 0.25, w = W / 26 * 0.9;
@@ -29665,7 +29986,10 @@ onmessage = function(e){ var m = e.data, out = [];
     g.addColorStop(1, "#1C1810");
     c.fillStyle = g;
     c.fillRect(0, hy, W, H - hy);
-    const bw = Math.min(W * 0.075, H * 0.12), rows = [8, 7, 6, 5, 4, 3], rh = bw * 0.42;
+  }
+  function scvEndZPyr(c, W, H, t, st, win, mid, U) {
+    const gy = H * 0.97, rows = [14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3], bw = Math.min(W * 0.05, H * 0.072), rh = bw * 0.5;
+    scvEndBg(c, W, H, H * 0.42);
     if (!st.pyr || st.pw !== W) {
       st.pw = W;
       const pc = document.createElement("canvas");
@@ -29675,12 +29999,12 @@ onmessage = function(e){ var m = e.data, out = [];
       let id = 0;
       rows.forEach((cnt, r) => {
         for (let k = 0; k < cnt; k++) {
-          const x = W / 2 + (k - (cnt - 1) / 2) * bw * 0.95, y = gy - r * rh;
+          const x = W / 2 + (k - (cnt - 1) / 2) * bw * 0.95 + scvR(-bw * 0.1, bw * 0.1), y = gy - r * rh;
           const z = { kind: id % 7 === 0 ? "big" : id % 3 === 0 ? "cad" : id % 5 === 0 ? "potro" : "n", sh: id % 4, hb: id % 2, headless: id % 4 === 0 };
-          const e = scvZSprite(z, bw * 0.95, id % 8, false), kk = bw * 0.95 / e.sb;
+          const e = scvZSprite(z, bw * 1.05, id % 8, id % 3 === 0), kk = bw * 1.05 / e.sb;
           p2.save();
-          p2.translate(x + (id % 2 ? -bw * 0.45 : bw * 0.45), y);
-          p2.rotate(id % 2 ? Math.PI / 2 : -Math.PI / 2);
+          p2.translate(x + (id % 2 ? -bw * 0.5 : bw * 0.5), y);
+          p2.rotate((id % 2 ? 1 : -1) * (Math.PI / 2 - 0.15 + scvR(-0.1, 0.1)));
           p2.drawImage(e.cv, -e.ox * kk, -e.oy * kk, e.cv.width * kk, e.cv.height * kk);
           p2.restore();
           p2.fillStyle = "rgba(90,20,20,.35)";
@@ -29692,77 +30016,117 @@ onmessage = function(e){ var m = e.data, out = [];
       });
       st.pyr = pc;
     }
-    c.fillStyle = "rgba(120,15,15,.4)";
+    c.fillStyle = "rgba(120,15,15,.45)";
     c.beginPath();
-    c.ellipse(W / 2, gy + 6 * U, bw * 4.6, bw * 0.35, 0, 0, 7);
+    c.ellipse(W / 2, gy, bw * 7.5, bw * 0.4, 0, 0, 7);
     c.fill();
     c.drawImage(st.pyr, 0, 0, W, H);
     const topY = gy - rows.length * rh;
-    [W * 0.2, W * 0.8].forEach((sx, k) => {
-      const a = Math.sin(t * 0.8 + k) * 0.08;
-      const gg = c.createLinearGradient(sx, 0, W / 2, topY);
+    [W * 0.15, W * 0.85].forEach((sx, k) => {
+      const a = Math.sin(t * 0.8 + k) * 0.06, gg = c.createLinearGradient(sx, 0, W / 2, topY);
       gg.addColorStop(0, "rgba(255,240,180,.35)");
       gg.addColorStop(1, "rgba(255,240,180,0)");
       c.fillStyle = gg;
       c.beginPath();
       c.moveTo(sx, 0);
-      c.lineTo(W / 2 - W * 0.12 + a * W, topY + 20);
-      c.lineTo(W / 2 + W * 0.12 + a * W, topY + 20);
+      c.lineTo(W / 2 - W * 0.1 + a * W, topY + 20);
+      c.lineTo(W / 2 + W * 0.1 + a * W, topY + 20);
       c.closePath();
       c.fill();
     });
-    lose.forEach((s, i) => {
-      const side = i % 2 ? 1 : -1, slot = Math.floor(i / 2), x = W / 2 + side * (W * 0.33 + slot * W * 0.06), y = H * 0.97 - slot * H * 0.04, sz = H * 0.2 * (1 - slot * 0.12);
-      const cyc = (t + i * 1.3) % 5, dead = cyc > 3.2 ? Math.min(2, (cyc - 3.2) * 1.2) : 0, z = st["z" + i] || (st["z" + i] = { kind: "cad", sh: i % 4, hb: 1, ph: i * 1.7, sp: 0.8, ly: 0.5 });
-      z.dead = dead > 0 ? Math.max(1e-3, dead) : 0;
-      if (cyc > 3.1 && cyc < 3.2 && !z.shotNow) {
-        z.shotNow = 1;
-        scvShotSnd("rifle", 0.35);
-        if (Math.random() < 0.6) scvGroan(0.3);
+    if (!st.midSlots) {
+      st.midSlots = [];
+      for (let r = rows.length - 2; r >= 0 && st.midSlots.length < 60; r--) {
+        const cnt = rows[r], k = Math.max(1, Math.floor(cnt / 3.2));
+        for (let j = 0; j < k; j++) {
+          const f = (j + 0.5) / k - 0.5;
+          st.midSlots.push({ x: W / 2 + f * (cnt - 1.5) * bw * 0.95, y: gy - r * rh - rh * 0.35, r });
+        }
       }
-      if (cyc < 1) z.shotNow = 0;
-      scvZDrawOne(c, z, x + Math.sin(t * 0.8 + i) * 20 * U, y, sz, t, true);
-      if (cyc > 3 && cyc < 3.2) {
-        const w0 = win[i % Math.max(1, win.length)];
-        c.strokeStyle = "#FFD21A";
-        c.lineWidth = 3;
-        c.beginPath();
-        c.moveTo(W / 2, topY - H * 0.08);
-        c.lineTo(x, y - sz * 0.9);
-        c.stroke();
-      }
+    }
+    const msz = bw * 1.5;
+    mid.slice().reverse().forEach((s, ii) => {
+      const i = mid.length - 1 - ii, p = st.midSlots[i];
+      if (!p) return;
+      const bob = Math.abs(Math.sin(t * 3 + i)) * 4 * U;
+      scvCadetFront(c, s, p.x, p.y - bob, msz, t + i, { pose: i % 3 === 0 ? "cheer" : "stand", face: "happy" });
       c.fillStyle = "rgba(0,0,0,.6)";
-      scRR(c, x - 46 * U, y - sz * 1.25 - 18 * U, 92 * U, 26 * U, 8);
+      scRR(c, p.x - 34 * U, p.y - msz * 1.28 - 14 * U, 68 * U, 20 * U, 6);
       c.fill();
-      scvText(c, `\u{1F9DF} ${scLabel(s)} \xB7 ${s.pts || 0}`, x, y - sz * 1.25 - 5 * U, 14 * U, "#9BE564");
+      scvText(c, `${scLabel(s)} \xB7 ${s.pts || 0}`, p.x, p.y - msz * 1.28 - 4 * U, 11 * U, "#fff");
     });
-    const pos = [[W / 2, topY], [W / 2 - bw * 1.2, topY + rh * 1], [W / 2 + bw * 1.2, topY + rh * 1]], med = ["\u{1F947}", "\u{1F948}", "\u{1F949}"];
+    const pos = [[W / 2, topY + rh * 0.2], [W / 2 - bw * 1.5, topY + rh * 1], [W / 2 + bw * 1.5, topY + rh * 1]], med = ["\u{1F947}", "\u{1F948}", "\u{1F949}"];
     [2, 1, 0].forEach((i) => {
       const s = win[i];
       if (!s) return;
-      const jump = Math.abs(Math.sin(t * 4 + i * 1.2)) * 28 * U * (i === 0 ? 1.3 : 1), sz = H * (i === 0 ? 0.19 : 0.16), x = pos[i][0], y = pos[i][1] - jump;
-      scvAvatar(c, s, x, y, sz, t * 0.6 + i, false);
-      scvText(c, med[i], x, y - sz * 1.25, sz * 0.32, "#fff", "center", false);
-      scvText(c, "\u{1F4AA}", x + sz * 0.42, y - sz * 0.75 + Math.sin(t * 8 + i) * 4, sz * 0.22, "#fff", "center", false);
-      c.fillStyle = "rgba(0,0,0,.6)";
-      scRR(c, x - 60 * U, y - sz * 1.62 - 16 * U, 120 * U, 28 * U, 8);
+      const jump = Math.abs(Math.sin(t * 4 + i * 1.2)) * 24 * U * (i === 0 ? 1.3 : 1), sz = H * (i === 0 ? 0.2 : 0.16), x = pos[i][0], y = pos[i][1] - jump;
+      scvCadetFront(c, s, x, y, sz, t + i, { pose: "cheer", face: "happy" });
+      scvText(c, med[i], x, y - sz * 1.36, sz * 0.26, "#fff", "center", false);
+      scvText(c, "\u{1F4AA}", x + sz * 0.42, y - sz * 0.95 + Math.sin(t * 8 + i) * 4, sz * 0.2, "#fff", "center", false);
+      c.fillStyle = "rgba(0,0,0,.65)";
+      scRR(c, x - 62 * U, y - sz * 1.68 - 14 * U, 124 * U, 28 * U, 8);
       c.fill();
-      scvText(c, `${scLabel(s)} \xB7 ${s.pts || 0} pts`, x, y - sz * 1.62 - 2 * U, 15 * U, "#FFD21A");
+      scvText(c, `${scLabel(s)} \xB7 ${s.pts || 0} pts`, x, y - sz * 1.68, 15 * U, "#FFD21A");
     });
     scvConfetti(c, W, H, t);
-    if (!st.nextG || t > st.nextG) {
-      scvGroan(0.3);
-      st.nextG = t + scvR(1.2, 2.8);
-    }
-    if (!st.nextF || t > st.nextF) {
-      scvShotSnd("far", 0.2);
-      st.nextF = t + scvR(0.3, 1);
-    }
     c.fillStyle = "rgba(0,0,0,.55)";
-    scRR(c, W * 0.18, 18 * U, W * 0.64, 104 * U, 18);
+    scRR(c, W * 0.18, 14 * U, W * 0.64, 98 * U, 18);
     c.fill();
-    scvText(c, "\u{1F3C6} \xA1SOBREVIVIERON AL ATAQUE ZOMBI!", W / 2, 54 * U, 40 * U, "#FFD21A");
-    scvText(c, "Arriba de la pir\xE1mide de zombis los mejores \xB7 los de menos puntos\u2026 ahora son zombis \u{1F9DF}", W / 2, 98 * U, 18 * U, "#fff");
+    scvText(c, "\u{1F3C6} \xA1SOBREVIVIERON AL ATAQUE ZOMBI!", W / 2, 48 * U, 38 * U, "#FFD21A");
+    scvText(c, "Todos sobre la pir\xE1mide de zombis \xB7 entre menos puntos, m\xE1s abajo", W / 2, 90 * U, 18 * U, "#fff");
+  }
+  function scvEndZLose(c, W, H, t, st, lose, U) {
+    const hy = H * 0.45;
+    scvEndBg(c, W, H, hy);
+    const g = c.createLinearGradient(0, hy, 0, H);
+    g.addColorStop(0, "rgba(120,200,120,.18)");
+    g.addColorStop(1, "rgba(60,120,60,0)");
+    c.fillStyle = g;
+    c.fillRect(0, hy, W, H - hy);
+    const n = lose.length, sp = W / Math.max(1, n), sz = Math.min(H * 0.32, sp * 1.5);
+    lose.forEach((s, i) => {
+      const x = sp * (i + 0.5), zombie = i % 2 === 0;
+      const tx = x + sp * 0.18, ty = H * 0.6;
+      c.fillStyle = "#7A7A86";
+      c.strokeStyle = "#1A1530";
+      c.lineWidth = 2;
+      c.beginPath();
+      c.moveTo(tx - sz * 0.22, ty + sz * 0.2);
+      c.lineTo(tx - sz * 0.22, ty - sz * 0.15);
+      c.quadraticCurveTo(tx, ty - sz * 0.42, tx + sz * 0.22, ty - sz * 0.15);
+      c.lineTo(tx + sz * 0.22, ty + sz * 0.2);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      scvText(c, "R.I.P.", tx, ty - sz * 0.12, sz * 0.09, "#2B2838", "center", false);
+      scvText(c, scLabel(s), tx, ty + sz * 0.05, sz * 0.08, "#2B2838", "center", false);
+      if (zombie) {
+        const k = (t * 0.12 + i * 0.2) % 1, y = H * 0.7 + k * H * 0.24, s2 = sz * (0.75 + k * 0.35);
+        scvCadetFront(c, s, x + Math.sin(t * 1.2 + i) * sp * 0.08, y, s2, t + i, { zombie: true, pose: "zombie", face: "zombie" });
+        scvText(c, `\u{1F9DF} ${scLabel(s)} \xB7 ${s.pts || 0}`, x, y - s2 * 1.35, Math.max(12, 15 * U), "#9BE564");
+      } else {
+        const y = H * 0.9;
+        c.fillStyle = "rgba(110,15,15,.6)";
+        c.beginPath();
+        c.ellipse(x, y, sz * 0.6, sz * 0.12, 0, 0, 7);
+        c.fill();
+        c.save();
+        c.translate(x + sz * 0.55, y - sz * 0.1);
+        c.rotate(-Math.PI / 2);
+        scvCadetFront(c, s, 0, 0, sz * 0.85, 0, { face: "dead" });
+        c.restore();
+        for (let q = 0; q < 3; q++) {
+          const a = t * 5 + q * 2.1;
+          scvText(c, "\u{1FAB0}", x + Math.cos(a) * sz * 0.35, y - sz * 0.4 + Math.sin(a * 1.3) * sz * 0.1, sz * 0.1, "#fff", "center", false);
+        }
+        scvText(c, `\u{1F480} ${scLabel(s)} \xB7 ${s.pts || 0}`, x, y - sz * 0.55, Math.max(12, 15 * U), "#FF6B85");
+      }
+    });
+    c.fillStyle = "rgba(0,0,0,.55)";
+    scRR(c, W * 0.18, 14 * U, W * 0.64, 98 * U, 18);
+    c.fill();
+    scvText(c, "\u{1F9DF} LOS QUE NO SOBREVIVIERON", W / 2, 48 * U, 38 * U, "#9BE564");
+    scvText(c, "Los de menos puntos: muertos\u2026 o ya son zombis", W / 2, 90 * U, 18 * U, "#fff");
   }
   function scvEndPara(c, W, H, t, st, S, win, lose) {
     const U = scvU(W, H), gy = H * 0.58;
@@ -29798,181 +30162,276 @@ onmessage = function(e){ var m = e.data, out = [];
       c.fillStyle = "#1A1530";
       c.fillRect(x - 2 * U, y + 14 * U, 4 * U, 8 * U);
     }
-    const pw = Math.min(W * 0.13, 200 * U), base = H * 0.68, hts = [H * 0.16, H * 0.11, H * 0.08], px = [W / 2, W / 2 - pw * 1.05, W / 2 + pw * 1.05], cols = ["#FFD21A", "#D7DCE3", "#E89B5A"], med = ["\u{1F947}", "\u{1F948}", "\u{1F949}"], BO = scvBoina();
-    [1, 2, 0].forEach((i) => {
-      c.fillStyle = cols[i];
-      c.strokeStyle = "#1A1530";
-      c.lineWidth = 3;
-      scRR(c, px[i] - pw / 2, base - hts[i], pw, hts[i] + 20 * U, 10);
-      c.fill();
-      c.stroke();
-      scvText(c, `${i + 1}`, px[i], base - hts[i] * 0.45, hts[i] * 0.45, "#1A1530", "center", false);
-    });
-    [2, 1, 0].forEach((i) => {
-      const s = win[i];
-      if (!s) return;
-      const sz = H * (i === 0 ? 0.2 : 0.17), jump = Math.max(0, Math.sin(t * 3.5 + i * 1.4)) * 20 * U, x = px[i], y = base - hts[i] - jump;
-      const look = Object.assign({}, s.look, { uni: "pix", hat: BO });
-      const bp = scvAvatarL(c, s, look, x, y, sz, t * 0.6 + i, false);
-      const tb = 1.2 + (2 - i) * 0.9, k = Math.max(0, Math.min(1, (t - tb) / 0.9)), bs = sz * 0.16;
-      if (t > tb - 0.4) {
-        const sx = x, sy = -40, bx2 = bp[0] - sz * 0.02, by = bp[1] + sz * 0.2, e = 1 - Math.pow(1 - k, 3);
-        scvBadge(c, sx + (bx2 - sx) * e, sy + (by - sy) * e, bs * (k < 1 ? 1.8 - 0.8 * e : 1), k >= 1 ? 0.5 + 0.5 * Math.sin(t * 6) : 0);
-        if (k >= 1 && !st["b" + i]) {
-          st["b" + i] = 1;
-          try {
-            SFX.play("crowd");
-          } catch (e2) {
+    const scr = Math.floor(t / 12) % 2, tt = t % 12;
+    if (scr === 0) {
+      const pw = Math.min(W * 0.13, 200 * U), base = H * 0.74, hts = [H * 0.16, H * 0.11, H * 0.08], px = [W / 2, W / 2 - pw * 1.05, W / 2 + pw * 1.05], cols = ["#FFD21A", "#D7DCE3", "#E89B5A"], med = ["\u{1F947}", "\u{1F948}", "\u{1F949}"];
+      [1, 2, 0].forEach((i) => {
+        c.fillStyle = cols[i];
+        c.strokeStyle = "#1A1530";
+        c.lineWidth = 3;
+        scRR(c, px[i] - pw / 2, base - hts[i], pw, hts[i] + 20 * U, 10);
+        c.fill();
+        c.stroke();
+        scvText(c, `${i + 1}`, px[i], base - hts[i] * 0.45, hts[i] * 0.45, "#1A1530", "center", false);
+      });
+      [2, 1, 0].forEach((i) => {
+        const s = win[i];
+        if (!s) return;
+        const sz = H * (i === 0 ? 0.22 : 0.19), jump = Math.max(0, Math.sin(t * 3.5 + i * 1.4)) * 18 * U, x = px[i], y = base - hts[i] - jump;
+        const tb = 1.2 + (2 - i) * 0.9, k = Math.max(0, Math.min(1, (t - tb) / 0.9));
+        const bp = scvCadetFront(c, s, x, y, sz, t + i, { uni: "pix", hat: "boina", pose: k >= 1 ? "cheer" : "stand", face: "happy" });
+        const bs = sz * 0.13;
+        if (t > tb - 0.4) {
+          const sx = x, sy = -40, e = 1 - Math.pow(1 - k, 3);
+          scvBadge(c, sx + (bp[0] - sx) * e, sy + (bp[1] - sy) * e, bs * (k < 1 ? 1.8 - 0.8 * e : 1), k >= 1 ? 0.5 + 0.5 * Math.sin(t * 6) : 0);
+          if (k >= 1 && !st["b" + i]) {
+            st["b" + i] = 1;
+            try {
+              SFX.play("crowd");
+            } catch (e2) {
+            }
+            try {
+              jingle([660, 880, 1320], 90, 0.12);
+            } catch (e2) {
+            }
           }
-          jingle && jingle([660, 880, 1320], 90, 0.12);
+          if (k >= 1 && t - tb < 2.2) {
+            c.fillStyle = "#FFF6A8";
+            for (let q = 0; q < 8; q++) {
+              const a = q / 8 * Math.PI * 2 + t * 3, r = bs * (1.4 + (t - tb - 0.9) * 2);
+              c.beginPath();
+              c.arc(bp[0] + Math.cos(a) * r, bp[1] + Math.sin(a) * r, 3 * U, 0, 7);
+              c.fill();
+            }
+          }
         }
-        if (k >= 1 && t - tb < 2.2) {
-          c.fillStyle = "#FFF6A8";
-          for (let q = 0; q < 8; q++) {
-            const a = q / 8 * Math.PI * 2 + t * 3, r = bs * (1.4 + (t - tb - 0.9) * 2);
+        scvText(c, med[i], x, y - sz * 1.38, sz * 0.24, "#fff", "center", false);
+        c.fillStyle = "rgba(0,0,0,.6)";
+        scRR(c, x - 60 * U, y - sz * 1.68 - 14 * U, 120 * U, 26 * U, 8);
+        c.fill();
+        scvText(c, `${scLabel(s)} \xB7 ${s.pts || 0} pts`, x, y - sz * 1.68 - 1 * U, 14 * U, "#FFD21A");
+      });
+      scvConfetti(c, W, H * 0.75, t);
+      c.fillStyle = "rgba(0,0,0,.5)";
+      scRR(c, W * 0.14, 14 * U, W * 0.72, 100 * U, 18);
+      c.fill();
+      scvText(c, "\u{1FA82} \xA1INSIGNIA DE PARACAIDISTA Y BOINA ROJA!", W / 2, 50 * U, 38 * U, "#FFD21A");
+      scvText(c, "Los 3 mejores reciben sus alas de paracaidista", W / 2, 92 * U, 18 * U, "#fff");
+    } else {
+      c.fillStyle = "rgba(20,30,60,.35)";
+      c.fillRect(0, 0, W, H);
+      const n = lose.length, cols = Math.min(3, Math.max(1, n)), rows = Math.max(1, Math.ceil(n / cols)), cw = W / cols, ch = H * 0.8 / rows, fates = ["cable", "lake", "tree", "car"];
+      lose.forEach((s, i) => {
+        const pw2 = cw - 14 * U, ph2 = ch - 10 * U, py0 = H * 0.18 + Math.floor(i / cols) * ch, J = S.j && S.j[s.no], kind0 = J && J.land ? J.land[3] : null, kind = kind0 && kind0 !== "ok" && kind0 !== "cactus" ? kind0 : fates[i % fates.length], x0 = cw * (i % cols + 0.5), cx = x0, sz = Math.min(ph2 * 0.42, pw2 * 0.4), top = py0, bot = py0 + ph2 - 6;
+        c.save();
+        c.beginPath();
+        c.rect(x0 - pw2 / 2 + 4, top, pw2 - 8, ph2 - 6);
+        c.clip();
+        c.fillStyle = "#BFE4FF";
+        c.fillRect(x0 - pw2 / 2, top, pw2, ph2);
+        c.fillStyle = "#9ED97A";
+        c.fillRect(x0 - pw2 / 2, top + ph2 * 0.75, pw2, ph2);
+        if (kind === "lake") {
+          const sy = top + ph2 * 0.36, sink = Math.min(1, (t * 0.18 + i * 0.2) % 1.3), fy = sy + sz * 1.05 + sink * ph2 * 0.25 + Math.sin(t * 2 + i) * 3;
+          const wg = c.createLinearGradient(0, sy, 0, bot);
+          wg.addColorStop(0, "#5BB4F2");
+          wg.addColorStop(1, "#1E5FA8");
+          c.fillStyle = wg;
+          c.fillRect(x0 - pw2 / 2, sy, pw2, ph2);
+          scvCadetFront(c, s, cx, fy, sz, t + i, { uni: "pix", hat: "casco", pose: "flail", face: sink > 0.6 ? "dead" : "shock" });
+          c.fillStyle = "rgba(30,100,190,.42)";
+          c.fillRect(x0 - pw2 / 2, sy, pw2, ph2);
+          c.fillStyle = "rgba(230,245,255,.9)";
+          for (let q = 0; q < 7; q++) {
+            const ph = (t * 0.9 + q * 0.15 + i * 0.1) % 1, by0 = fy - sz * 0.9;
             c.beginPath();
-            c.arc(bx2 + Math.cos(a) * r, by + Math.sin(a) * r, 3 * U, 0, 7);
+            c.arc(cx + Math.sin(q * 1.7 + t * 2) * sz * 0.18, by0 - ph * (by0 - sy), 2 + q % 3 * 1.5, 0, 7);
             c.fill();
           }
-        }
-      }
-      scvText(c, med[i], x, y - sz * 1.35, sz * 0.3, "#fff", "center", false);
-      c.fillStyle = "rgba(0,0,0,.6)";
-      scRR(c, x - 60 * U, y - sz * 1.7 - 14 * U, 120 * U, 26 * U, 8);
-      c.fill();
-      scvText(c, `${scLabel(s)} \xB7 ${s.pts || 0} pts`, x, y - sz * 1.7 - 1 * U, 14 * U, "#FFD21A");
-    });
-    const n = lose.length, pw2 = n ? Math.min(W * 0.16, (W - 40 * U) / n) : 0, py0 = H * 0.72, ph2 = H * 0.27, fates = ["cable", "lake", "car", "tree"];
-    lose.forEach((s, i) => {
-      const J = S.j && S.j[s.no], kind0 = J && J.land ? J.land[3] : null, kind = kind0 && kind0 !== "ok" && kind0 !== "cactus" ? kind0 : fates[i % fates.length], x0 = W / 2 + (i - (n - 1) / 2) * pw2, cx = x0, by = py0 + ph2 * 0.85, sz = Math.min(ph2 * 0.55, pw2 * 0.6);
-      c.save();
-      c.beginPath();
-      c.rect(x0 - pw2 / 2 + 4, py0, pw2 - 8, ph2 - 6);
-      c.clip();
-      c.fillStyle = kind === "lake" ? "#7CC4F5" : "#9ED97A";
-      c.fillRect(x0 - pw2 / 2, py0, pw2, ph2);
-      if (kind === "cable") {
-        const on = Math.floor(t * 11) % 2 === 0;
-        c.fillStyle = "#6B5A4A";
-        c.fillRect(x0 - pw2 * 0.42, py0 + ph2 * 0.08, 8, ph2);
-        c.fillRect(x0 + pw2 * 0.38, py0 + ph2 * 0.08, 8, ph2);
-        c.strokeStyle = "#1A1530";
-        c.lineWidth = 2;
-        c.beginPath();
-        c.moveTo(x0 - pw2 * 0.42, py0 + ph2 * 0.15);
-        c.quadraticCurveTo(x0, py0 + ph2 * 0.3, x0 + pw2 * 0.42, py0 + ph2 * 0.15);
-        c.stroke();
-        const ay = py0 + ph2 * 0.25 + sz;
-        c.save();
-        c.translate(cx + (on ? 3 : -3), ay);
-        c.rotate(0.15);
-        if (!on) c.globalAlpha = 0.5;
-        scvAvC(st, c, s, 0, 0, sz);
-        c.restore();
-        if (on) {
-          c.fillStyle = "rgba(190,230,255,.4)";
+          c.fillStyle = "#6F7B58";
+          c.strokeStyle = "#1A1530";
+          c.lineWidth = 1.5;
           c.beginPath();
-          c.arc(cx, ay - sz * 0.5, sz * 0.7, 0, 7);
+          c.ellipse(cx + sz * 0.35 + Math.sin(t) * 6, sy, sz * 0.45, sz * 0.1, 0, Math.PI, 0);
           c.fill();
-          scvSkel(c, cx, ay, sz);
-        }
-        c.fillStyle = "#FFD21A";
-        for (let q = 0; q < 5; q++) {
-          c.beginPath();
-          c.arc(cx + scvR(-sz * 0.5, sz * 0.5), ay - scvR(0, sz * 1.2), 2.5, 0, 7);
-          c.fill();
-        }
-      } else if (kind === "lake") {
-        const sink = (t * 0.25 + i * 0.3) % 1, yy = by + sz * 0.1 + sink * sz * 0.6 + Math.sin(t * 5 + i) * 4;
-        c.save();
-        c.beginPath();
-        c.rect(x0 - pw2 / 2, py0, pw2, by - py0);
-        c.clip();
-        scvAvC(st, c, s, cx, yy, sz);
-        c.restore();
-        c.fillStyle = "#4DA8FF";
-        c.fillRect(x0 - pw2 / 2, by, pw2, ph2);
-        c.strokeStyle = "#fff";
-        c.lineWidth = 2;
-        for (let r = 0; r < 3; r++) {
-          const ph = (t * 0.8 + r / 3) % 1;
-          c.globalAlpha = 1 - ph;
-          c.beginPath();
-          c.ellipse(cx, by, sz * (0.3 + ph * 0.5), sz * (0.06 + ph * 0.08), 0, 0, 7);
           c.stroke();
-        }
-        c.globalAlpha = 1;
-        c.fillStyle = "rgba(230,245,255,.9)";
-        for (let q = 0; q < 4; q++) {
-          const ph = (t * 1.2 + q * 0.25) % 1;
+          c.strokeStyle = "#fff";
+          c.lineWidth = 2;
+          for (let r = 0; r < 3; r++) {
+            const ph = (t * 0.7 + r / 3) % 1;
+            c.globalAlpha = 1 - ph;
+            c.beginPath();
+            c.ellipse(cx, sy, sz * (0.25 + ph * 0.6), sz * (0.04 + ph * 0.06), 0, 0, 7);
+            c.stroke();
+          }
+          c.globalAlpha = 1;
+          c.fillStyle = "rgba(255,255,255,.7)";
+          c.fillRect(x0 - pw2 / 2, sy - 1, pw2, 3);
+        } else if (kind === "tree") {
+          const ax = cx, ay = top + ph2 * 0.2;
+          c.fillStyle = "#7A5230";
+          c.fillRect(cx + pw2 * 0.22, top + ph2 * 0.1, 14, ph2);
+          c.strokeStyle = "#7A5230";
+          c.lineWidth = 8;
           c.beginPath();
-          c.arc(cx + Math.sin(q * 2 + t) * sz * 0.2, by - ph * sz * 0.8, 3 + q % 2 * 2, 0, 7);
+          c.moveTo(cx + pw2 * 0.25, top + ph2 * 0.25);
+          c.lineTo(ax - 10, ay);
+          c.stroke();
+          c.fillStyle = "#2E9A35";
+          [[cx + pw2 * 0.2, top + ph2 * 0.08, pw2 * 0.32], [cx - pw2 * 0.05, top + ph2 * 0.12, pw2 * 0.26], [cx + pw2 * 0.38, top + ph2 * 0.22, pw2 * 0.2]].forEach(([xx, yy, r]) => {
+            c.beginPath();
+            c.arc(xx, yy, r, 0, 7);
+            c.fill();
+          });
+          c.fillStyle = "#6F7B58";
+          c.strokeStyle = "#1A1530";
+          c.lineWidth = 1.5;
+          c.beginPath();
+          c.moveTo(ax - sz * 0.55, ay - 4);
+          c.quadraticCurveTo(ax - sz * 0.2, ay - sz * 0.4, ax + sz * 0.3, ay - 6);
+          c.quadraticCurveTo(ax + sz * 0.45, ay + sz * 0.2, ax + sz * 0.2, ay + sz * 0.12);
+          c.quadraticCurveTo(ax - sz * 0.1, ay + sz * 0.25, ax - sz * 0.55, ay - 4);
           c.fill();
+          c.stroke();
+          const sw = Math.sin(t * 1.6 + i) * 0.2, hl = sz * 0.5;
+          c.save();
+          c.translate(ax, ay);
+          c.rotate(sw);
+          c.strokeStyle = "rgba(26,21,48,.7)";
+          c.lineWidth = 1.5;
+          c.beginPath();
+          c.moveTo(-sz * 0.15, 0);
+          c.lineTo(-sz * 0.12, hl);
+          c.moveTo(sz * 0.15, 0);
+          c.lineTo(sz * 0.12, hl);
+          c.stroke();
+          scvCadetFront(c, s, 0, hl + sz * 1.18, sz, t + i, { uni: "pix", hat: "casco", pose: "hang", face: "shock" });
+          c.restore();
+          if (Math.floor(t * 1.5 + i) % 3 === 0) scvText(c, "\xA1B\xC1JENME!", cx - pw2 * 0.18, top + ph2 * 0.55, 12 * U, "#fff");
+        } else if (kind === "cable") {
+          const wy = top + ph2 * 0.24, on = Math.floor(t * 12 + i) % 2 === 0;
+          c.fillStyle = "#6B5A4A";
+          c.fillRect(x0 - pw2 * 0.44, top + ph2 * 0.12, 8, ph2);
+          c.fillRect(x0 + pw2 * 0.4, top + ph2 * 0.12, 8, ph2);
+          c.fillRect(x0 - pw2 * 0.5, top + ph2 * 0.14, 30, 5);
+          c.fillRect(x0 + pw2 * 0.36, top + ph2 * 0.14, 30, 5);
+          c.strokeStyle = "#1A1530";
+          c.lineWidth = 2.5;
+          c.beginPath();
+          c.moveTo(x0 - pw2 * 0.44, wy - 8);
+          c.quadraticCurveTo(cx, wy + 14, x0 + pw2 * 0.44, wy - 8);
+          c.stroke();
+          c.fillStyle = "#6F7B58";
+          c.strokeStyle = "#1A1530";
+          c.lineWidth = 1.5;
+          c.beginPath();
+          c.moveTo(cx - sz * 0.6, wy);
+          c.quadraticCurveTo(cx - sz * 0.3, wy - sz * 0.25, cx, wy + 2);
+          c.quadraticCurveTo(cx - sz * 0.25, wy + sz * 0.15, cx - sz * 0.6, wy);
+          c.fill();
+          c.stroke();
+          const jx = on ? 3 : -3, fy = wy + sz * 1.2 + 6;
+          c.save();
+          if (!on) c.globalAlpha = 0.55;
+          scvCadetFront(c, s, cx + jx, fy, sz, t + i, { uni: "pix", hat: "casco", pose: "hang", face: "shock" });
+          c.restore();
+          if (on) {
+            c.fillStyle = "rgba(190,230,255,.45)";
+            c.beginPath();
+            c.arc(cx, fy - sz * 0.6, sz * 0.75, 0, 7);
+            c.fill();
+            scvSkel(c, cx, fy, sz);
+          }
+          c.strokeStyle = "#FFF6A8";
+          c.lineWidth = 2.5;
+          for (let q = 0; q < 4; q++) {
+            c.beginPath();
+            let xx = cx + scvR(-sz * 0.4, sz * 0.4), yy = wy;
+            c.moveTo(xx, yy);
+            for (let m = 0; m < 4; m++) {
+              xx += scvR(-sz * 0.12, sz * 0.12);
+              yy += sz * 0.25;
+              c.lineTo(xx, yy);
+            }
+            c.stroke();
+          }
+          c.fillStyle = "#FFD21A";
+          for (let q = 0; q < 7; q++) {
+            c.beginPath();
+            c.arc(cx + scvR(-sz * 0.5, sz * 0.5), wy + scvR(-6, sz * 1.1), 2.5, 0, 7);
+            c.fill();
+          }
+          c.fillStyle = "rgba(80,80,90,.4)";
+          for (let q = 0; q < 3; q++) {
+            const ph = (t * 0.7 + q / 3) % 1;
+            c.beginPath();
+            c.arc(cx + Math.sin(q + t) * sz * 0.2, wy - ph * ph2 * 0.2, sz * (0.08 + ph * 0.15), 0, 7);
+            c.fill();
+          }
+          if (on) scvText(c, "\u26A1BZZZT\u26A1", cx, top + 34 * U, 13 * U, "#FFF6A8");
+        } else {
+          const ry = top + ph2 * 0.78;
+          c.fillStyle = "#4A4A52";
+          c.fillRect(x0 - pw2 / 2, ry - sz * 0.35, pw2, sz * 0.5);
+          c.fillStyle = "#FFD21A";
+          for (let q = 0; q < 4; q++) c.fillRect(x0 - pw2 / 2 + q * pw2 / 4 + 6, ry - sz * 0.1, pw2 / 8, 4);
+          c.save();
+          c.translate(cx + sz * 0.6, ry - sz * 0.05);
+          c.rotate(-Math.PI / 2);
+          c.scale(0.4, 1.35);
+          scvCadetFront(c, s, 0, 0, sz, 0, { uni: "pix", hat: "casco", face: "dead" });
+          c.restore();
+          c.strokeStyle = "rgba(20,20,20,.55)";
+          c.lineWidth = sz * 0.08;
+          c.setLineDash([sz * 0.08, sz * 0.06]);
+          c.beginPath();
+          c.moveTo(x0 - pw2 / 2, ry - sz * 0.12);
+          c.lineTo(x0 + pw2 / 2, ry - sz * 0.08);
+          c.stroke();
+          c.setLineDash([]);
+          for (let q = 0; q < 3; q++) {
+            const a = t * 3 + q * 2.1;
+            scvText(c, "\u2B50", cx + Math.cos(a) * sz * 0.4, ry - sz * 0.4 + Math.sin(a) * sz * 0.1, sz * 0.16, "#fff", "center", false);
+          }
+          const carX = x0 - pw2 / 2 - 90 + (t * 260 + i * 90) % (pw2 + 180);
+          c.fillStyle = "#E23B3B";
+          c.strokeStyle = "#1A1530";
+          c.lineWidth = 2;
+          scRR(c, carX - sz * 0.55, ry - sz * 0.6, sz * 1.1, sz * 0.32, 6);
+          c.fill();
+          c.stroke();
+          c.fillStyle = "#BFE3FF";
+          scRR(c, carX - sz * 0.28, ry - sz * 0.8, sz * 0.56, sz * 0.22, 5);
+          c.fill();
+          c.stroke();
+          c.fillStyle = "#1A1530";
+          [-0.32, 0.32].forEach((d) => {
+            c.beginPath();
+            c.arc(carX + d * sz, ry - sz * 0.28, sz * 0.1, 0, 7);
+            c.fill();
+          });
         }
-        if (Math.floor(t * 2.5) % 2) scvText(c, "\u{1F198}", cx + sz * 0.4, by - sz * 0.9, sz * 0.3, "#fff", "center", false);
-      } else if (kind === "car") {
-        c.fillStyle = "#4A4A52";
-        c.fillRect(x0 - pw2 / 2, by - sz * 0.3, pw2, sz * 0.45);
-        c.save();
-        c.translate(cx, by - sz * 0.05);
-        c.scale(1.5, 0.3);
-        scvAvC(st, c, s, 0, 0, sz);
         c.restore();
-        for (let q = 0; q < 3; q++) {
-          const a = t * 3 + q * 2.1;
-          scvText(c, "\u2B50", cx + Math.cos(a) * sz * 0.4, by - sz * 0.35 + Math.sin(a) * sz * 0.1, sz * 0.18, "#fff", "center", false);
-        }
-        const carX = x0 - pw2 / 2 - 80 + (t * 260 + i * 90) % (pw2 + 160);
-        c.fillStyle = "#E23B3B";
         c.strokeStyle = "#1A1530";
-        c.lineWidth = 2;
-        scRR(c, carX - sz * 0.5, by - sz * 0.55, sz, sz * 0.3, 6);
-        c.fill();
+        c.lineWidth = 3;
+        scRR(c, x0 - pw2 / 2 + 4, top, pw2 - 8, ph2 - 6, 10);
         c.stroke();
-        c.fillStyle = "#BFE3FF";
-        scRR(c, carX - sz * 0.25, by - sz * 0.72, sz * 0.5, sz * 0.2, 5);
+        const lbl = { cable: "\u26A1 electrocutado", lake: "\u{1F4A6} ahogado", car: "\u{1F697} atropellado", tree: "\u{1F333} colgado" }[kind];
+        c.fillStyle = "rgba(0,0,0,.7)";
+        scRR(c, x0 - pw2 / 2 + 8, top + 6, pw2 - 16, 24 * U, 6);
         c.fill();
-        c.stroke();
-        c.fillStyle = "#1A1530";
-        [-0.3, 0.3].forEach((d) => {
-          c.beginPath();
-          c.arc(carX + d * sz, by - sz * 0.25, sz * 0.09, 0, 7);
-          c.fill();
-        });
-      } else {
-        c.fillStyle = "#7A5230";
-        c.fillRect(cx - 6, py0 + ph2 * 0.3, 12, ph2);
-        c.fillStyle = "#2E9A35";
-        c.beginPath();
-        c.arc(cx, py0 + ph2 * 0.32, pw2 * 0.36, 0, 7);
-        c.fill();
-        c.fillStyle = "#6F7B58";
-        c.beginPath();
-        c.arc(cx + sz * 0.2, py0 + ph2 * 0.18, sz * 0.45, Math.PI, 0);
-        c.fill();
-        c.save();
-        c.translate(cx, py0 + ph2 * 0.25 + sz * 0.9 + Math.sin(t * 2 + i) * 3);
-        c.rotate(Math.sin(t * 1.5 + i) * 0.15);
-        scvAvC(st, c, s, 0, 0, sz);
-        c.restore();
-      }
-      c.restore();
-      c.strokeStyle = "#1A1530";
-      c.lineWidth = 3;
-      scRR(c, x0 - pw2 / 2 + 4, py0, pw2 - 8, ph2 - 6, 10);
-      c.stroke();
-      const lbl = { cable: "\u26A1 electrocutado", lake: "\u{1F4A6} ahogado", car: "\u{1F697} atropellado", tree: "\u{1F333} colgado" }[kind];
-      c.fillStyle = "rgba(0,0,0,.65)";
-      scRR(c, x0 - pw2 / 2 + 8, py0 + 6, pw2 - 16, 24 * U, 6);
+        scvText(c, `${scLabel(s)} \xB7 ${lbl}`, x0, top + 6 + 12 * U, 15 * U, "#FF6B85");
+      });
+      c.fillStyle = "rgba(0,0,0,.55)";
+      scRR(c, W * 0.14, 14 * U, W * 0.72, 100 * U, 18);
       c.fill();
-      scvText(c, `${scLabel(s)} \xB7 ${lbl}`, x0, py0 + 6 + 12 * U, 12 * U, "#FF6B85");
-    });
-    scvConfetti(c, W, H * 0.6, t);
-    c.fillStyle = "rgba(0,0,0,.5)";
-    scRR(c, W * 0.14, 14 * U, W * 0.72, 100 * U, 18);
-    c.fill();
-    scvText(c, "\u{1FA82} \xA1INSIGNIA DE PARACAIDISTA Y BOINA ROJA!", W / 2, 50 * U, 38 * U, "#FFD21A");
-    scvText(c, "Los mejores reciben sus alas\u2026 y los dem\xE1s, bueno\u2026 \u{1F447}", W / 2, 92 * U, 18 * U, "#fff");
+      scvText(c, "\u{1F635} LOS QUE NO LO LOGRARON", W / 2, 50 * U, 38 * U, "#FF6B85");
+      scvText(c, "Cables, lago, \xE1rboles y carretera\u2026 as\xED terminaron", W / 2, 92 * U, 18 * U, "#fff");
+    }
+    if (tt < 0.4 || tt > 11.6) {
+      c.fillStyle = `rgba(0,0,0,${tt < 0.4 ? 1 - tt / 0.4 : (tt - 11.6) / 0.4})`;
+      c.fillRect(0, 0, W, H);
+    }
   }
   const P3X = (x) => (x - 0.5) * 2400;
   function scvP3Scene() {
