@@ -23640,6 +23640,15 @@ onmessage = function(e){ var m = e.data, out = [];
     }
     $("#scEdit").hidden = true;
     sc.answers = {};
+    try {
+      if (typeof scvIntro === "function" && scvIntro(() => {
+        if (game.phase === "pick") {
+          sc.answers = {};
+          scNext();
+        }
+      })) return;
+    } catch (e) {
+    }
     scNext();
   }
   function scAllRandom() {
@@ -26526,7 +26535,7 @@ onmessage = function(e){ var m = e.data, out = [];
       }
       if (S.gate <= 0 && !S.breach) scvZBreach(S);
     }
-    S.zs = S.zs.filter((z) => !z.dead || z.dead < 1.6);
+    S.zs = S.zs.filter((z) => !z.dead || z.dead < 3);
     live.sort((a, b) => a.ly - b.ly);
     scvZDecals(c, S, (d) => ({ x: d.fx * W, y: scvZY(L, H, U, d), w: scvZS(U, { ly: d.ly, kind: "n" }) * 0.35 }));
     S.zs.filter((z) => z.dead).forEach((z) => {
@@ -26556,7 +26565,12 @@ onmessage = function(e){ var m = e.data, out = [];
       if (!p) return;
       const grabbed = (S.grab || []).some((G) => G.no === s.no && G.done);
       if (S.out[s.no] != null || grabbed) {
-        scvText(c, "\u{1F480}", p.x, p.y - p.size * 0.4, p.size * 0.35, "#fff", "center", false);
+        c.save();
+        c.translate(p.x, p.y - p.size * 0.12);
+        c.rotate(-Math.PI / 2);
+        scvAvatar(c, s, 0, 0, p.size * 0.8, 0, false);
+        c.restore();
+        scvText(c, "\u{1F480}", p.x, p.y - p.size * 0.45, p.size * 0.25, "#fff", "center", false);
         return;
       }
       let py = p.y, alpha = 1;
@@ -26615,12 +26629,8 @@ onmessage = function(e){ var m = e.data, out = [];
       c.stroke();
     }
     const able = sc.students.filter((s) => S.out[s.no] == null && S.pos[s.no]);
-    if (moving && able.length && liveN && tkxEvery(S, Math.max(3, Math.round(9 - n / 8)), "amb")) {
-      const s = able[Math.floor(Math.random() * able.length)], z = Math.random() < 0.6 ? live[0 + Math.floor(Math.random() * Math.min(12, liveN))] : live[Math.floor(Math.random() * liveN)];
-      const near = live.slice().sort((a, b) => a.fx - b.fx);
-      const tz = Math.random() < 0.6 ? near[Math.floor(Math.random() * Math.min(10, near.length))] : z;
-      if (tz) scvZFire(S, s.no, tz, Math.random() < 0.25 ? "head" : "body", W, H, U, L, 0);
-    }
+    if (moving) scvZCadetFire(S, able, live, W, H, U, L);
+    scvZAudio(S, moving, liveN, atk.length);
     if (S.turretUntil > now) {
       const tx = L.bx1 - 10 * U, ty = L.roofY - 40 * U;
       c.fillStyle = "#5A6070";
@@ -26747,6 +26757,7 @@ onmessage = function(e){ var m = e.data, out = [];
     if (z.hp <= 0) {
       z.dead = 1e-3;
       S.kills++;
+      if (Math.random() < 0.5) scvSquish();
       (S.dec = S.dec || []).push({ fx: z.fx, ly: z.ly, r: z.kind === "super" ? 2.2 : z.kind === "big" ? 1.5 : 1, t0: performance.now() });
       if (S.dec.length > 60) S.dec.shift();
       if (head && z.kind !== "super") {
@@ -26785,11 +26796,11 @@ onmessage = function(e){ var m = e.data, out = [];
       }
     }
     if (w === "bazooka") {
-      S.shots.push({ x0, y0, x1, y1, z, t: delay || 0, kind: "rocket" });
+      S.shots.push({ x0, y0, x1, y1, z, t: delay || 0, kind: "rocket", w });
       return;
     }
     const n = w === "pistol" ? 1 : 1 + (delay ? 1 : 0);
-    for (let i = 0; i < n; i++) S.shots.push({ x0, y0, x1: x1 + scvR(-4, 4), y1, z, t: (delay || 0) - i * 3, kind: w === "pistol" ? "body" : kind });
+    for (let i = 0; i < n; i++) S.shots.push({ x0, y0, x1: x1 + scvR(-4, 4), y1, z, t: (delay || 0) - i * 3, kind: w === "pistol" ? "body" : kind, w });
   }
   function scvGun(c, S, no, x, y, sz) {
     const w = S.wpn[no] && S.wpn[no].k || "fx";
@@ -26837,7 +26848,7 @@ onmessage = function(e){ var m = e.data, out = [];
     c.moveTo(0, -u * 4);
     c.lineTo(u * 1 - step * u * (potro ? 2 : 1), 0);
     c.stroke();
-    c.strokeStyle = potro ? "#2E3B2A" : "#3A3A4A";
+    c.strokeStyle = potro ? "#BFA97C" : "#3A3A4A";
     c.lineWidth = u * 0.8;
     c.beginPath();
     c.moveTo(0, -u * 4);
@@ -26845,7 +26856,7 @@ onmessage = function(e){ var m = e.data, out = [];
     c.moveTo(0, -u * 4);
     c.lineTo(u * 1 - step * u * (potro ? 2 : 1), 0);
     c.stroke();
-    c.fillStyle = z.kind === "cad" || potro ? "#3E4A2E" : sup ? "#3A2A4A" : z.shirt;
+    c.fillStyle = potro ? "#D6C49B" : z.kind === "cad" ? "#3E4A2E" : sup ? "#3A2A4A" : z.shirt;
     c.strokeStyle = dk;
     c.lineWidth = 2;
     c.beginPath();
@@ -26912,7 +26923,7 @@ onmessage = function(e){ var m = e.data, out = [];
     c.fill();
     c.stroke();
     if (potro) {
-      c.fillStyle = "#3A4A2C";
+      c.fillStyle = "#141414";
       c.beginPath();
       c.arc(hx, hy - u * 0.6, u * 1.55, Math.PI, 0);
       c.fill();
@@ -26982,7 +26993,11 @@ onmessage = function(e){ var m = e.data, out = [];
     const squad = [];
     for (let i = 0; i < n; i++) {
       const off = i === n - 1;
-      squad.push({ off, x: L.stopX + 30 * U + i % 2 * 34 * U, y: L.gnd + 40 * U + i * (H - L.gnd - 60 * U) / (n - 1), size: 60 * U, look: { sp: 0, hat: off ? 2 : 3, gl: off ? 1 : 0, shoe: 5, shirt: off ? 40 : 220, skin: Math.floor(Math.random() * 3), uni: "beige" } });
+      squad.push({ off, x: L.stopX + 30 * U + i % 2 * 34 * U, y: L.gnd + 40 * U + i * (H - L.gnd - 60 * U) / (n - 1), size: 60 * U, look: { sp: 0, hat: off ? 2 : 3, gl: off ? 1 : 0, shoe: 5, shirt: off ? 40 : 220, skin: Math.floor(Math.random() * 3), uni: "pix" } });
+      squad[squad.length - 1].look.hat = 2;
+      squad.forEach((m, k) => {
+        if (!m.off) m.look.hat = 3;
+      });
     }
     S.reinf = { t0: performance.now(), squad, say: ["\xA1Aguanten, terceros!", "\xA1Aqu\xED 4\xBA a\xF1o, vamos con todo!", "\xA1A mi mando, fuego!"][Math.floor(Math.random() * 3)] };
     scvSnd("siren");
@@ -27020,6 +27035,7 @@ onmessage = function(e){ var m = e.data, out = [];
     if (k === "repair") {
       S.gate = Math.min(100, S.gate + 35);
       scvSnd("crowd");
+      scvFloat(W * 0.5, H * 0.62, S.pov ? "\u{1F9F1} +35% barricada" : "\u{1F9F1} +35% puerta", "#9BE564", 30, 90);
     }
     if (k === "fence") S.zapUntil = now + 2e4;
     if (k === "turret") S.turretUntil = now + 22e3;
@@ -27172,7 +27188,7 @@ onmessage = function(e){ var m = e.data, out = [];
     }
     if (z.dead) {
       const d = z.dead;
-      c.globalAlpha *= Math.max(0, 1 - Math.max(0, d - 0.9) / 0.7);
+      c.globalAlpha *= Math.max(0, 1 - Math.max(0, d - 2.2) / 0.8);
       if (front) {
         const f = Math.min(1, d * 2.6);
         c.translate(0, -Math.sin(f * Math.PI) * sz * 0.08);
@@ -27234,7 +27250,7 @@ onmessage = function(e){ var m = e.data, out = [];
   function scvZombieF(c, x, y, sz, z) {
     const u = sz / 10, ph = z.ph, st = Math.sin(ph), potro = z.kind === "potro", sup = z.kind === "super", big = z.kind === "big", dk = "#1A1530";
     const skin = sup ? "hsl(275,30%,45%)" : `hsl(${z.hue},35%,${big ? 38 : 48}%)`, skin2 = sup ? "hsl(275,30%,33%)" : `hsl(${z.hue},35%,${big ? 28 : 36}%)`;
-    const shirt = z.kind === "cad" || potro ? "#3E4A2E" : sup ? "#3A2A4A" : z.shirt, pants = potro ? "#2E3B2A" : "#33334A", W2 = big || sup ? 1.22 : 1;
+    const shirt = potro ? "#D6C49B" : z.kind === "cad" ? "#3E4A2E" : sup ? "#3A2A4A" : z.shirt, pants = potro ? "#BFA97C" : "#33334A", W2 = big || sup ? 1.22 : 1;
     c.save();
     c.translate(x, y);
     c.lineCap = "round";
@@ -27312,7 +27328,7 @@ onmessage = function(e){ var m = e.data, out = [];
       c.fill();
       c.stroke();
       if (potro) {
-        c.fillStyle = "#3A4A2C";
+        c.fillStyle = "#141414";
         c.beginPath();
         c.arc(0, -u * 0.5, u * 1.6, Math.PI, 0);
         c.fill();
@@ -27408,14 +27424,248 @@ onmessage = function(e){ var m = e.data, out = [];
     c.restore();
     c.restore();
   }
-  function scvCadetBack(c, s, x, y, sz, t, w, rec, alpha) {
-    const u = sz / 10, L0 = s.look || {}, spx = SC_SP[L0.sp], sp = spx ? spx[0] : "cadete", fur = sp === "cadete" ? ["#F1C9A0", "#E0AC7E", "#A86B45"][L0.skin || 0] : spx[2], dk = "#1A1530", uni = "#D6C49B", uni2 = "#BFA97C";
+  let scvNB2 = null, scvShotT = 0, scvSqT = 0;
+  function scvAC() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      return audioCtx.state === "running" ? audioCtx : null;
+    } catch (e) {
+      return null;
+    }
+  }
+  function scvNoise(c) {
+    if (!scvNB2) {
+      scvNB2 = c.createBuffer(1, Math.floor(c.sampleRate * 0.6), c.sampleRate);
+      const d = scvNB2.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2.5);
+    }
+    return scvNB2;
+  }
+  function scvShotSnd(kind, vol) {
+    const now = performance.now();
+    if (now - scvShotT < (kind === "far" ? 25 : 40)) return;
+    scvShotT = now;
+    const c = scvAC();
+    if (!c) return;
+    try {
+      const t0 = c.currentTime, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+      s.buffer = scvNoise(c);
+      s.playbackRate.value = kind === "pistol" ? 1.5 : kind === "far" ? 0.7 : 1 + Math.random() * 0.2;
+      f.type = kind === "far" ? "lowpass" : "bandpass";
+      f.frequency.value = kind === "far" ? 700 : kind === "pistol" ? 2600 : 1700;
+      f.Q.value = 0.8;
+      const v = vol == null ? 0.5 : vol;
+      g.gain.setValueAtTime(v, t0);
+      g.gain.exponentialRampToValueAtTime(1e-4, t0 + (kind === "far" ? 0.4 : 0.22));
+      s.connect(f);
+      f.connect(g);
+      g.connect(SFX.out());
+      s.start(t0);
+      s.stop(t0 + 0.5);
+      if (kind !== "far") {
+        const o = c.createOscillator(), og = c.createGain();
+        o.frequency.setValueAtTime(kind === "pistol" ? 220 : 150, t0);
+        o.frequency.exponentialRampToValueAtTime(45, t0 + 0.12);
+        og.gain.setValueAtTime(v * 0.7, t0);
+        og.gain.exponentialRampToValueAtTime(1e-4, t0 + 0.14);
+        o.connect(og);
+        og.connect(SFX.out());
+        o.start(t0);
+        o.stop(t0 + 0.2);
+      }
+    } catch (e) {
+    }
+  }
+  function scvGroan(vol) {
+    const c = scvAC();
+    if (!c) return;
+    try {
+      const t0 = c.currentTime, dur = scvR(0.7, 1.4), f0 = scvR(70, 130), o = c.createOscillator(), lfo = c.createOscillator(), lg = c.createGain(), f = c.createBiquadFilter(), f2 = c.createBiquadFilter(), g = c.createGain();
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(f0 * 1.15, t0);
+      o.frequency.linearRampToValueAtTime(f0 * 0.8, t0 + dur);
+      lfo.frequency.value = scvR(5, 9);
+      lg.gain.value = f0 * 0.06;
+      lfo.connect(lg);
+      lg.connect(o.frequency);
+      f.type = "bandpass";
+      f.frequency.setValueAtTime(scvR(450, 650), t0);
+      f.frequency.linearRampToValueAtTime(scvR(300, 400), t0 + dur);
+      f.Q.value = 3;
+      f2.type = "lowpass";
+      f2.frequency.value = 1400;
+      const v = vol == null ? 0.35 : vol;
+      g.gain.setValueAtTime(1e-4, t0);
+      g.gain.exponentialRampToValueAtTime(v, t0 + 0.15);
+      g.gain.setValueAtTime(v, t0 + dur * 0.6);
+      g.gain.exponentialRampToValueAtTime(1e-4, t0 + dur);
+      o.connect(f);
+      f.connect(f2);
+      f2.connect(g);
+      g.connect(SFX.out());
+      o.start(t0);
+      lfo.start(t0);
+      o.stop(t0 + dur + 0.05);
+      lfo.stop(t0 + dur + 0.05);
+    } catch (e) {
+    }
+  }
+  function scvSquish() {
+    const now = performance.now();
+    if (now - scvSqT < 90) return;
+    scvSqT = now;
+    const c = scvAC();
+    if (!c) return;
+    try {
+      const t0 = c.currentTime, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+      s.buffer = scvNoise(c);
+      s.playbackRate.value = 0.5;
+      f.type = "lowpass";
+      f.frequency.value = 500;
+      g.gain.setValueAtTime(0.35, t0);
+      g.gain.exponentialRampToValueAtTime(1e-4, t0 + 0.25);
+      s.connect(f);
+      f.connect(g);
+      g.connect(SFX.out());
+      s.start(t0);
+      s.stop(t0 + 0.3);
+    } catch (e) {
+    }
+  }
+  function scvEngine() {
+    const c = scvAC();
+    if (!c) return null;
+    try {
+      const g = c.createGain(), f = c.createBiquadFilter(), os = [52, 55.5, 104].map((fr) => {
+        const o = c.createOscillator();
+        o.type = "sawtooth";
+        o.frequency.value = fr;
+        o.connect(f);
+        o.start();
+        return o;
+      });
+      f.type = "lowpass";
+      f.frequency.value = 320;
+      f.connect(g);
+      g.gain.value = 1e-4;
+      g.gain.exponentialRampToValueAtTime(0.16, c.currentTime + 0.6);
+      g.connect(SFX.out());
+      return () => {
+        try {
+          g.gain.exponentialRampToValueAtTime(1e-4, c.currentTime + 0.4);
+          os.forEach((o) => o.stop(c.currentTime + 0.45));
+        } catch (e) {
+        }
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+  function scvZAudio(S, moving, liveN, atkN) {
+    const now = performance.now();
+    if (game.phase === "end" || game.phase === "lobby") return;
+    if (!S.nextGroan || now > S.nextGroan) {
+      if (liveN) scvGroan(Math.min(0.5, 0.2 + liveN / 400 + atkN * 0.01));
+      S.nextGroan = now + scvR(500, 1900) * (liveN > 80 ? 0.6 : 1);
+    }
+    if (!S.nextFar || now > S.nextFar) {
+      scvShotSnd("far", 0.22);
+      S.nextFar = now + scvR(90, 600);
+    }
+  }
+  function scvZCadetFire(S, able, live, W, H, U, L) {
+    if (!able.length || !live.length) return;
+    const near = live.filter((z) => !(z.rise < 1)).sort((a, b) => a.fx - b.fx);
+    if (!near.length) return;
+    able.forEach((s) => {
+      const w = (S.wpn[s.no] || {}).k || "fx", p = (w === "bazooka" ? 0.45 : w === "pistol" ? 0.6 : 1) / 150;
+      if (Math.random() < p) {
+        const tz = near[Math.floor(Math.random() * Math.min(14, near.length))];
+        scvZFire(S, s.no, tz, Math.random() < 0.25 ? "head" : "body", W, H, U, L, 0);
+      }
+    });
+  }
+  function scvZPSlots(n, W, H) {
+    const two = n > 14, nFar = two ? Math.ceil(n / 2) : 0, nNear = n - nFar, out = [];
+    for (let i = 0; i < n; i++) {
+      if (two && i < nFar) {
+        const sp = W / nFar;
+        out.push({ x: sp * (i + 0.5), y: H * 0.95, size: Math.min(H * 0.21, sp * 1.6), far: 1 });
+      } else {
+        const k = i - nFar, sp = W / Math.max(1, nNear);
+        out.push({ x: sp * (k + 0.5) + (two ? sp * 0.25 : 0), y: two ? H * 1.06 : H * 1, size: Math.min(two ? H * 0.25 : H * 0.27, sp * (two ? 1.7 : 1.8)) });
+      }
+    }
+    return out;
+  }
+  function scvZPWall(c, W, H, U, hp, t) {
+    const wy0 = H * 0.7, wy1 = H * 0.82, bw = 64 * U, bh = 22 * U;
+    for (let r = 0, y = wy1 - bh; y > wy0 - bh * 0.5; r++, y -= bh * 0.8) {
+      for (let x = (r % 2 ? -bw / 2 : 0) - 10; x < W + bw; x += bw * 0.92) {
+        const id = Math.floor(x / bw) + r * 97;
+        if (r > 0 && scHash(id + 7) < (1 - hp) * 0.55) continue;
+        c.fillStyle = scHash(id) > 0.5 ? "#B8A47A" : "#A99568";
+        c.strokeStyle = "#1A1530";
+        c.lineWidth = 1.5;
+        scRR(c, x, y, bw, bh, bh * 0.45);
+        c.fill();
+        c.stroke();
+      }
+    }
+    return wy0;
+  }
+  function scvEarsBack(c, sp, fur, fur2, u, hy) {
+    c.strokeStyle = "#1A1530";
+    c.lineWidth = Math.max(1.5, u * 0.2);
+    const ell = (x, y, rx, ry, rot, col) => {
+      c.fillStyle = col;
+      c.beginPath();
+      c.ellipse(x, y, rx, ry, rot, 0, 7);
+      c.fill();
+      c.stroke();
+    };
+    if (sp === "cadete" || sp === "mono") [-1, 1].forEach((d) => ell(d * u * 1.55, hy, u * (sp === "mono" ? 0.65 : 0.35), u * (sp === "mono" ? 0.65 : 0.5), 0, sp === "mono" ? fur2 : fur));
+    else if (sp === "perro") [-1, 1].forEach((d) => ell(d * u * 1.45, hy + u * 0.3, u * 0.6, u * 1.25, d * 0.25, fur2));
+    else if (sp === "gato" || sp === "zorro" || sp === "tigre") [-1, 1].forEach((d) => {
+      c.fillStyle = fur;
+      c.beginPath();
+      c.moveTo(d * u * 0.4, hy - u * 1.2);
+      c.lineTo(d * u * 1.35, hy - u * 2.7);
+      c.lineTo(d * u * 1.6, hy - u * 0.5);
+      c.closePath();
+      c.fill();
+      c.stroke();
+    });
+    else if (sp === "oso" || sp === "panda") [-1, 1].forEach((d) => ell(d * u * 1.2, hy - u * 1.25, u * 0.65, u * 0.65, 0, sp === "panda" ? "#1A1530" : fur));
+    else if (sp === "leon") {
+      c.fillStyle = fur2;
+      c.beginPath();
+      for (let k = 0; k < 16; k++) {
+        const a = k / 16 * Math.PI * 2, r = u * (k % 2 ? 2 : 2.5);
+        c.lineTo(Math.cos(a) * r, hy + Math.sin(a) * r);
+      }
+      c.closePath();
+      c.fill();
+      c.stroke();
+      [-1, 1].forEach((d) => ell(d * u * 1.25, hy - u * 1.35, u * 0.5, u * 0.5, 0, fur));
+    } else if (sp === "conejo") [-1, 1].forEach((d) => {
+      ell(d * u * 0.7, hy - u * 2.8, u * 0.55, u * 1.7, d * 0.15, fur);
+      c.fillStyle = fur2;
+      c.beginPath();
+      c.ellipse(d * u * 0.7, hy - u * 2.8, u * 0.25, u * 1.15, d * 0.15, 0, 7);
+      c.fill();
+    });
+    else if (sp === "rana") [-1, 1].forEach((d) => ell(d * u * 0.8, hy - u * 1.35, u * 0.65, u * 0.6, 0, fur));
+  }
+  function scvCadetBack(c, s, x, y, sz, t, w, rec, alpha, uniK) {
+    const u = sz / 10, L0 = s.look || {}, spx = SC_SP[L0.sp], sp = spx ? spx[0] : "cadete", fur = sp === "cadete" ? ["#F1C9A0", "#E0AC7E", "#A86B45"][L0.skin || 0] : spx[2], fur2 = spx ? spx[3] : fur, dk = "#1A1530", pix = uniK === "pix", uni = pix ? "#7B8762" : "#D6C49B", uni2 = pix ? "#5C664A" : "#BFA97C";
     c.save();
     if (alpha != null) c.globalAlpha = alpha;
     c.translate(x, y + rec * u * 0.5);
     c.lineJoin = "round";
     c.lineCap = "round";
-    const br = Math.sin(t * 1.6 + s.no) * u * 0.08;
+    const br = Math.sin(t * 1.6 + (+s.no || 3)) * u * 0.08;
     c.strokeStyle = dk;
     c.lineWidth = Math.max(1.5, u * 0.22);
     c.fillStyle = uni2;
@@ -27439,9 +27689,16 @@ onmessage = function(e){ var m = e.data, out = [];
     c.closePath();
     c.fill();
     c.stroke();
+    if (pix) {
+      const cols = ["#5C664A", "#9AA27A", "#4A5238"];
+      for (let i = 0; i < 16; i++) {
+        c.fillStyle = cols[i % 3];
+        c.fillRect(-u * 1.9 + scHash(i * 3 + 1) * u * 3.4, -u * 7.3 + scHash(i * 3 + 2) * u * 3.2, u * 0.55, u * 0.45);
+      }
+    }
     c.fillStyle = "#3A2E1E";
     c.fillRect(-u * 1.9, -u * 4.4, u * 3.8, u * 0.5);
-    c.fillStyle = "#1B1440";
+    c.fillStyle = pix ? "#fff" : "#1B1440";
     c.font = `900 ${Math.round(u * 2.3)}px Nunito, system-ui, sans-serif`;
     c.textAlign = "center";
     c.textBaseline = "middle";
@@ -27458,47 +27715,67 @@ onmessage = function(e){ var m = e.data, out = [];
       c.stroke();
     };
     let mz;
-    if (w === "bazooka") {
-      arm([[2, -7.2], [3.1, -6.4], [2.4, -8.4]]);
-      arm([[-2, -7.2], [-1.6, -8.6], [0.6, -9.6]]);
+    if (w === "none") {
+      arm([[2, -7.2], [2.5, -5.6], [2.4, -4.2]]);
+      arm([[-2, -7.2], [-2.5, -5.6], [-2.4, -4.2]]);
+      mz = [0, -u * 9];
+    } else if (w === "bazooka") {
+      arm([[-2, -7.2], [-0.6, -9], [2, -10.6]]);
       c.save();
-      c.translate(u * 2, -u * 7.8);
-      c.rotate(-0.35);
+      c.translate(u * 2.4, -u * 8);
+      c.rotate(0.12);
       c.fillStyle = "#4E5B3A";
       c.strokeStyle = dk;
-      c.lineWidth = Math.max(1.5, u * 0.22);
-      scRR(c, -u * 0.8, -u * 4.4, u * 1.6, u * 6.2, u * 0.5);
+      c.lineWidth = Math.max(1.5, u * 0.25);
+      scRR(c, -u * 0.95, -u * 6, u * 1.9, u * 8.4, u * 0.6);
       c.fill();
       c.stroke();
+      c.fillStyle = "#FFD21A";
+      c.fillRect(-u * 0.95, -u * 4.4, u * 1.9, u * 0.45);
       c.fillStyle = "#1A1A1A";
       c.beginPath();
-      c.ellipse(0, -u * 4.4, u * 0.7, u * 0.3, 0, 0, 7);
+      c.ellipse(0, -u * 6, u * 0.8, u * 0.32, 0, 0, 7);
       c.fill();
+      c.fillStyle = "#2B2838";
+      c.fillRect(-u * 0.4, -u * 1.6, u * 0.8, u * 1.2);
       c.restore();
-      mz = [u * 0.5, -u * 12];
+      arm([[2, -7.2], [3.2, -6.6], [2.6, -8.6]]);
+      mz = [u * 3.1, -u * 14];
     } else if (w === "pistol") {
-      arm([[2, -7.2], [1.6, -8.8], [0.4, -10]]);
-      arm([[-2, -7.2], [-1.4, -8.8], [0, -10]]);
+      arm([[-2, -7.2], [0.2, -9.6], [2.3, -11.2]]);
+      arm([[2, -7.2], [3, -9.4], [2.6, -11.4]]);
       c.fillStyle = "#1A1A1A";
-      c.fillRect(-u * 0.2, -u * 10.9, u * 0.7, u * 1);
-      mz = [u * 0.15, -u * 11];
-    } else {
-      arm([[2, -7.2], [3, -6.2], [1.6, -7.9]]);
-      arm([[-2, -7.2], [-2.4, -8.4], [-0.5, -9.3]]);
-      c.strokeStyle = "#2B2F26";
-      c.lineWidth = u * 0.75;
-      c.beginPath();
-      c.moveTo(u * 1.7, -u * 7.2);
-      c.lineTo(u * 0.4, -u * 11.4);
+      c.strokeStyle = "#555";
+      c.lineWidth = 1;
+      scRR(c, u * 2.15, -u * 13, u * 0.9, u * 1.8, u * 0.15);
+      c.fill();
       c.stroke();
-      c.fillStyle = "#2B2F26";
+      c.fillRect(u * 2.3, -u * 11.4, u * 0.6, u * 0.9);
+      mz = [u * 2.6, -u * 13.1];
+    } else {
+      arm([[-2, -7.2], [-0.9, -9.2], [2.2, -10.4]]);
       c.save();
-      c.translate(u * 1.2, -u * 8.6);
-      c.rotate(-0.3);
-      c.fillRect(u * 0.2, -u * 0.3, u * 0.8, u * 0.5);
+      c.translate(u * 2.2, -u * 7);
+      c.rotate(0.06);
+      c.fillStyle = "#22261E";
+      c.strokeStyle = "#0E100C";
+      c.lineWidth = Math.max(1, u * 0.15);
+      scRR(c, -u * 0.65, -u * 1, u * 1.3, u * 1.6, u * 0.25);
+      c.fill();
+      c.stroke();
+      scRR(c, -u * 0.4, -u * 6.4, u * 0.8, u * 5.6, u * 0.2);
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#3A3F33";
+      c.fillRect(-u * 0.15, -u * 7.6, u * 0.3, u * 1.4);
+      c.fillStyle = "#22261E";
+      scRR(c, u * 0.25, -u * 3.6, u * 0.9, u * 1.4, u * 0.2);
+      c.fill();
       c.restore();
-      mz = [u * 0.4, -u * 11.4];
+      arm([[2, -7.2], [3.1, -6.4], [2.4, -7.6]]);
+      mz = [u * 2.65, -u * 14.6];
     }
+    scvEarsBack(c, sp, fur, fur2, u, -u * 8.9 + br);
     c.fillStyle = fur;
     c.strokeStyle = dk;
     c.lineWidth = Math.max(1.5, u * 0.22);
@@ -27506,25 +27783,457 @@ onmessage = function(e){ var m = e.data, out = [];
     c.arc(0, -u * 8.9 + br, u * 1.5, 0, 7);
     c.fill();
     c.stroke();
-    if (sp !== "cadete") {
-      [-1, 1].forEach((d) => {
+    if (pix) {
+      c.fillStyle = "#556B2F";
+      c.beginPath();
+      c.arc(0, -u * 9.1 + br, u * 1.8, Math.PI, 0);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#4A5238";
+      c.fillRect(-u * 1.85, -u * 9.3 + br, u * 3.7, u * 0.35);
+    } else {
+      c.save();
+      c.translate(0, -u * 9.9 + br);
+      c.rotate(0.12);
+      c.fillStyle = "#141414";
+      c.strokeStyle = dk;
+      c.beginPath();
+      c.moveTo(-u * 1.55, u * 0.35);
+      c.quadraticCurveTo(-u * 0.6, -u * 1.25, u * 0.3, -u * 1);
+      c.quadraticCurveTo(u * 1.2, -u * 0.75, u * 1.6, u * 0.35);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.strokeStyle = "#444";
+      c.lineWidth = Math.max(1, u * 0.12);
+      c.beginPath();
+      c.moveTo(-u * 1.1, -u * 0.1);
+      c.quadraticCurveTo(0, -u * 0.7, u * 1.2, -u * 0.05);
+      c.stroke();
+      c.restore();
+    }
+    c.restore();
+    return [x + mz[0], y + rec * u * 0.5 + mz[1]];
+  }
+  function scvCadetDown(c, s, x, y, sz, t) {
+    c.save();
+    c.fillStyle = "rgba(120,15,15,.55)";
+    c.beginPath();
+    c.ellipse(x, y - sz * 0.05, sz * 0.6, sz * 0.12, 0, 0, 7);
+    c.fill();
+    c.translate(x + sz * 0.5, y - sz * 0.12);
+    c.rotate(-Math.PI / 2 + Math.sin(t * 0.5) * 0.01);
+    scvCadetBack(c, s, 0, 0, sz * 0.9, 0, "none", 0);
+    c.restore();
+    c.strokeStyle = "#22261E";
+    c.lineWidth = sz * 0.06;
+    c.beginPath();
+    c.moveTo(x - sz * 0.4, y - sz * 0.02);
+    c.lineTo(x + sz * 0.25, y - sz * 0.1);
+    c.stroke();
+    scvText(c, "\u{1F480}", x + sz * 0.1, y - sz * 0.42, sz * 0.18, "#fff", "center", false);
+  }
+  function scvIntro(onDone) {
+    if (!scvOn()) return false;
+    const v = sc.v;
+    if (v !== "zombie" && v !== "zpov" && v !== "para") return false;
+    const S = scvInit();
+    if (S.introRun) {
+      if (S.introSkip) S.introSkip();
+      return true;
+    }
+    if (S.introDone) return false;
+    S.introRun = true;
+    try {
+      scvAC();
+    } catch (e) {
+    }
+    const ov = document.createElement("div");
+    ov.style.cssText = "position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;background:#000";
+    const cv = document.createElement("canvas");
+    cv.style.cssText = "width:100%;height:100%;display:block";
+    ov.appendChild(cv);
+    const sk = document.createElement("button");
+    sk.textContent = "Saltar \u23ED";
+    sk.style.cssText = "position:absolute;right:18px;bottom:18px;font:900 20px Nunito,system-ui,sans-serif;padding:10px 18px;border-radius:14px;border:3px solid #1A1530;background:#fff;color:#1A1530;box-shadow:0 4px 0 #1A1530;cursor:pointer";
+    ov.appendChild(sk);
+    document.body.appendChild(ov);
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    let W = 0, H = 0;
+    const fit = () => {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      cv.width = Math.round(W * dpr);
+      cv.height = Math.round(H * dpr);
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    const c = cv.getContext("2d"), t0 = performance.now(), DUR = v === "para" ? 7800 : 7600, st = {};
+    let raf = 0, done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", fit);
+      try {
+        st.eng && st.eng();
+      } catch (e) {
+      }
+      S.introRun = false;
+      S.introDone = true;
+      S.introSkip = null;
+      ov.style.transition = "opacity .4s";
+      ov.style.opacity = "0";
+      setTimeout(() => ov.remove(), 450);
+      try {
+        onDone();
+      } catch (e) {
+      }
+    };
+    S.introSkip = finish;
+    sk.onclick = finish;
+    const frame = () => {
+      if (done) return;
+      const ms = performance.now() - t0;
+      c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      c.clearRect(0, 0, W, H);
+      try {
+        (v === "para" ? scvIntroPara : scvIntroZ)(c, W, H, ms / 1e3, st, S);
+      } catch (e) {
+        try {
+          console.warn("intro", e);
+        } catch (_) {
+        }
+        finish();
+        return;
+      }
+      const fi = Math.max(0, 1 - ms / 400), fo = Math.max(0, (ms - (DUR - 500)) / 500);
+      if (fi || fo) {
+        c.fillStyle = `rgba(0,0,0,${Math.min(1, fi + fo)})`;
+        c.fillRect(0, 0, W, H);
+      }
+      if (ms > DUR) return finish();
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return true;
+  }
+  function scvBanner(c, W, y, txt, sub, col, k, U) {
+    const s = Math.min(1, k * 4), sc2 = 0.6 + 0.4 * (1 - Math.pow(1 - s, 3)) + Math.max(0, Math.sin(k * 20) * 0.02);
+    c.save();
+    c.translate(W / 2, y);
+    c.scale(sc2, sc2);
+    c.fillStyle = "rgba(0,0,0,.55)";
+    scRR(c, -W * 0.42, -46 * U, W * 0.84, sub ? 120 * U : 92 * U, 20);
+    c.fill();
+    scvText(c, txt, 0, 0, 52 * U, col);
+    if (sub) scvText(c, sub, 0, 50 * U, 24 * U, "#fff");
+    c.restore();
+  }
+  function scvIntroZ(c, W, H, t, st, S) {
+    const U = scvU(W, H), n = sc.students.length, hy = H * 0.42, yb = H * 0.75;
+    if (!st.init) {
+      st.init = 1;
+      scvSnd("siren");
+      st.z = [];
+      for (let i = 0; i < 70; i++) st.z.push({ kind: i % 11 === 0 ? "big" : i % 5 === 0 ? "potro" : i % 4 === 0 ? "cad" : "n", sh: i % 4, hb: i % 2, ph: Math.random() * 9, sp: scvR(0.6, 1.3), d: scvR(0.5, 1.4), ly: Math.random() });
+      st.nextG = 0.3;
+      st.slots = scvZPSlots(n, W, H);
+      st.ready = {};
+    }
+    const P = (d, ly) => {
+      const s = 1 / (1 + d * 7);
+      return { x: W / 2 + (ly - 0.5) * W * 1.3 * s, y: hy + (yb - hy) * s, sz: H * 0.26 * s };
+    };
+    let g = c.createLinearGradient(0, 0, 0, hy);
+    g.addColorStop(0, "#14060C");
+    g.addColorStop(1, "#8A2430");
+    c.fillStyle = g;
+    c.fillRect(0, 0, W, hy);
+    c.fillStyle = "#F6F0D2";
+    c.beginPath();
+    c.arc(W * 0.78, hy * 0.45, Math.min(W, H) * 0.05, 0, 7);
+    c.fill();
+    for (let i = 0; i < 26; i++) {
+      const x = i * W / 25 - 10, h = hy * 0.08 + scHash(i + 11) * hy * 0.22, w = W / 26 * 0.9;
+      c.fillStyle = "#24182E";
+      c.fillRect(x, hy - h, w, h);
+      if (scHash(i + 50) > 0.6) {
+        c.fillStyle = `rgba(255,140,40,${0.5 + Math.sin(t * 6 + i) * 0.3})`;
         c.beginPath();
-        c.moveTo(d * u * 0.7, -u * 10 + br);
-        c.lineTo(d * u * 1.4, -u * 11 + br);
-        c.lineTo(d * u * 1.45, -u * 9.6 + br);
+        c.ellipse(x + w / 2, hy - h, w * 0.3, h * 0.12 + 3, 0, 0, 7);
+        c.fill();
+      }
+    }
+    g = c.createLinearGradient(0, hy, 0, H);
+    g.addColorStop(0, "#3E3626");
+    g.addColorStop(1, "#1C1810");
+    c.fillStyle = g;
+    c.fillRect(0, hy, W, H - hy);
+    st.z.forEach((z) => {
+      z.d -= 12e-4 * z.sp;
+      if (z.d < 0.3) z.d = scvR(1.1, 1.4);
+    });
+    st.z.slice().sort((a, b) => b.d - a.d).forEach((z) => {
+      const q = P(z.d, z.ly);
+      c.globalAlpha = Math.max(0, Math.min(1, (1.35 - z.d) * 2.5));
+      scvZDrawOne(c, z, q.x, q.y, q.sz * scvZPMult(z), t, true);
+    });
+    c.globalAlpha = 1;
+    if (t > st.nextG) {
+      scvGroan(0.4);
+      st.nextG = t + scvR(0.4, 1);
+    }
+    scvZPWall(c, W, H, U, 1, t);
+    if (t > 2.6) sc.students.forEach((s, i) => {
+      const p = st.slots[i];
+      if (!p) return;
+      const t1 = 2.8 + i % 15 * 0.07 + (p.far ? 0 : 0.35), k = Math.min(1, Math.max(0, (t - t1) / 1.3));
+      if (k <= 0) return;
+      const fromL = i % 2 === 0, fromX = fromL ? -90 : W + 90;
+      if (k < 1) {
+        const x = fromX + (p.x - fromX) * k;
+        c.save();
+        c.translate(x, 0);
+        if (!fromL) c.scale(-1, 1);
+        scvAvatar(c, s, 0, p.y - p.size * 0.08, p.size * 0.75, t + i, true);
+        c.restore();
+      } else {
+        if (!st.ready[s.no]) {
+          st.ready[s.no] = 1;
+          if (Math.random() < 0.3) scvSnd("punch");
+        }
+        const fire2 = t > 6 && (i * 7 + Math.floor(t * 12)) % 9 === 0, m = scvCadetBack(c, s, p.x, p.y, p.size, t, "fx", fire2 ? 1 : 0, p.far ? 0.97 : 1);
+        if (fire2) {
+          c.fillStyle = "rgba(255,230,120,.95)";
+          c.beginPath();
+          c.arc(m[0], m[1], p.size * 0.07, 0, 7);
+          c.fill();
+          c.strokeStyle = "#FFD21A";
+          c.lineWidth = 3;
+          c.beginPath();
+          c.moveTo(m[0], m[1]);
+          c.lineTo(W / 2 + scvR(-W * 0.3, W * 0.3), hy + scvR(10, 60));
+          c.stroke();
+          scvShotSnd("rifle", 0.35);
+        }
+      }
+    });
+    if (t < 3) {
+      c.fillStyle = `rgba(255,0,0,${0.1 + 0.14 * Math.max(0, Math.sin(t * 9))})`;
+      c.fillRect(0, 0, W, H);
+      [0, W].forEach((x0, k) => {
+        const a = t * 5 + k * Math.PI;
+        c.save();
+        c.translate(x0 + (k ? -40 : 40) * U, 40 * U);
+        c.rotate(a);
+        const gg = c.createLinearGradient(0, 0, W * 0.5, 0);
+        gg.addColorStop(0, "rgba(255,40,40,.55)");
+        gg.addColorStop(1, "rgba(255,40,40,0)");
+        c.fillStyle = gg;
+        c.beginPath();
+        c.moveTo(0, 0);
+        c.lineTo(W * 0.5, -W * 0.08);
+        c.lineTo(W * 0.5, W * 0.08);
         c.closePath();
         c.fill();
-        c.stroke();
+        c.restore();
+        c.fillStyle = "#FF2D2D";
+        c.beginPath();
+        c.arc(x0 + (k ? -40 : 40) * U, 40 * U, 16 * U, 0, 7);
+        c.fill();
       });
+      scvBanner(c, W, H * 0.2, "\u26A0\uFE0F \xA1ALERTA ZOMBI!", "\xA1Una horda viene directo al Colegio!", "#FF4F6D", t / 3, U);
+    } else if (t < 5.6) scvBanner(c, W, H * 0.2, "\u{1F4E3} \xA1A SUS PUESTOS, CADETES!", "Todos a la barricada, \xA1ya!", "#FFD21A", (t - 3) / 2.6, U);
+    else scvBanner(c, W, H * 0.2, "\u{1F52B} \xA1LISTOS\u2026 FUEGO!", "Cada respuesta buena = disparo \xB7 primera respuesta buena = HEADSHOT", "#9BE564", (t - 5.6) / 2, U);
+  }
+  function scvIntroPara(c, W, H, t, st, S) {
+    const U = scvU(W, H), n = sc.students.length;
+    if (!st.init) {
+      st.init = 1;
+      st.j = sc.students.map((s, i) => ({ s, tj: 1.8 + i * Math.min(0.2, 4 / Math.max(1, n)), sw: Math.random() * 9 }));
+      st.eng = scvEngine();
+      st.light = 0;
     }
-    c.fillStyle = uni2;
+    let g = c.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#2F7BE0");
+    g.addColorStop(0.7, "#9FD0FF");
+    g.addColorStop(1, "#D9EEFF");
+    c.fillStyle = g;
+    c.fillRect(0, 0, W, H);
+    c.fillStyle = "#7DBB5A";
+    c.fillRect(0, H * 0.88, W, H * 0.12);
+    for (let i = 0; i < 14; i++) {
+      const x = ((i * W / 7 - t * W * 0.05) % (W * 2) + W * 2) % (W * 2) - W * 0.3;
+      c.fillStyle = i % 2 ? "#6AA84A" : "#8ACB66";
+      c.fillRect(x, H * 0.88, W * 0.12, H * 0.12);
+    }
+    c.fillStyle = "#4A4A52";
+    c.fillRect(0, H * 0.93, W, 6 * U);
+    for (let L2 = 0; L2 < 2; L2++) for (let i = 0; i < 6; i++) {
+      const sp = L2 ? 0.5 : 0.25, x = ((scHash(i + L2 * 9) * W * 2 - t * W * sp) % (W + 400) + W + 400) % (W + 400) - 200, y = H * (0.08 + scHash(i + 4 + L2 * 7) * 0.7), r = (30 + scHash(i + 2) * 40) * U * (L2 ? 1.4 : 0.8);
+      c.fillStyle = L2 ? "rgba(255,255,255,.9)" : "rgba(255,255,255,.6)";
+      c.beginPath();
+      c.arc(x, y, r, 0, 7);
+      c.arc(x + r, y - r * 0.4, r * 1.1, 0, 7);
+      c.arc(x + r * 2, y, r * 0.9, 0, 7);
+      c.fill();
+    }
+    const cx = W * 0.56, cy = H * 0.28 + Math.sin(t * 1.5) * 5 * U, L = Math.min(W * 0.62, 1100 * U), hh = L * 0.13, dk = "#1A1530";
+    c.save();
+    c.translate(cx, cy);
+    c.lineJoin = "round";
+    c.strokeStyle = dk;
+    c.lineWidth = 3;
+    c.fillStyle = "#4E5B3A";
     c.beginPath();
-    c.arc(0, -u * 9.25 + br, u * 1.6, Math.PI, 0);
+    c.moveTo(-L * 0.05, -hh * 0.2);
+    c.lineTo(L * 0.12, -hh * 0.2);
+    c.lineTo(L * 0.02, hh * 0.9);
+    c.lineTo(-L * 0.12, hh * 0.9);
     c.closePath();
     c.fill();
     c.stroke();
+    c.beginPath();
+    c.moveTo(-L * 0.5, -hh * 0.3);
+    c.lineTo(-L * 0.44, -hh * 1.6);
+    c.lineTo(-L * 0.36, -hh * 1.6);
+    c.lineTo(-L * 0.32, -hh * 0.3);
+    c.closePath();
+    c.fill();
+    c.stroke();
+    c.fillStyle = "#6F7B58";
+    scRR(c, -L * 0.5, -hh * 0.5, L, hh, hh * 0.5);
+    c.fill();
+    c.stroke();
+    c.beginPath();
+    c.moveTo(L * 0.42, -hh * 0.5);
+    c.quadraticCurveTo(L * 0.58, -hh * 0.3, L * 0.56, hh * 0.1);
+    c.quadraticCurveTo(L * 0.5, hh * 0.5, L * 0.4, hh * 0.5);
+    c.closePath();
+    c.fill();
+    c.stroke();
+    c.fillStyle = "#BFE3FF";
+    c.beginPath();
+    c.moveTo(L * 0.44, -hh * 0.4);
+    c.lineTo(L * 0.52, -hh * 0.25);
+    c.lineTo(L * 0.5, -hh * 0.05);
+    c.lineTo(L * 0.43, -hh * 0.05);
+    c.closePath();
+    c.fill();
+    c.stroke();
+    for (let i = 0; i < 7; i++) {
+      c.fillStyle = "#BFE3FF";
+      c.beginPath();
+      c.arc(-L * 0.12 + i * L * 0.07, -hh * 0.1, hh * 0.12, 0, 7);
+      c.fill();
+      c.stroke();
+    }
+    scvText(c, "H. COLEGIO MILITAR", L * 0.08, hh * 0.28, hh * 0.22, "#E8E2C8", "center", false);
+    const dx = -L * 0.3, dw = L * 0.07;
+    c.fillStyle = "#1A1A20";
+    c.fillRect(dx - dw / 2, -hh * 0.38, dw, hh * 0.8);
+    c.strokeRect(dx - dw / 2, -hh * 0.38, dw, hh * 0.8);
+    const green = t > 1.7;
+    c.fillStyle = green ? Math.floor(t * 6) % 2 ? "#3FFF6A" : "#1E9E3A" : "#FF2D2D";
+    c.beginPath();
+    c.arc(dx + dw * 0.9, -hh * 0.42, hh * 0.09, 0, 7);
+    c.fill();
+    c.stroke();
+    c.fillStyle = "#4E5B3A";
+    c.beginPath();
+    c.moveTo(-L * 0.02, -hh * 0.05);
+    c.lineTo(L * 0.16, -hh * 0.05);
+    c.lineTo(L * 0.1, hh * 0.35);
+    c.lineTo(-L * 0.08, hh * 0.35);
+    c.closePath();
+    c.fill();
+    c.stroke();
+    [L * 0.03, L * 0.11].forEach((px) => {
+      c.fillStyle = "#3A3F33";
+      scRR(c, px - hh * 0.12, -hh * 0.05, hh * 0.4, hh * 0.24, 6);
+      c.fill();
+      c.stroke();
+      c.fillStyle = "rgba(60,60,70,.45)";
+      c.beginPath();
+      c.ellipse(px + hh * 0.3, hh * 0.07, hh * 0.08, hh * 0.55 * Math.abs(Math.sin(t * 40)), 0, 0, 7);
+      c.fill();
+    });
     c.restore();
-    return [x + mz[0], y + rec * u * 0.5 + mz[1]];
+    const doorX = cx + dx, doorY = cy + hh * 0.2;
+    const waiting = st.j.find((J) => t < J.tj);
+    if (waiting) {
+      c.save();
+      c.beginPath();
+      c.rect(doorX - dw / 2, cy - hh * 0.38, dw, hh * 0.8);
+      c.clip();
+      scvAvC(st, c, waiting.s, doorX, cy + hh * 0.42, hh * 0.75);
+      c.restore();
+    }
+    st.j.forEach((J) => {
+      const dt = t - J.tj;
+      if (dt < 0) return;
+      const open = dt > 0.8, size = Math.min(H * 0.12, 110 * U);
+      if (!J.snd) {
+        J.snd = 1;
+        scvSnd("whoosh");
+      }
+      let x = doorX - dt * W * 0.13, y;
+      if (!open) y = doorY + 0.5 * H * 0.9 * dt * dt;
+      else {
+        const y0 = doorY + 0.5 * H * 0.9 * 0.64;
+        y = y0 + (dt - 0.8) * H * 0.1;
+        x -= (dt - 0.8) * W * 0.03;
+      }
+      if (y > H + 200 || x < -200) return;
+      if (!open) {
+        c.save();
+        c.translate(x, y);
+        c.rotate(dt * 8 + J.sw);
+        scvAvC(st, c, J.s, 0, size * 0.5, size);
+        c.restore();
+        if (dt < 0.6 && +J.s.no % 3 === 0) scvText(c, "\xA1GER\xD3NIMOOO!", x + size * 0.6, y - size * 0.6, 14 * U, "#fff");
+      } else {
+        const k = Math.min(1, (dt - 0.8) * 5), cr = size * 0.75 * k, sw = Math.sin(t * 2 + J.sw) * 0.12;
+        c.save();
+        c.translate(x, y);
+        c.rotate(sw);
+        if (k > 0.05) {
+          c.fillStyle = "#6F7B58";
+          c.strokeStyle = "#1A1530";
+          c.lineWidth = 2;
+          c.beginPath();
+          c.moveTo(-cr, -size * 1.25);
+          c.quadraticCurveTo(0, -size * (1.25 + 0.85 * k), cr, -size * 1.25);
+          c.quadraticCurveTo(0, -size * 1.45, -cr, -size * 1.25);
+          c.fill();
+          c.stroke();
+          c.strokeStyle = "rgba(26,21,48,.6)";
+          c.lineWidth = 1;
+          c.beginPath();
+          c.moveTo(-cr, -size * 1.2);
+          c.lineTo(0, -size * 0.6);
+          c.lineTo(cr, -size * 1.2);
+          c.stroke();
+          if (k >= 1) scvText(c, `${J.s.no}`, 0, -size * 1.55, size * 0.28, "#fff");
+        }
+        scvAvC(st, c, J.s, 0, 0, size);
+        c.restore();
+      }
+    });
+    c.strokeStyle = "rgba(255,255,255,.6)";
+    c.lineWidth = 2;
+    for (let i = 0; i < 12; i++) {
+      const y = H * scHash(i + 30), x = ((W - (t * W * 1.6 + i * W / 6)) % (W + 300) + W + 300) % (W + 300) - 150;
+      c.beginPath();
+      c.moveTo(x, y);
+      c.lineTo(x + 140 * U, y);
+      c.stroke();
+    }
+    if (t < 1.7) scvBanner(c, W, H * 0.62, "\u{1FA82} \xA1PREP\xC1RENSE PARA SALTAR!", "Cadetes en la puerta\u2026 esperen la luz verde", "#FFD21A", t / 1.7, U);
+    else if (t < 4.6) scvBanner(c, W, H * 0.62, "\u{1F7E2} \xA1LUZ VERDE! \xA1SALTEN!", "", "#3FFF6A", (t - 1.7) / 2.9, U);
+    else scvBanner(c, W, H * 0.62, "\u{1F3AF} \xA1CAIGAN EN EL BLANCO!", "Respuesta buena = te acercas \xB7 error = \xE1rbol, cables, carretera o lago", "#fff", (t - 4.6) / 3, U);
   }
   const SCV_ZP_STOP = 0.3;
   function scvZPView(W, H) {
@@ -27673,7 +28382,7 @@ onmessage = function(e){ var m = e.data, out = [];
       }
       if (S.gate <= 0 && !S.breach) scvZBreach(S);
     }
-    S.zs = S.zs.filter((z) => !z.dead || z.dead < 1.6);
+    S.zs = S.zs.filter((z) => !z.dead || z.dead < 3);
     scvZDecals(c, S, (d) => {
       const q = P(d.fx, d.ly);
       return { x: q.x, y: q.y, w: q.sz * 0.4 };
@@ -27764,17 +28473,30 @@ onmessage = function(e){ var m = e.data, out = [];
     scRR(c, W * 0.5 - hw / 2 + 3, V.hy - 41 * U, (hw - 6) * hp, 24 * U, 8);
     c.fill();
     scvText(c, `\u{1F9F1} BARRICADA ${Math.round(hp * 100)}%`, W * 0.5, V.hy - 29 * U, 14 * U, "#fff");
+    {
+      const pu = SCV_PU[(S.puIdx || 0) % SCV_PU.length], pulse = 1 + Math.sin(t * 4) * 0.07, bw2 = 160 * U, bh2 = 120 * U, bx2 = 10 * U, by = V.hy - 30 * U;
+      c.fillStyle = "rgba(26,21,48,.88)";
+      scRR(c, bx2, by, bw2, bh2, 14);
+      c.fill();
+      c.strokeStyle = "#FFD21A";
+      c.lineWidth = 3;
+      c.stroke();
+      scvText(c, "POWER-UP", bx2 + bw2 / 2, by + 16 * U, 13 * U, "#FFD21A");
+      c.save();
+      c.translate(bx2 + bw2 / 2, by + 54 * U);
+      c.scale(pulse, pulse);
+      scvText(c, pu[1], 0, 0, 40 * U, "#fff", "center", false);
+      c.restore();
+      scvText(c, pu[2], bx2 + bw2 / 2, by + 90 * U, 13 * U, "#fff");
+      scvText(c, "si aciertan 60%+", bx2 + bw2 / 2, by + 106 * U, 10 * U, "#BDB6A8");
+      const act = [];
+      if (S.turretUntil > now) act.push(`\u{1F916} ${Math.ceil((S.turretUntil - now) / 1e3)}s`);
+      if (S.zapUntil > now) act.push(`\u26A1 ${Math.ceil((S.zapUntil - now) / 1e3)}s`);
+      if (act.length) scvText(c, "ACTIVO: " + act.join(" \xB7 "), bx2 + bw2 / 2, by + bh2 + 14 * U, 13 * U, "#9BE564");
+    }
     scvText(c, `${brutal ? "\u{1F6A9} OLEADA ENORME" : S.wt === "normal" ? "\u{1F9DF} OLEADA" : "\u{1F60C} TRANQUILA"} \xB7 \u{1F9DF} ${live.length} \xB7 \u{1F480} ${S.kills} \xB7 \u{1F3AF} ${S.heads || 0} headshots`, W * 0.5, V.hy - 62 * U, 16 * U, wave.col);
-    const two = n > 14, nFar = two ? Math.ceil(n / 2) : 0, nNear = n - nFar;
     S.pos = {};
-    const slots = sc.students.map((s, i) => {
-      if (two && i < nFar) {
-        const sp2 = W / nFar, size2 = Math.min(H * 0.21, sp2 * 1.6);
-        return { x: sp2 * (i + 0.5), y: H * 0.95, size: size2, far: 1 };
-      }
-      const k = i - nFar, sp = W / nNear, size = Math.min(two ? H * 0.25 : H * 0.27, sp * (two ? 1.7 : 1.8));
-      return { x: sp * (k + 0.5) + (two ? sp * 0.25 : 0), y: two ? H * 1.06 : H * 1, size };
-    });
+    const slots = scvZPSlots(n, W, H);
     const qph = game.phase === "q";
     const drawCadet = (s, i) => {
       const p = slots[i];
@@ -27782,7 +28504,7 @@ onmessage = function(e){ var m = e.data, out = [];
       const W0 = S.wpn[s.no] || { k: "fx" }, grabbed = (S.grab || []).some((G) => G.no === s.no && G.done);
       if (S.out[s.no] != null || grabbed) {
         S.pos[s.no] = Object.assign({ mx: p.x, my: p.y - p.size }, p);
-        scvText(c, "\u{1F480}", p.x, p.y - p.size * 0.45, p.size * 0.3, "#fff", "center", false);
+        scvCadetDown(c, s, p.x, p.y - (p.far ? 0 : p.size * 0.1), p.size * 0.62, t);
         scvText(c, `#${s.no}`, p.x, p.y - p.size * 0.2, p.size * 0.12, "#FF6B85");
         return;
       }
@@ -27854,10 +28576,8 @@ onmessage = function(e){ var m = e.data, out = [];
     });
     S.grab = (S.grab || []).filter((G) => now - G.t0 < 2e3);
     const able = sc.students.filter((s) => S.out[s.no] == null && S.pos[s.no] && !S.para[s.no]);
-    if (moving && able.length && live.length && tkxEvery(S, Math.max(3, Math.round(9 - n / 8)), "amb")) {
-      const s = able[Math.floor(Math.random() * able.length)], near = live.filter((z) => !(z.rise < 1)).sort((a, b) => a.fx - b.fx), tz = near[Math.floor(Math.random() * Math.min(10, near.length))];
-      if (tz) scvZFire(S, s.no, tz, Math.random() < 0.25 ? "head" : "body", W, H, U, null, 0);
-    }
+    if (moving) scvZCadetFire(S, able, live, W, H, U, null);
+    scvZAudio(S, moving, live.length, atk.length);
     if (S.turretUntil > now) {
       const tx = W * 0.06, ty = wy0 - 20 * U;
       c.fillStyle = "#5A6070";
@@ -27877,7 +28597,7 @@ onmessage = function(e){ var m = e.data, out = [];
       if (k > 6) S.reinf = null;
       else R.squad.forEach((m, i) => {
         const side = i % 2 ? 1 : -1, inX = Math.min(1, k / 1), outK = Math.max(0, (k - 5) / 1), size = H * 0.3, x = (side < 0 ? W * 0.03 + Math.floor(i / 2) * W * 0.045 : W * 0.97 - Math.floor(i / 2) * W * 0.045) + side * (1 - inX + outK) * W * 0.25, y = H * 0.98;
-        const mm = scvCadetBack(c, { no: m.off ? "OF" : "4\xBA", look: m.look }, x, y, size, t + i, "fx", 0);
+        const mm = scvCadetBack(c, { no: m.off ? "OF" : "4\xBA", look: m.look }, x, y, size, t + i, "fx", 0, null, "pix");
         if (inX >= 1 && outK === 0 && (Math.floor(now / 90) + i) % 4 === 0) {
           const z = live.filter((z2) => !z2.tg).sort((a, b) => a.fx - b.fx)[0];
           if (z) {
@@ -27922,6 +28642,10 @@ onmessage = function(e){ var m = e.data, out = [];
         c.moveTo(sh.x0 + (sh.x1 - sh.x0) * Math.max(0, k - 0.3), sh.y0 + (sh.y1 - sh.y0) * Math.max(0, k - 0.3));
         c.lineTo(x, y);
         c.stroke();
+      }
+      if (sh.t === 1) {
+        if (sh.kind == "rocket") scvSnd("shot");
+        else scvShotSnd(sh.w == "pistol" ? "pistol" : "rifle", 0.42);
       }
       if (sh.t < 3) {
         c.fillStyle = "#FFD21A";
@@ -28590,10 +29314,10 @@ onmessage = function(e){ var m = e.data, out = [];
   const P3X = (x) => (x - 0.5) * 2400;
   function scvP3Scene() {
     const trees = [], poles = [], cars = [];
-    [[-1116, -150], [-1e3, 250], [-1120, 700], [-990, 1200], [-1110, 1800], [1130, 1500], [1e3, 2200]].forEach(([x, z]) => trees.push({ x, z, h: 150 + Math.abs(Math.sin(x * z)) * 60 }));
+    [[-1116, -150], [-1e3, 250], [-1120, 700], [-990, 1200], [-1110, 1800], [1130, 1500], [1080, 2300]].forEach(([x, z]) => trees.push({ x, z, h: 150 + Math.abs(Math.sin(x * z)) * 60 }));
     [-100, 450, 1e3, 1600].forEach((z) => {
-      poles.push({ x: -588, z });
-      poles.push({ x: -168, z });
+      poles.push({ x: -560, z });
+      poles.push({ x: -170, z });
     });
     for (let i = 0; i < 6; i++) cars.push({ road: i % 2, dir: i % 2 ? -1 : 1, off: i * 700, sp: 5 + i % 3 * 2, col: ["#E23B3B", "#3D7BFF", "#FFB400", "#22C55E", "#B06BFF", "#F5F5F5"][i], truck: i === 1 || i === 4 });
     return { trees, poles, cars };
@@ -28608,32 +29332,18 @@ onmessage = function(e){ var m = e.data, out = [];
     });
     return items;
   }
-  function scvPDraw(c, W, H, t, U, top, S) {
-    const now = performance.now();
-    if (!S.sc3) S.sc3 = scvP3Scene();
-    const SC3 = S.sc3;
-    const sw = Math.sin(t * 0.15) * 180, cp = [sw, 720 + Math.sin(t * 0.2) * 30, -1700], look = [sw * 0.3, 120, 600];
-    const C = cam3(cp, V3.sub(look, cp), W, H);
-    C.cy = top + (H - top) * 0.42;
-    C.F = H * 1.05;
-    const fogC = [205, 228, 250], fog = (d) => Math.max(0, Math.min(0.75, (d - 1500) / 4500)), sh = (col, k, d) => rgbS(mixRgb(rgbOf(col).map((v) => v * k), fogC, fog(d)));
+  function scvPStatic(W, H, U, dpr, C, sh, SC3, hy) {
+    const cv = document.createElement("canvas");
+    cv.width = Math.round(W * dpr);
+    cv.height = Math.round(H * dpr);
+    const c = cv.getContext("2d");
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
     let g = c.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, "#3E8EF0");
     g.addColorStop(0.55, "#BFE4FF");
     g.addColorStop(1, "#E9F6FF");
     c.fillStyle = g;
     c.fillRect(0, 0, W, H);
-    const hz = proj3(C, [0, 0, 6e4]);
-    const hy = hz ? hz[1] : H * 0.4;
-    c.fillStyle = "rgba(255,255,255,.85)";
-    for (let i = 0; i < 6; i++) {
-      const x = (scHash(i) * W * 1.4 + t * 10 * (1 + i % 3)) % (W + 300) - 150, y = top * 0.3 + scHash(i + 5) * (hy - top * 0.3) * 0.8, r = 22 + scHash(i + 2) * 26;
-      c.beginPath();
-      c.arc(x, y, r * U, 0, 7);
-      c.arc(x + r * U, y - r * U * 0.4, r * U * 1.1, 0, 7);
-      c.arc(x + r * U * 2, y, r * U * 0.9, 0, 7);
-      c.fill();
-    }
     c.fillStyle = "#9CB8D6";
     c.beginPath();
     c.moveTo(0, hy);
@@ -28652,17 +29362,22 @@ onmessage = function(e){ var m = e.data, out = [];
     quad([[-3e3, 0, -500], [3e3, 0, -500], [3e3, 0, 8e3], [-3e3, 0, 8e3]], "#6FBF4A");
     for (let i = 0; i < 8; i++) quad([[-3e3, 0.2, i * 900 - 500], [3e3, 0.2, i * 900 - 500], [3e3, 0.2, i * 900 - 50], [-3e3, 0.2, i * 900 - 50]], "rgba(255,255,255,.06)");
     {
-      const pts = [];
-      for (let k = 0; k < 28; k++) {
-        const a = k / 28 * Math.PI * 2;
-        pts.push([1150 + Math.cos(a) * 230, 0.5, 450 + Math.sin(a) * 420]);
+      const sand = [], wat = [], deep = [];
+      for (let k = 0; k < 36; k++) {
+        const a = k / 36 * Math.PI * 2;
+        sand.push([1310 + Math.cos(a) * 340, 0.4, 450 + Math.sin(a) * 700]);
+        wat.push([1310 + Math.cos(a) * 300, 0.5, 450 + Math.sin(a) * 650]);
+        deep.push([1340 + Math.cos(a) * 170, 0.6, 500 + Math.sin(a) * 380]);
       }
-      quad(pts, "#4DA8FF");
+      quad(sand, "#D9C58E");
+      quad(wat, "#4DA8FF");
+      quad(deep, "#2F7FD6");
     }
-    [[-876, -636], [732, 948]].forEach(([x0, x1]) => {
+    [[-940, -600], [680, 1e3]].forEach(([x0, x1]) => {
+      quad([[x0 - 14, 0.5, -500], [x1 + 14, 0.5, -500], [x1 + 14, 0.5, 8e3], [x0 - 14, 0.5, 8e3]], "#8A8A80");
       quad([[x0, 0.6, -500], [x1, 0.6, -500], [x1, 0.6, 8e3], [x0, 0.6, 8e3]], "#4A4A52");
-      for (let z = -500; z < 8e3; z += 260) quad([[(x0 + x1) / 2 - 5, 0.8, z], [(x0 + x1) / 2 + 5, 0.8, z], [(x0 + x1) / 2 + 5, 0.8, z + 130], [(x0 + x1) / 2 - 5, 0.8, z + 130]], "#FFD21A");
-      [x0 + 6, x1 - 6].forEach((x) => quad([[x - 3, 0.8, -500], [x + 3, 0.8, -500], [x + 3, 0.8, 8e3], [x - 3, 0.8, 8e3]], "#FFFFFF"));
+      for (let z = -500; z < 8e3; z += 260) quad([[(x0 + x1) / 2 - 7, 0.8, z], [(x0 + x1) / 2 + 7, 0.8, z], [(x0 + x1) / 2 + 7, 0.8, z + 130], [(x0 + x1) / 2 - 7, 0.8, z + 130]], "#FFD21A");
+      [x0 + 8, x1 - 8].forEach((x) => quad([[x - 4, 0.8, -500], [x + 4, 0.8, -500], [x + 4, 0.8, 8e3], [x - 4, 0.8, 8e3]], "#FFFFFF"));
     });
     const T = [P3X(SCV_TARGET), 0, 150];
     [[360, "#fff"], [264, "#FF4F6D"], [168, "#fff"], [72, "#FF4F6D"]].forEach(([r, col]) => {
@@ -28673,7 +29388,7 @@ onmessage = function(e){ var m = e.data, out = [];
       }
       quad(pts, col);
     });
-    const faces = [], bills = [];
+    const faces = [];
     SC3.trees.forEach((tr) => {
       box3(faces, [tr.x, tr.h * 0.25, tr.z], 10, tr.h * 0.25, 10, "#7A5230");
       prism3(faces, [tr.x, tr.h * 0.7, tr.z], tr.h * 0.38, tr.h * 0.28, 8, "y", "#2E9A35");
@@ -28683,16 +29398,80 @@ onmessage = function(e){ var m = e.data, out = [];
       box3(faces, [p.x, 130, p.z], 7, 130, 7, "#6B5A4A");
       box3(faces, [p.x, 252, p.z], 50, 5, 5, "#5A4A3A");
     });
-    [-100, 450, 1e3, 1600].forEach((z) => bills.push({ wire: true, z }));
     [-150, 300].forEach((z) => prism3(faces, [P3X(0.455), 30, z], 14, 30, 6, "y", "#3E8A3A"));
-    [-50, 450].forEach((z) => prism3(faces, [P3X(0.785), 30, z], 14, 30, 6, "y", "#3E8A3A"));
-    const rx = [[-816, -696], [792, 888]];
+    [-50, 450].forEach((z) => prism3(faces, [P3X(0.78), 30, z], 14, 30, 6, "y", "#3E8A3A"));
+    scvP3Paint(c, C, faces).sort((a, b) => b.d - a.d).forEach((it) => {
+      const fc = it.fc, kk = 0.58 + 0.5 * Math.max(0, V3.dot(fc.n, LIGHT3));
+      c.beginPath();
+      it.pp.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]));
+      c.closePath();
+      c.fillStyle = sh(fc.col, kk, it.d);
+      c.fill();
+      c.lineWidth = 1;
+      c.strokeStyle = "rgba(26,21,48,.35)";
+      c.stroke();
+    });
+    c.strokeStyle = "#1A1530";
+    c.lineWidth = 1.5;
+    [-100, 450, 1e3, 1600].forEach((wz) => [-30, 0, 30].forEach((o) => {
+      const a = proj3(C, [-560 + o * 0.2, 252, wz + o]), b = proj3(C, [-170 + o * 0.2, 252, wz + o]), m = proj3(C, [-365, 212, wz + o]);
+      if (a && b && m) {
+        c.beginPath();
+        c.moveTo(a[0], a[1]);
+        c.quadraticCurveTo(m[0], m[1] + (m[1] - (a[1] + b[1]) / 2), b[0], b[1]);
+        c.stroke();
+      }
+    }));
+    return cv;
+  }
+  function scvAvC(S, c, s, x, y, size) {
+    S.avc = S.avc || {};
+    let e = S.avc[s.no];
+    if (!e) {
+      const b = 180, w = Math.ceil(b * 1.8), h = Math.ceil(b * 1.95), cv = document.createElement("canvas");
+      cv.width = w;
+      cv.height = h;
+      scvAvatar(cv.getContext("2d"), s, w / 2, h * 0.88, b, 0.2, false);
+      e = S.avc[s.no] = { cv, w, h, b };
+    }
+    const k = size / e.b;
+    c.drawImage(e.cv, x - e.w / 2 * k, y - e.h * 0.88 * k, e.w * k, e.h * k);
+  }
+  function scvPDraw(c, W, H, t, U, top, S) {
+    const now = performance.now();
+    if (!S.sc3) S.sc3 = scvP3Scene();
+    const SC3 = S.sc3;
+    const cp = [0, 720, -1700], look = [0, 120, 600];
+    const C = cam3(cp, V3.sub(look, cp), W, H);
+    C.cy = top + (H - top) * 0.42;
+    C.F = H * 1.05;
+    const fogC = [205, 228, 250], fog = (d) => Math.max(0, Math.min(0.75, (d - 1500) / 4500)), sh = (col, k, d) => rgbS(mixRgb(rgbOf(col).map((v) => v * k), fogC, fog(d)));
+    const hz = proj3(C, [0, 0, 6e4]);
+    const hy = hz ? hz[1] : H * 0.4;
+    const dpr = Math.max(1, Math.min(2, (c.canvas && c.canvas.width ? c.canvas.width : W) / W)), bgKey = `${W}|${H}|${top}|${dpr}`;
+    if (!S.bg || S.bgKey !== bgKey) {
+      S.bgKey = bgKey;
+      S.bg = scvPStatic(W, H, U, dpr, C, sh, SC3, hy);
+    }
+    c.drawImage(S.bg, 0, 0, W, H);
+    c.fillStyle = "rgba(255,255,255,.85)";
+    for (let i = 0; i < 6; i++) {
+      const x = (scHash(i) * W * 1.4 + t * 10 * (1 + i % 3)) % (W + 300) - 150, y = top * 0.3 + scHash(i + 5) * (hy - top * 0.3) * 0.7, r = 22 + scHash(i + 2) * 26;
+      c.beginPath();
+      c.arc(x, y, r * U, 0, 7);
+      c.arc(x + r * U, y - r * U * 0.4, r * U * 1.1, 0, 7);
+      c.arc(x + r * U * 2, y, r * U * 0.9, 0, 7);
+      c.fill();
+    }
+    const T = [P3X(SCV_TARGET), 0, 150];
+    const faces = [], bills = [];
+    const rx = [[-860, -680], [760, 920]];
     SC3.cars.forEach((cr) => {
       const lane = rx[cr.road][cr.dir > 0 ? 0 : 1], span = 6400, zz = ((cr.off + t * cr.sp * 60 * cr.dir) % span + span) % span - 400;
       cr.z = zz;
       cr.x = lane;
-      box3(faces, [lane, 18, zz], 34, 14, cr.truck ? 90 : 60, cr.col);
-      box3(faces, [lane, 40, zz - (cr.truck ? 50 : 6) * cr.dir], 30, 12, cr.truck ? 30 : 30, cr.truck ? "#DDDDDD" : "#BFE3FF");
+      box3(faces, [lane, 26, zz], 50, 20, cr.truck ? 130 : 84, cr.col);
+      box3(faces, [lane, 56, zz - (cr.truck ? 72 : 8) * cr.dir], 44, 16, cr.truck ? 42 : 40, cr.truck ? "#DDDDDD" : "#BFE3FF");
     });
     const n = sc.students.length;
     sc.students.forEach((s, i) => {
@@ -28717,7 +29496,7 @@ onmessage = function(e){ var m = e.data, out = [];
           y = 150;
           pose = "cable";
         } else if (kind === "car") {
-          const lane = X < 0 ? -756 : 840;
+          const lane = X < 0 ? -770 : 840;
           ox = lane - X;
           pose = "car";
           if (k >= 0 && k < 1.4) {
@@ -28729,7 +29508,7 @@ onmessage = function(e){ var m = e.data, out = [];
             ox += 1.2 * 300 * (i % 2 ? 1 : -1);
           }
         } else if (kind === "lake") {
-          ox = 1150 - X;
+          ox = 1150 + i % 3 * 60 - X;
           oz = 450 - z;
           pose = "lake";
         }
@@ -28825,7 +29604,7 @@ onmessage = function(e){ var m = e.data, out = [];
         c.save();
         c.translate(x, y);
         c.scale(1.5, 0.3);
-        scvAvatar(c, s, 0, 0, size, 0, false);
+        scvAvC(S, c, s, 0, 0, size);
         c.restore();
         c.strokeStyle = "rgba(30,30,30,.5)";
         c.lineWidth = size * 0.06;
@@ -28846,7 +29625,7 @@ onmessage = function(e){ var m = e.data, out = [];
         c.beginPath();
         c.rect(0, 0, W, y);
         c.clip();
-        scvAvatar(c, s, x, yy, size, 0, false);
+        scvAvC(S, c, s, x, yy, size);
         if (sink < 1) {
           c.strokeStyle = "#1A1530";
           c.lineWidth = size * 0.09;
@@ -28894,7 +29673,7 @@ onmessage = function(e){ var m = e.data, out = [];
           c.translate(on ? 3 : -3, 0);
           if (!on) c.globalAlpha = 0.45;
         }
-        scvAvatar(c, s, 0, 0, size, b.pose === "air" ? 0.2 : t + b.i, false);
+        scvAvC(S, c, s, 0, 0, size);
         c.restore();
         if (b.pose === "cable") {
           const on = Math.floor(now / 90) % 2 === 1;
@@ -28985,7 +29764,7 @@ onmessage = function(e){ var m = e.data, out = [];
       if (!J || !J.land || J.land[3] !== "car") return;
       const k = (now - J.landT) / 1e3;
       if (k > 0.2 || k < -1.2) return;
-      const X = P3X(J.x) < 0 ? -756 : 840, z = -200 + i % 6 * 110 + Math.floor(i / 6) * 25, zz = z + -k * 900;
+      const X = P3X(J.x) < 0 ? -770 : 840, z = -200 + i % 6 * 110 + Math.floor(i / 6) * 25, zz = z + -k * 900;
       const f2 = [];
       box3(f2, [X, 26, zz], 52, 22, 90, "#E23B3B");
       box3(f2, [X, 58, zz + 8], 46, 18, 45, "#BFE3FF");
@@ -29001,12 +29780,12 @@ onmessage = function(e){ var m = e.data, out = [];
       const p = proj3(C, p3);
       if (p) scvText(c, txt, p[0], p[1], 13 * U, col);
     };
-    lab("\u{1F697} TR\xC1FICO", [-756, 60, -300], "#FFD21A");
+    lab("\u{1F697} TR\xC1FICO", [-770, 60, -300], "#FFD21A");
     lab("\u{1F69A} CAMIONES", [840, 60, -300], "#FFD21A");
-    lab("\u26A1 ALTA TENSI\xD3N", [-378, 300, -100], "#FFF6A8");
+    lab("\u26A1 ALTA TENSI\xD3N", [-365, 300, -100], "#FFF6A8");
     lab("\u{1F3AF} ZONA DE SALTO", [T[0], 30, -260], "#fff");
     lab("\u{1F333} \xC1RBOLES", [-1060, 260, -150], "#fff");
-    lab("\u{1F4A6} LAGO", [1150, 40, 100], "#fff");
+    lab("\u{1F4A6} LAGO", [1250, 40, 0], "#fff");
     scvText(c, `\u{1FA82} ALTURA ${Math.round(S.alt * 3e3)} m`, 20, top + 30 * U, 22 * U, "#fff", "left");
     if (S.gust > 0) {
       c.strokeStyle = `rgba(255,255,255,${S.gust * 0.7})`;
