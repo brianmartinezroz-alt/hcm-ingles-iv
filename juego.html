@@ -688,6 +688,11 @@ body.tkpov #tkCanvas{position:fixed!important;left:0!important;top:0!important;w
 .tkclock{position:absolute;left:50%;bottom:calc(100% + 40px);margin-left:66px;min-width:62px;height:48px;padding:0 10px;border-radius:14px;background:#fff;border:3px solid var(--ink,#2B2366);box-shadow:0 4px 0 var(--ink,#2B2366);display:grid;place-items:center;font-family:'Lilita One','Arial Rounded MT Bold',sans-serif;font-size:28px;color:var(--ink,#2B2366);z-index:5}
 .tkclock::before{content:"⏱";font-size:16px;position:absolute;top:-12px;left:-10px}
 .tkclock.warn{background:#FF4F6D;color:#fff;animation:clockPulse .5s ease-in-out infinite alternate}
+.tknuket{position:absolute;left:50%;top:74px;transform:translateX(-50%);z-index:6;padding:6px 16px;border-radius:999px;background:#1E1838;color:#B6FF5C;border:3px solid #B6FF5C;font-family:'Lilita One','Arial Rounded MT Bold',sans-serif;font-size:24px;box-shadow:0 4px 0 #0E0A20;pointer-events:none;white-space:nowrap}
+.tknuket.warn{background:#FF2D55;color:#fff;border-color:#fff;animation:clockPulse .5s ease-in-out infinite alternate}
+.tkstk{margin-left:4px;font-weight:900;color:#FF8A1F;font-size:.95em}
+#vTank[data-phase="replay"] .tkhud,#vTank[data-phase="replay"] .tkpan{display:none!important}
+@media (max-width:760px){.tknuket{top:58px;font-size:18px}}
 @keyframes clockPulse{to{transform:scale(1.15)}}
 @media (max-width:760px){.tkclock{margin-left:50px;bottom:calc(100% + 30px);height:40px;font-size:22px;min-width:50px}}
 #tkFire::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:6px solid rgba(255,79,109,.45);animation:firePulse 1.6s ease-in-out infinite;pointer-events:none;will-change:transform,opacity}
@@ -1120,7 +1125,7 @@ body.qopen .tkscreen .tktop{display:none!important}
         </div>
         <div class="field" id="backdropField">
           <span class="note">Background</span>
-          <div class="seg" id="backdropSeg"><button data-v="random">🎲 Random</button><button data-v="hcm">🏛 HCM campus</button><button data-v="plaza">🎖 HCM plaza</button><button data-v="cdmx">🏙 CDMX Reforma</button><button data-v="centro">⛪ CDMX Centro</button><button data-v="nature">🌲 Forest</button></div>
+          <div class="seg" id="backdropSeg"><button data-v="random">🎲 Random</button><button data-v="hcm">🏛 HCM campus</button><button data-v="plaza">🎖 HCM plaza</button><button data-v="puerta">🚪 Puerta de Honor</button><button data-v="cdmx">🏙 CDMX Reforma</button><button data-v="centro">⛪ CDMX Centro</button><button data-v="nature">🌲 Forest</button></div>
         </div>
         <div class="field" id="waterField">
           <span class="note">Water</span>
@@ -5737,7 +5742,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       };
       beep(ok ? 880 : 220, ok ? 0.2 : 0.3);
       const ans = (closed || q.type === "order") && q.a ? `<div class="answer">${esc(q.a)}</div>` : "";
-      $("#verdict").innerHTML = `<div class="verdict ${ok ? "ok" : "no"}">${ok ? "Correct!" : "Oops!"}</div>${ans}`;
+      $("#verdict").innerHTML = `<div class="verdict ${ok ? "ok" : "no"}">${ok ? "Correct!" : "Oops!"}</div>${q.joke && q.note ? `<div class="answer">${esc(q.note)}</div>` : ""}${ans}`;
       $("#acts").innerHTML = textUsed ? `<span class="note">${ok ? "Right answer, but you used the text:" : ""} turn lost. Next team\u2026</span>` : `<span class="note">${ok ? rightLabel && rightLabel !== "Correct" ? esc(rightLabel) : "Nice!" : "Next team\u2026"}</span>`;
       const tmo = setTimeout(() => finish(ok), wait);
       setTimeout(() => {
@@ -5861,11 +5866,13 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     } else {
       const correctIdx = q.type === "tf" ? q.correct ? 1 : 0 : q.correct;
       const pick = (i) => {
-        const ok = i === correctIdx;
+        const ok = q.joke === "all" ? true : q.joke === "none" ? false : i === correctIdx;
         $("#opts").querySelectorAll(".opt").forEach((b) => {
           const bi = +b.dataset.i;
           b.disabled = true;
-          if (bi === correctIdx) b.classList.add("right");
+          if (q.joke === "all") b.classList.add("right");
+          else if (q.joke === "none") b.classList.add(bi === i ? "wrong" : "dim");
+          else if (bi === correctIdx) b.classList.add("right");
           else if (bi === i) b.classList.add("wrong");
           else b.classList.add("dim");
         });
@@ -6776,8 +6783,8 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     c.fillStyle = "#3B3458";
     c.fillRect(cx - 8, y - 22, 16, 22);
   }
-  const BACKDROP_KEYS = ["hcm", "plaza", "cdmx", "centro", "nature"];
-  const BLD_H = { gov: 260, class: 260, latino: 400, bellas: 300, catedral: 330, tribuna: 230, dorm: 150, office: 310 };
+  const BACKDROP_KEYS = ["hcm", "plaza", "puerta", "cdmx", "centro", "nature"];
+  const BLD_H = { gate: 330, gov: 260, class: 260, latino: 400, bellas: 300, catedral: 330, tribuna: 230, dorm: 150, office: 310 };
   function latinoTower(c, cx, y0, S, winter) {
     const glass = "#5A7BA3", dk = "#3B4E6A", w = 110, h = 300;
     poly(c, [[cx - w / 2, y0], [cx + w / 2, y0], [cx + w / 2, y0 - h], [cx - w / 2, y0 - h]], glass);
@@ -7214,6 +7221,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     else if (k === "catedral") catedral(t, b.cx, y, S, winter);
     else if (k === "tribuna") tribuna(t, b.cx, y, S, winter);
     else if (k === "dorm") eagleDorm(t, b.cx, y, S, winter);
+    else if (k === "gate") gateBuilding(t, b.cx, y, S, winter);
   }
   function buildWorld(type, season, backdrop, noWater) {
     const S = SEASONS[season], W = TK.W, H = TK.H, winter = season === "winter";
@@ -7253,6 +7261,10 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
         pad(0.4, 0.6, 240, "tribuna");
         pad(0.08, 0.24, 160, "dorm");
         if (wide) pad(0.76, 0.92, 160, "dorm");
+      } else if (backdrop === "puerta") {
+        pad(0.4, 0.6, 210, "gate");
+        pad(0.08, 0.24, 160, "dorm");
+        if (wide) pad(0.74, 0.92, 230, "class", true);
       } else if (backdrop === "cdmx") {
         pad(0.42, 0.58, 70, "latino");
         pad(0.08, 0.26, 210, "bellas");
@@ -7347,6 +7359,28 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       m.fill();
       m.stroke();
       poly(m, [[flag.x - 36, y0], [flag.x + 36, y0], [flag.x + 24, y0 - 16], [flag.x - 24, y0 - 16]], S.concrete);
+    } else if (backdrop === "puerta") {
+      stepPyramid(m, W * 0.07, y0, 200, S, winter);
+      eagleDorm(m, W * 0.26, y0, S, winter);
+      serpentBuilding(m, W * 0.62, y0, 420, S, winter);
+      stepPyramid(m, W * 0.93, y0, 220, S, winter);
+      m.fillStyle = shade(S.concrete, 0.9);
+      m.fillRect(W * 0.3, y0 - 5, W * 0.4, 5);
+      cadets(m, W * 0.33, W * 0.45, y0);
+      cadets(m, W * 0.55, W * 0.67, y0);
+      flag = { x: W * 0.5, y: y0 };
+      m.strokeStyle = INK;
+      m.lineWidth = 3;
+      m.fillStyle = "#9C9AB0";
+      m.beginPath();
+      m.rect(flag.x - 3, y0 - 330, 6, 330);
+      m.fill();
+      m.stroke();
+      m.beginPath();
+      m.arc(flag.x, y0 - 334, 7, 0, 7);
+      m.fillStyle = "#FFD21A";
+      m.fill();
+      m.stroke();
     } else if (backdrop === "cdmx") {
       skyline(m, 0, W * 0.4, y0, S, winter);
       skyline(m, W * 0.6, W, y0, S, winter);
@@ -9114,6 +9148,8 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       amt = Math.max(1, Math.round(amt * 0.5));
       float(t.x, t.y - 125, "\u{1F9BE} ARMOR -50%", "#9AA7C7");
     }
+    if (game.sudden) amt = amt * 2;
+    tkxRec(t, amt, by);
     const st0 = tankStage(t.hp);
     t.hp -= amt;
     t.lastHit = by;
@@ -9128,6 +9164,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
   }
   function kill(t, label) {
     if (!t.alive) return;
+    tkxKo(t);
     t.alive = false;
     t.hp = 0;
     t.respawn = 120;
@@ -9162,6 +9199,12 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     t.lastHit = null;
   }
   function explode(x, y, r, dmg, owner, kind, direct) {
+    if (tk) {
+      tk.lastKind = kind || "shell";
+      if (direct && tk.split && owner != null) tkxSplitHit(direct.team, Math.round(dmg * (game.sudden ? 2 : 1)));
+      if (y <= tk.water && (kind === "rapid" || kind === "triple")) tkxCombo(x, y, kind);
+      if (kind === "sniper" && direct && tk.snipeArmed && owner != null) tkxHeadshot(x, y);
+    }
     if (y > tk.water) {
       splash(x, tk.water);
       return;
@@ -10067,6 +10110,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       return;
     }
     game.shotsLeft = Math.max(0, game.shotsLeft - 1);
+    tk.turnKind = w;
     const spec = WEAPONS[w], a = t.angle * Math.PI / 180, sp = t.power * 0.19;
     const bx2 = t.x + Math.cos(a) * 32 * TS, by = t.y - 22 * TS - Math.sin(a) * 32 * TS;
     if (w === "mortar") [-13, -6.5, 0, 6.5, 13].forEach((da, k) => {
@@ -10105,17 +10149,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     }
     if (game.rapid > 0 && w === baseW()) {
       game.rapid--;
-      const sh = WEAPONS.shell;
-      [9, 18].forEach((fr, k) => later(fr, () => {
-        if (!tk) return;
-        const aa = a + (k ? -0.03 : 0.03);
-        tk.shots.push({ x: bx2, y: by, vx: Math.cos(aa) * sp * 1.02, vy: -Math.sin(aa) * sp * 1.02, r: sh.r, dmg: sh.dmg, owner: t.team, age: 0, trail: [], kind: "shell" });
-        t.recoil = 7;
-        boom(14);
-        SFX.play("f_shell");
-        for (let i = 0; i < 10; i++) tk.parts.push({ x: bx2, y: by, vx: Math.cos(aa) * rnd(1, 4), vy: -Math.sin(aa) * rnd(1, 4), life: rnd(10, 18), max: 18, size: rnd(4, 8), col: "#FFD21A", g: 0, fire: true });
-      }));
-      float(t.x, t.y - 120, "RAPID FIRE x3!", "#FFD21A");
+      tkxRapid(t, a, sp, bx2, by);
     }
     if (w !== baseW()) puBanner(w);
     for (let i = 0; i < 12; i++) tk.parts.push({ x: bx2, y: by, vx: Math.cos(a) * rnd(1, 4) + rnd(-1, 1), vy: -Math.sin(a) * rnd(1, 4) + rnd(-1, 1), life: rnd(10, 20), max: 20, size: rnd(4, 9), col: i % 2 ? "#FFD21A" : "#FF8A3D", g: 0, fire: true });
@@ -10193,6 +10227,9 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     renderTkUI();
   }
   function launchHoming(targets, kind) {
+    if (kind === "sniper" && !tk.snipeGo) return tkxSnipe(targets);
+    tk.turnKind = kind;
+    if ((kind === "twin" || kind === "barrage") && targets.length > 1) tkxSplitStart(targets, kind);
     const t = curTank(), spec = WEAPONS[kind];
     game.shotsLeft = Math.max(0, game.shotsLeft - 1);
     targets.forEach((ti, k) => {
@@ -10311,7 +10348,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     const born = tk.born = [];
     tk.shots = tk.shots.filter((s) => {
       if (s.cluster && s.age > 6 && s.vy > -1) {
-        [-3.6, -2.2, -0.8, 0.8, 2.2, 3.6].forEach((dv, q) => born.push({ x: s.x, y: s.y, vx: s.vx * 1.15 + dv, vy: s.vy * 1.3 - 1, r: s.r, dmg: s.dmg, owner: s.owner, age: 30, trail: [], kind: "triple", mini: true, fast: true, ci: q % 4 }));
+        [-4.4, -3.2, -2, -0.8, 0.8, 2, 3.2, 4.4].forEach((dv, q) => born.push({ x: s.x, y: s.y, vx: s.vx * 1.15 + dv, vy: s.vy * 1.3 - 1, r: s.r, dmg: Math.round(s.dmg * 0.85), owner: s.owner, age: 30, trail: [], kind: "triple", mini: true, fast: true, ci: q % 4 }));
         tk.flash = Math.max(tk.flash, 0.35);
         float(s.x, s.y - 40, "SPLIT!", "#FFD21A");
         for (let i = 0; i < 22; i++) {
@@ -10320,6 +10357,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
         }
         anim({ type: "shock", x: s.x, y: s.y, max: 18, col: "#FFD21A" });
         SFX.play("split");
+        tkxSplit(s);
         return false;
       }
       s.age++;
@@ -10645,6 +10683,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     }
     game.phase = "question";
     tk.cam.follow = "tank";
+    tkxEndTurn(game.turn <= prev);
     renderTkUI();
   }
   const ROU = [
@@ -11327,6 +11366,15 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     c.restore();
   }
   function drawTk() {
+    if (tk.replay) {
+      sizeTk();
+      tkxDrawReplay();
+      return;
+    }
+    if (tk.split && !tk._inSplit && !tk.pov) {
+      tkxDrawSplit();
+      return;
+    }
     if (tk.pov) {
       sizeTk();
       drawPov();
@@ -11395,6 +11443,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     drawFires(c, now);
     game.tanks.forEach((t2, i) => drawTank(c, t2, i === game.turn, now));
     drawAnims(c, now, false);
+    tkxWorld(c, now);
     const t = curTank();
     if (game.phase === "act" && t && t.alive) {
       const a = t.angle * Math.PI / 180, L2 = 40 + t.power * 1.5, ox = t.x + Math.cos(a) * 23 * TS, oy = t.y - 22 * TS - Math.sin(a) * 23 * TS;
@@ -11629,7 +11678,10 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       c.fillRect(0, 0, cw, chh);
       tk.flash *= 0.8;
     }
-    drawMini();
+    if (!tk._inSplit) {
+      tkxOverlay(c);
+      drawMini();
+    }
   }
   function drawMini() {
     const m = tkMiniCtx, W = tkMini.width, H = tkMini.height, sx = W / TK.W, sy = H / TK.H;
@@ -11718,13 +11770,23 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     if (view !== "play" || (game == null ? void 0 : game.mode) !== "tanks" || !tk) return;
     tk.frame++;
     shotClock();
-    stepPov();
-    stepMove();
-    stepShots();
-    game.tanks.forEach(stepTank);
-    stepCrates();
-    stepParts();
-    checkBusyDone();
+    tkxTick();
+    if (tk.replay) {
+      tkxStepReplay();
+      drawTk();
+      tkRaf = requestAnimationFrame(tkFrame);
+      return;
+    }
+    const slowSkip = tk.slow > 0 ? (tk.slow--, tk.frame % 3 !== 0) : false;
+    if (!slowSkip) {
+      stepPov();
+      stepMove();
+      stepShots();
+      game.tanks.forEach(stepTank);
+      stepCrates();
+      stepParts();
+      checkBusyDone();
+    }
     drawTk();
     updateTkLive();
     tkRaf = requestAnimationFrame(tkFrame);
@@ -12394,7 +12456,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     return best;
   }
   function povScene(P) {
-    const D = 1600, T = [D, 0, D * 0.2], objs = [], bd = game.backdrop, city = bd === "cdmx" || bd === "centro", hcm = bd === "hcm" || bd === "plaza";
+    const D = 1600, T = [D, 0, D * 0.2], objs = [], bd = game.backdrop, city = bd === "cdmx" || bd === "centro", hcm = bd === "hcm" || bd === "plaza" || bd === "puerta";
     const R = (() => {
       let s = Math.floor(Math.random() * 1e6) + 7;
       return () => {
@@ -12750,6 +12812,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     return ALB_ON() ? Math.random() < 0.5 ? `\xA1ALV ${n}!` : `\xA1QUE CHSM ${n}!` : `BYE BYE ${n}!`;
   }
   function startPov(kind, tgt) {
+    tk.turnKind = kind;
     const t = curTank();
     if (!t || !t.alive) return;
     let imp;
@@ -13407,12 +13470,1142 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     }
     povText(c, "Tap to skip \u23ED", W - 16 * U, H - 8 * U, 12, "rgba(255,255,255,.75)", "right", U);
   }
+  SHOT_TRAIL.rapid = "#FF5A1F";
+  BOOM_COLS.rapid = ["#FF3D1F", "#FFD21A", "#FFFFFF"];
+  const TKX_NUKE_EVERY = 240;
+  const RP_END = 400;
+  const BD_NAMES = { hcm: "Campus HCM", plaza: "Plaza de honor HCM", puerta: "Puerta de Honor HCM", cdmx: "CDMX \xB7 Reforma", centro: "CDMX \xB7 Centro", nature: "Bosque" };
+  const SEASON_ES = { spring: "Primavera", summer: "Verano", autumn: "Oto\xF1o", winter: "Invierno" };
+  function tkxBig(txt, sub, col, frames) {
+    tk.big = { txt, sub: sub || "", col: col || "#FFD21A", t: 0, max: frames || 150 };
+  }
+  function tkxText(c, txt, x, y, size, col, U, align) {
+    c.font = `400 ${Math.round(size * U)}px 'Lilita One','Arial Rounded MT Bold',sans-serif`;
+    c.textAlign = align || "center";
+    c.textBaseline = "middle";
+    c.lineJoin = "round";
+    c.lineWidth = Math.max(4, size * U * 0.16);
+    c.strokeStyle = INK;
+    c.strokeText(txt, x, y);
+    c.fillStyle = col;
+    c.fillText(txt, x, y);
+    c.textBaseline = "alphabetic";
+  }
+  function tkxTick() {
+    if (!game || !tk) return;
+    const now = performance.now(), dt = tk._tt ? Math.min(0.25, (now - tk._tt) / 1e3) : 0;
+    tk._tt = now;
+    if (game.nukeLeft == null) game.nukeLeft = TKX_NUKE_EVERY;
+    if (game.phase !== "over" && !tk.nukeEv && !tk.replay) {
+      game.nukeLeft -= dt;
+      const s = Math.ceil(game.nukeLeft);
+      if (s !== tk._ns) {
+        tk._ns = s;
+        if (s <= 10 && s > 0) beep(s <= 3 ? 1400 : 900, 0.08);
+      }
+    }
+    if (game.nukeLeft <= 0 && !tk.nukeEv && game.phase === "question" && $("#overlay").hidden && !tk.replay && !tk.pov) tkxNukeAll();
+    tkxClockEl();
+    (tk.shots || []).forEach((s) => {
+      if (s.kind === "rapid") {
+        for (let i = 0; i < 2; i++) tk.parts.push({ x: s.x - s.vx * i * 0.5, y: s.y - s.vy * i * 0.5, vx: rnd(-0.6, 0.6), vy: rnd(-0.6, 0.6), life: rnd(12, 20), max: 20, size: rnd(5, 10), col: i ? "#FFD21A" : "#FF3D1F", g: 0, fire: true });
+      }
+      if (s.kind === "triple" && s.mini) tk.parts.push({ x: s.x, y: s.y, vx: 0, vy: -0.2, life: 34, max: 34, size: rnd(6, 10), col: BOMBLET[s.ci || 0], g: 0, smoke: true });
+    });
+    if (tk.zone) {
+      const z = tk.zone;
+      z.l += (z.tl - z.l) * 0.03;
+      z.r += (z.tr - z.r) * 0.03;
+    }
+    if (tk.big) {
+      tk.big.t++;
+      if (tk.big.t > tk.big.max) tk.big = null;
+    }
+    if (tk.combo && tk.frame - tk.combo.f > 70) tk.combo = null;
+    tkxSplitTick();
+  }
+  function tkxClockEl() {
+    let el = document.getElementById("tkNukeT");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "tkNukeT";
+      el.className = "tknuket";
+      $("#vTank").appendChild(el);
+    }
+    const on = game && game.mode === "tanks" && game.phase !== "over" && !tk.replay;
+    el.hidden = !on;
+    if (!on) return;
+    const s = Math.max(0, Math.ceil(game.nukeLeft || 0)), txt = tk.nukeEv ? "\u2622\uFE0F \xA1IMPACTO!" : s <= 0 ? "\u2622\uFE0F \xA1INMINENTE!" : `\u2622\uFE0F ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    if (el._t !== txt) {
+      el._t = txt;
+      el.textContent = txt;
+    }
+    el.classList.toggle("warn", s <= 15 || !!tk.nukeEv);
+  }
+  function tkxRec(t, amt, by) {
+    if (by == null || by === t.team || amt <= 0 || !tk) return;
+    const h = tk.turnHits = tk.turnHits || {}, k = by + ">" + t.team;
+    h[k] = h[k] || { by, to: t.team, dmg: 0, ko: false, kind: tk.turnKind || tk.lastKind || "shell", x: t.x };
+    h[k].dmg += amt;
+    h[k].kind = tk.turnKind || h[k].kind;
+  }
+  function tkxKo(t) {
+    if (!tk || t.lastHit == null || t.lastHit === t.team) return;
+    const h = tk.turnHits = tk.turnHits || {}, k = t.lastHit + ">" + t.team;
+    h[k] = h[k] || { by: t.lastHit, to: t.team, dmg: 0, ko: false, kind: tk.turnKind || "shell" };
+    h[k].ko = true;
+  }
+  function tkxScore(h) {
+    return h.dmg + (h.ko ? 60 : 0);
+  }
+  function tkxEndTurn(roundOver) {
+    const hits = Object.values(tk.turnHits || {});
+    tk.turnHits = {};
+    tk.turnKind = null;
+    hits.forEach((h) => {
+      if (!tk.roundBest || tkxScore(h) > tkxScore(tk.roundBest)) tk.roundBest = h;
+    });
+    if (game.sudden && tk.zone) {
+      const z = tk.zone, step = TK.W * 0.07;
+      if (z.tr - z.tl > TK.W * 0.4) {
+        z.tl += step;
+        z.tr -= step;
+      }
+      game.tanks.forEach((t) => {
+        if (t.alive && (t.x < z.l || t.x > z.r)) {
+          hurt(t, 12, null);
+          float(t.x, t.y - 140, "\u2620\uFE0F \xA1TORMENTA!", "#C77DFF");
+          t.burn = Math.max(t.burn || 0, 90);
+        }
+      });
+    }
+    if (!game.sudden && game.total >= game.teams.length * 2 && game.total - game.asked <= game.teams.length) tkxSudden();
+    if (roundOver) {
+      const best = tk.roundBest;
+      tk.roundBest = null;
+      if (best && (best.dmg >= 15 || best.ko) && game.tanks[best.to] && game.tanks[best.by]) {
+        tkxStartReplay(best);
+        return true;
+      }
+    }
+    return false;
+  }
+  function tkxSudden() {
+    game.sudden = true;
+    tk.zone = { l: 0, r: TK.W, tl: TK.W * 0.07, tr: TK.W * 0.93 };
+    alarmFx();
+    SFX.play("siren");
+    tk.flash = 0.8;
+    tk.shake = 18;
+    tkxBig("\u26A0\uFE0F MUERTE S\xDABITA \u26A0\uFE0F", "\xDAltima ronda \xB7 da\xF1o x2 \xB7 el mapa se cierra", "#FF4F6D", 200);
+    puShow("\u2620\uFE0F", "MUERTE S\xDABITA", "Da\xF1o x2 \xB7 la tormenta cierra el mapa", "#C77DFF");
+  }
+  function tkxAfterAnswer(ok, q) {
+    const ti = game.turn, tm = game.teams[ti];
+    game.streak = game.streak || game.teams.map(() => 0);
+    if (q && q.joke === "all") {
+      setTimeout(() => tkxGiftAll(q), 250);
+      return;
+    }
+    if (q && q.joke === "none") {
+      setTimeout(() => tkxTrapAll(q), 250);
+      return;
+    }
+    if (ok) {
+      const n = ++game.streak[ti], t = game.tanks[ti];
+      const prize = n === 3 ? "airstrike" : n === 5 ? "nuke" : n > 5 && n % 2 === 1 ? "bigbomb" : null;
+      if (n >= 2 && t && t.alive) setTimeout(() => {
+        if (tk) float(t.x, t.y - 175, `\u{1F525} RACHA x${n}`, "#FF8A1F");
+      }, 900);
+      if (prize) {
+        game.inv[ti][prize] = (game.inv[ti][prize] || 0) + 1;
+        setTimeout(() => {
+          if (!tk) return;
+          puShow("\u{1F525}", `RACHA x${n}: ${WEAPONS[prize].name}`, `${tm.name} contest\xF3 ${n} seguidas`, tm.color);
+          SFX.play("fireUp");
+          renderTkUI();
+        }, 1400);
+      }
+    } else {
+      if (game.streak[ti] >= 3) {
+        const t = game.tanks[ti];
+        if (t && t.alive) float(t.x, t.y - 150, "\u{1F494} Se acab\xF3 la racha", "#fff");
+      }
+      game.streak[ti] = 0;
+    }
+    renderTkUI();
+  }
+  function tkxGiftAll(q) {
+    if (!tk) return;
+    puShow("\u{1F381}", "\xA1REGALO PARA TODOS!", (q.note || "").replace(/^🎁\s*/, ""), "#3FBF4F");
+    SFX.play("medic");
+    game.tanks.forEach((t, ti) => {
+      if (!t.alive) return;
+      const k = ITEM_KEYS[Math.floor(Math.random() * ITEM_KEYS.length)];
+      game.inv[ti][k] = (game.inv[ti][k] || 0) + 1;
+      t.hp = Math.min(100, t.hp + 15);
+      later(10 + ti * 8, () => {
+        if (!tk) return;
+        float(t.x, t.y - 130, `\u{1F381} ${WEAPONS[k].icon} +15\u2764`, game.teams[ti].color);
+        anim({ type: "shieldup", ti, max: 60 });
+      });
+    });
+    renderTkUI();
+  }
+  function tkxTrapAll(q) {
+    if (!tk) return;
+    alarmFx();
+    SFX.play("siren");
+    puShow("\u{1F608}", "\xA1TODOS PIERDEN!", (q.note || "").replace(/^😈\s*/, ""), "#FF4F6D");
+    const alive = game.tanks.filter((t) => t.alive);
+    tk.fit = true;
+    alive.forEach((t, k) => later(20 + k * 14, () => {
+      if (!tk || !t.alive) return;
+      tk.shots.push({ x: t.x + rnd(-260, 260), y: -80, vx: 0, vy: 5, r: 34, dmg: 15, owner: null, age: 29, trail: [], homing: true, target: t.team, kind: "sniper" });
+      anim({ type: "reticle", ti: t.team, max: 300, col: "#FF4F6D" });
+      SFX.play("lock");
+    }));
+    later(20 + alive.length * 14 + 150, () => {
+      if (tk && !tk.nukeEv) {
+        tk.fit = false;
+        tk.cam.follow = "tank";
+      }
+    });
+    game.phase = "busy";
+    tk.busyFrames = 0;
+  }
+  function tkxRapid(t, a, sp, bx2, by) {
+    const last = tk.shots[tk.shots.length - 1];
+    if (last && last.kind === "shell") {
+      last.kind = "rapid";
+      last.rapid = 1;
+    }
+    tk.turnKind = "double";
+    tk.comboN = 0;
+    tk.punch = 1;
+    float(t.x, t.y - 150, "\u{1F501} \xA1DOBLE CA\xD1ONAZO!", "#FF8A1F");
+    anim({ type: "shock", x: bx2, y: by, max: 22, col: "#FF8A1F", big: true });
+    [12, 24].forEach((fr, k) => later(fr, () => {
+      if (!tk) return;
+      const aa = a + (k ? -0.035 : 0.035), sh = WEAPONS.shell;
+      tk.shots.push({ x: bx2, y: by, vx: Math.cos(aa) * sp * 1.03, vy: -Math.sin(aa) * sp * 1.03, r: sh.r + 4, dmg: sh.dmg, owner: t.team, age: 0, trail: [], kind: "rapid", rapid: 1 });
+      t.recoil = 9;
+      tk.shake = Math.max(tk.shake, 12);
+      tk.flash = Math.max(tk.flash, 0.3);
+      boom(30);
+      SFX.play("f_bigbomb");
+      anim({ type: "shock", x: bx2, y: by, max: 20, col: k ? "#FFD21A" : "#FF5A1F", big: true });
+      float(bx2, by - 60, k ? "\xA1Y OTRO! \u{1F4A5}" : "\xA1OTRO! \u{1F525}", k ? "#FFD21A" : "#FF5A1F");
+      for (let i = 0; i < 18; i++) tk.parts.push({ x: bx2, y: by, vx: Math.cos(aa) * rnd(2, 7) + rnd(-1.5, 1.5), vy: -Math.sin(aa) * rnd(2, 7) + rnd(-1.5, 1.5), life: rnd(12, 22), max: 22, size: rnd(6, 12), col: i % 2 ? "#FFD21A" : "#FF3D1F", g: 0, fire: true });
+    }));
+  }
+  function tkxCombo(x, y, kind) {
+    const n = tk.comboN = (tk.comboN || 0) + 1;
+    tk.combo = { n, x, y, f: tk.frame, kind };
+    beep(500 + n * 90, 0.09);
+    tk.punch = Math.max(tk.punch || 0, 0.6);
+    anim({ type: "shock", x, y, max: 22, col: kind === "rapid" ? "#FF5A1F" : BOMBLET[n % 4], big: true });
+    if (kind === "rapid") {
+      tk.flash = Math.max(tk.flash, 0.45);
+      for (let i = 0; i < 24; i++) {
+        const a2 = rnd(-Math.PI, 0), v = rnd(3, 11);
+        tk.parts.push({ x, y, vx: Math.cos(a2) * v, vy: Math.sin(a2) * v, life: rnd(26, 46), max: 46, size: rnd(8, 16), col: ["#FF3D1F", "#FF8A1F", "#FFD21A"][i % 3], g: 0.05, fire: true });
+      }
+      if (n === 3) {
+        tk.slow = 36;
+        float(x, y - 170, "\u{1F525} \xA1TRIPLE IMPACTO! \u{1F525}", "#FFD21A");
+        SFX.play("crowd");
+      }
+    }
+    if (kind === "triple" && n === 8) {
+      tk.slow = 40;
+      float(x, y - 190, "\u{1F386} \xA1COMBO x8! \u{1F386}", "#FF4F9A");
+      SFX.play("crowd");
+      tk.flash = 0.7;
+    }
+  }
+  function tkxSplit(s) {
+    tk.slow = 30;
+    tk.comboN = 0;
+    tk.turnKind = tk.turnKind || "triple";
+    tk.punch = 1;
+    tk.flash = Math.max(tk.flash, 0.6);
+    float(s.x, s.y - 80, "\u{1F386} \xA1SE ABRE EL RACIMO! \u{1F386}", "#FF4F9A");
+    for (let i = 0; i < 46; i++) {
+      const a = i / 46 * Math.PI * 2, v = rnd(4, 9);
+      tk.parts.push({ x: s.x, y: s.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rnd(26, 44), max: 44, size: rnd(4, 8), col: BOMBLET[i % 4], g: 0.04, fire: true });
+    }
+    anim({ type: "shock", x: s.x, y: s.y, max: 30, col: "#FF4F9A", big: true });
+    anim({ type: "shock", x: s.x, y: s.y, max: 22, col: "#4DA8FF", big: true });
+  }
+  function tkxWorld(c, now) {
+    if (!tk) return;
+    (tk.shots || []).forEach((s) => {
+      if (s.kind !== "rapid" && !(s.kind === "triple" && s.mini)) return;
+      const col = s.kind === "rapid" ? "255,90,30" : BOMBLET[s.ci || 0] === "#FF4F9A" ? "255,79,154" : BOMBLET[s.ci || 0] === "#FFD21A" ? "255,210,26" : BOMBLET[s.ci || 0] === "#4DA8FF" ? "77,168,255" : "63,191,79";
+      const r = s.kind === "rapid" ? 34 : 24, g = c.createRadialGradient(s.x, s.y, 2, s.x, s.y, r);
+      g.addColorStop(0, `rgba(255,255,230,.9)`);
+      g.addColorStop(0.35, `rgba(${col},.55)`);
+      g.addColorStop(1, `rgba(${col},0)`);
+      c.fillStyle = g;
+      c.beginPath();
+      c.arc(s.x, s.y, r, 0, 7);
+      c.fill();
+    });
+    if (tk.zone && game.sudden) {
+      const z = tk.zone, H = TK.H;
+      const wall = (x0, x1, edge) => {
+        if (x1 <= x0) return;
+        const g = c.createLinearGradient(edge, 0, edge === x1 ? x0 : x1, 0);
+        g.addColorStop(0, "rgba(120,40,170,.62)");
+        g.addColorStop(1, "rgba(60,10,90,.82)");
+        c.fillStyle = g;
+        c.fillRect(x0, 0, x1 - x0, H);
+        c.strokeStyle = "rgba(220,170,255,.35)";
+        c.lineWidth = 3;
+        for (let i = 0; i < 14; i++) {
+          const xx = x0 + (i * 97 + now * 0.25) % Math.max(1, x1 - x0);
+          c.beginPath();
+          c.moveTo(xx, (now * 0.6 + i * 130) % H);
+          c.lineTo(xx - 18, (now * 0.6 + i * 130) % H + 70);
+          c.stroke();
+        }
+        c.lineWidth = 8;
+        c.strokeStyle = "#C77DFF";
+        c.beginPath();
+        c.moveTo(edge, 0);
+        for (let y = 0; y <= H; y += 30) c.lineTo(edge + Math.sin(y / 40 + now / 200) * 10, y);
+        c.stroke();
+      };
+      wall(0, z.l, z.l);
+      wall(z.r, TK.W, z.r);
+      if (Math.random() < 0.02) {
+        tk.bolt = { x: Math.random() < 0.5 ? rnd(0, z.l) : rnd(z.r, TK.W), t: 8 };
+        beep(120, 0.2);
+      }
+      if (tk.bolt && tk.bolt.t-- > 0) {
+        c.strokeStyle = "#fff";
+        c.lineWidth = 5;
+        c.beginPath();
+        let x = tk.bolt.x, y = 0;
+        c.moveTo(x, y);
+        while (y < TK.H * 0.8) {
+          x += rnd(-30, 30);
+          y += rnd(40, 80);
+          c.lineTo(x, y);
+        }
+        c.stroke();
+      }
+    }
+    const ev = tk.nukeEv;
+    if (ev && ev.wh) {
+      const w = ev.wh;
+      c.save();
+      c.translate(w.x, w.y);
+      c.rotate(Math.PI / 2);
+      const fl = 40 + Math.random() * 30;
+      const g = c.createRadialGradient(-70, 0, 4, -70, 0, fl);
+      g.addColorStop(0, "rgba(255,255,220,1)");
+      g.addColorStop(0.4, "rgba(255,170,40,.9)");
+      g.addColorStop(1, "rgba(255,80,20,0)");
+      c.fillStyle = g;
+      c.beginPath();
+      c.arc(-80, 0, fl, 0, 7);
+      c.fill();
+      roundRect(c, -70, -26, 120, 52, 24);
+      c.fillStyle = "#F5C542";
+      c.fill();
+      c.lineWidth = 5;
+      c.strokeStyle = INK;
+      c.stroke();
+      c.beginPath();
+      c.moveTo(50, -26);
+      c.quadraticCurveTo(100, -20, 110, 0);
+      c.quadraticCurveTo(100, 20, 50, 26);
+      c.closePath();
+      c.fillStyle = "#C8102E";
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#1A1A1A";
+      c.fillRect(-20, -26, 10, 52);
+      c.fillRect(20, -26, 10, 52);
+      c.save();
+      c.translate(0, 0);
+      c.rotate(-Math.PI / 2);
+      trefoil(c, 18);
+      c.restore();
+      [[-70, -26, -100, -50], [-70, 26, -100, 50]].forEach(([x0, y0, x1, y1]) => {
+        c.beginPath();
+        c.moveTo(x0 + 20, y0);
+        c.lineTo(x1, y1);
+        c.lineTo(x0, y0);
+        c.closePath();
+        c.fillStyle = "#1A1A1A";
+        c.fill();
+      });
+      c.restore();
+    }
+  }
+  function tkxOverlay(c) {
+    if (!tk) return;
+    const W = tkCanvas.width, H = tkCanvas.height, U = Math.min(W, H) / 620;
+    tkxScope(c, W, H, U);
+    tkxCrack(c, W, H, U);
+    const ev = tk.nukeEv;
+    if (ev && ev.red) {
+      c.fillStyle = `rgba(255,30,50,${0.18 + 0.12 * Math.sin(tk.frame / 5)})`;
+      c.fillRect(0, 0, W, H);
+    }
+    if (ev && ev.cd) {
+      const k = ev.cdT++, s = 1 + Math.max(0, 0.8 - k * 0.05);
+      c.save();
+      c.translate(W / 2, H * 0.45);
+      c.scale(s, s);
+      tkxText(c, ev.cd, 0, 0, 120, "#FFD21A", U);
+      c.restore();
+    }
+    if (tk.combo) {
+      const k = tk.frame - tk.combo.f, s = 1 + Math.max(0, 0.7 - k * 0.06);
+      c.save();
+      c.globalAlpha = Math.min(1, (70 - k) / 20);
+      c.translate(W * 0.82, H * 0.3);
+      c.rotate(-0.12);
+      c.scale(s, s);
+      tkxText(c, `x${tk.combo.n}`, 0, 0, 70, tk.combo.kind === "rapid" ? "#FF8A1F" : BOMBLET[tk.combo.n % 4], U);
+      tkxText(c, "COMBO", 0, 46 * U, 22, "#fff", U);
+      c.restore();
+    }
+    if (tk.slow > 0) {
+      tkxText(c, "\u23F1 C\xC1MARA LENTA", W / 2, H * 0.24, 22, "#fff", U);
+    }
+    if (tk.big) {
+      const b = tk.big, k = b.t, a = Math.min(1, k / 8, (b.max - k) / 20), s = 1 + Math.max(0, 0.5 - k * 0.04);
+      c.save();
+      c.globalAlpha = Math.max(0, a);
+      c.fillStyle = "rgba(20,14,40,.55)";
+      c.fillRect(0, H * 0.36, W, H * 0.24);
+      c.translate(W / 2, H * 0.45);
+      c.scale(s, s);
+      tkxText(c, b.txt, 0, 0, 56, b.col, U);
+      c.restore();
+      if (b.sub) {
+        c.save();
+        c.globalAlpha = Math.max(0, a);
+        tkxText(c, b.sub, W / 2, H * 0.54, 24, "#fff", U);
+        c.restore();
+      }
+    }
+    if (ev && ev.white > 0) {
+      c.fillStyle = `rgba(255,252,235,${Math.min(1, ev.white)})`;
+      c.fillRect(0, 0, W, H);
+      if (ev.card) {
+        c.globalAlpha = Math.min(1, ev.white);
+        tkxText(c, "\u{1F5FA}\uFE0F \xA1NUEVO MAPA!", W / 2, H * 0.42, 58, "#FF4F6D", U);
+        tkxText(c, ev.card, W / 2, H * 0.53, 28, "#FFFFFF", U);
+        c.globalAlpha = 1;
+      }
+    }
+  }
+  function tkxNukeAll() {
+    const ev = tk.nukeEv = { f: 0, red: true, white: 0 };
+    tk.fitPrev = !!tk.fit;
+    tk.fit = true;
+    game.phase = "busy";
+    tk.rouBusy = true;
+    tk.busyFrames = 0;
+    $("#puSheet") && ($("#puSheet").hidden = true);
+    renderTkUI();
+    alarmFx();
+    SFX.play("siren");
+    tkxBig("\u2622\uFE0F ALERTA NUCLEAR \u2622\uFE0F", "\xA1Nadie se salva! Todos los tanques reciben da\xF1o", "#FFD21A", 110);
+    later(60, () => {
+      if (tk) alarmFx();
+      SFX.play("siren");
+    });
+    ["3", "2", "1"].forEach((d, i) => later(115 + i * 32, () => {
+      if (!tk) return;
+      ev.cd = d;
+      ev.cdT = 0;
+      beep(i === 2 ? 1400 : 1e3, 0.18);
+    }));
+    later(212, () => {
+      if (!tk) return;
+      ev.cd = null;
+      ev.wh = { x: TK.W / 2, y: -200, vy: 6 };
+      SFX.play("whistle");
+      later(20, () => SFX.play("whistle"));
+    });
+    const fall = () => {
+      if (!tk || !ev.wh) return;
+      const w = ev.wh;
+      w.vy += 0.5;
+      w.y += w.vy;
+      tk.parts.push({ x: w.x + rnd(-14, 14), y: w.y - 90, vx: rnd(-1, 1), vy: rnd(-2, -0.5), life: 50, max: 50, size: rnd(14, 26), col: "rgba(230,225,235,.6)", smoke: true, g: 0 });
+      const gy = surfaceY(w.x | 0);
+      if (w.y < Math.min(gy, TK.H - 20) - 40) later(1, fall);
+      else tkxNukeBoom(ev);
+    };
+    later(214, fall);
+  }
+  function tkxNukeBoom(ev) {
+    ev.wh = null;
+    ev.red = false;
+    tk.flash = 1;
+    tk.shake = 60;
+    tk.punch = 1;
+    const xs = [0.5, 0.2, 0.8, 0.35, 0.65].map((f) => f * TK.W);
+    xs.forEach((x, i) => later(i * 9, () => {
+      if (!tk) return;
+      const y = Math.min(surfaceY(x | 0), TK.H - 30);
+      explode(x, y, 92, 0, null, "nuke");
+    }));
+    later(50, () => {
+      if (!tk) return;
+      game.tanks.forEach((t) => {
+        if (t.alive) {
+          hurt(t, 25, null);
+          t.vy -= 9;
+          t.vx += rnd(-5, 5);
+          t.onGround = false;
+          float(t.x, t.y - 160, "\u2622\uFE0F -25", "#B6FF5C");
+        }
+      });
+      renderTkUI();
+    });
+    later(150, () => {
+      if (!tk) return;
+      ev.whiteGo = 1;
+    });
+    const fade = () => {
+      if (!tk) return;
+      ev.white += 0.035;
+      if (ev.white < 1) return later(1, fade);
+      tkxSwapMap(ev);
+    };
+    later(151, fade);
+  }
+  function tkxSwapMap(ev) {
+    const keys = Object.keys(SEASONS), terr = Object.keys(TERRAINS);
+    let bd;
+    do {
+      bd = BACKDROP_KEYS[Math.floor(Math.random() * BACKDROP_KEYS.length)];
+    } while (bd === game.backdrop && BACKDROP_KEYS.length > 1);
+    let se;
+    do {
+      se = keys[Math.floor(Math.random() * keys.length)];
+    } while (se === game.season);
+    let ty;
+    do {
+      ty = terr[Math.floor(Math.random() * terr.length)];
+    } while (ty === game.terrain);
+    const noWater = ty !== "islands" && ty !== "canyon" && Math.random() < 0.5;
+    const w = buildWorld(ty, se, bd, noWater);
+    Object.assign(tk, w, { shots: [], parts: [], floats: [], crates: [], strikes: [], fires: [], anims: [], later: [], zone: game.sudden ? { l: 0, r: TK.W, tl: TK.W * 0.07, tr: TK.W * 0.93 } : null, miniDirty: true });
+    Object.assign(game, { season: se, terrain: ty, backdrop: bd, noWater });
+    const zs = deployZones(), nT = game.tanks.length, spots = shuffle(Array.from({ length: nT }, (_, i) => Math.min(7, Math.floor(i * 8 / nT))));
+    game.tanks.forEach((t, ti) => {
+      const z = zs[spots[ti]];
+      t.x = zoneX(z);
+      t.y = rnd(-260, -60);
+      t.vx = 0;
+      t.vy = 0;
+      t.chute = true;
+      t.onGround = false;
+      t.burn = 0;
+      if (!t.alive) {
+        t.alive = true;
+        t.hp = 60;
+        t.respawn = 0;
+      }
+    });
+    for (let i = 0; i < Math.round(TK.W / 700); i++) dropCrate(true);
+    placeHazards();
+    newWind();
+    ev.card = `${BD_NAMES[bd] || bd} \xB7 ${SEASON_ES[se] || se}`;
+    tk.busyFrames = 0;
+    tk.quietFrames = 0;
+    later(70, () => {
+      const unf = () => {
+        if (!tk || !tk.nukeEv) return;
+        ev.white -= 0.03;
+        if (ev.white > 0) return later(1, unf);
+        tk.nukeEv = null;
+        tk.fit = tk.fitPrev;
+        tk.cam.follow = "tank";
+        game.nukeLeft = TKX_NUKE_EVERY;
+        jingle([523, 659, 784, 1047], 90, 0.14);
+        tkxBig("\u{1FA82} \xA1A SALTAR, CADETES!", ev.card, "#4DA8FF", 120);
+      };
+      unf();
+    });
+  }
+  function tkxStartReplay(h) {
+    const kind3 = h.kind === "nuke" ? "nuke" : h.kind;
+    const P = { f: 0, kind: kind3 === "nuke" ? "nuke" : "cruise", wkind: h.kind, shooter: game.tanks[h.by], team: h.by, foe: game.tanks[h.to], imp: {}, elev: 38, shake: 0 };
+    povScene(P);
+    tk.replay = { f: 0, h, P };
+    game.phase = "replay";
+    renderTkUI();
+    SFX.play("whoosh");
+    Music.duck(0.35);
+  }
+  function tkxRpU(f) {
+    if (f < 50) return 0;
+    if (f < 230) {
+      const k = (f - 50) / 180;
+      return 0.94 * (1 - Math.pow(1 - k, 1.6));
+    }
+    if (f < 262) return 0.94 + 0.06 * (f - 230) / 32;
+    return 1;
+  }
+  function tkxStepReplay() {
+    const R = tk.replay;
+    if (!R) return;
+    const P = R.P, f = ++R.f, T = P.T3;
+    if (f === 44) {
+      SFX.play("f_bigbomb");
+      boom(70);
+      P.shake = 16;
+    }
+    if (f >= 50 && f < 262) {
+      const u = tkxRpU(f);
+      P.trail.push({ p: povPath(P, u), age: 0 });
+    }
+    P.trail.forEach((s) => {
+      s.age++;
+      s.p[1] += 0.2;
+    });
+    P.trail = P.trail.filter((s) => s.age < 220);
+    if (f === 262) {
+      SFX.play("x_bigbomb", 120);
+      boom(140);
+      P.shake = 30;
+      const col = game.teams[P.foe.team].color;
+      for (let i = 0; i < 34; i++) {
+        const a = Math.random() * Math.PI * 2, sp = 3 + Math.random() * 7;
+        P.debris.push({ p: [T[0] + rnd(-20, 20), 30 + rnd(0, 20), T[2] + rnd(-20, 20)], v: [Math.cos(a) * sp, 5 + Math.random() * 9, Math.sin(a) * sp], s: 3 + Math.random() * 7, r: Math.random() * 6, col: i % 3 === 0 ? col : i % 3 === 1 ? "#2B2838" : "#6B6480" });
+      }
+    }
+    if (f === 290) SFX.play("crowd");
+    P.debris.forEach((d) => {
+      d.v[1] -= 0.28;
+      d.p = V3.add(d.p, V3.mul(d.v, 0.6));
+      d.r += 0.08;
+      if (d.p[1] < d.s * 0.7) {
+        d.p[1] = d.s * 0.7;
+        d.v = [d.v[0] * 0.6, -d.v[1] * 0.3, d.v[2] * 0.6];
+      }
+    });
+    if (f >= RP_END) tkxEndReplay();
+  }
+  function tkxEndReplay() {
+    tk.replay = null;
+    Music.duck(1);
+    game.phase = "question";
+    tk.cam.follow = "tank";
+    renderTkUI();
+  }
+  function tkxDrawReplay() {
+    const R = tk.replay, P = R.P, f = R.f, h = R.h, c = tkCtx, W = tkCanvas.width, H = tkCanvas.height, U = Math.min(W, H) / 620, S = tk.S, now = performance.now(), T = P.T3;
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    let sx = 0, sy = 0;
+    if (P.shake) {
+      sx = rnd(-P.shake, P.shake) * U;
+      sy = rnd(-P.shake, P.shake) * U;
+      P.shake *= 0.9;
+      if (P.shake < 0.5) P.shake = 0;
+    }
+    c.save();
+    c.translate(sx, sy);
+    const u = tkxRpU(Math.min(f, 261)), m = povPath(P, u), v = povDir(P, Math.max(1e-3, Math.min(0.999, u)));
+    const sh = [-80, 0, 0], dirT = V3.norm([T[0] - sh[0], 0, T[2] - sh[2]]), syaw = Math.atan2(dirT[2], -dirT[0]);
+    const shCol = game.teams[h.by].color, vh = skinById(game.teams[h.by].skin).veh;
+    const X = { bill: trailBills(P, f), noFlare: true };
+    const kind = h.kind, multi = kind === "triple" ? 6 : kind === "double" ? 3 : kind === "mortar" ? 5 : kind === "grenade" || kind === "organ" ? 5 : 1;
+    X.extra = (faces) => {
+      (vh ? (o, p, cl, y, ch, ti) => truck3(o, p, cl, y, ch, ti, vh === "jeep") : tank3)(faces, sh, shCol, syaw, false, 0);
+      if (f >= 50 && f < 262 && multi > 1) {
+        for (let k = 1; k < multi; k++) {
+          let pp;
+          if (kind === "triple") {
+            const sp = Math.max(0, (u - 0.5) / 0.5);
+            const a = k / multi * Math.PI * 2;
+            pp = V3.add(m, [Math.cos(a) * 170 * sp, -10 * sp, Math.sin(a) * 170 * sp]);
+          } else {
+            const uk = Math.max(0, u - k * 0.07);
+            pp = V3.add(povPath(P, uk), [0, 0, (k % 2 ? 1 : -1) * 24 * k]);
+          }
+          prism3(faces, pp, 6, 10, 8, "x", kind === "triple" ? BOMBLET[k % 4] : "#C9A23A", Math.atan2(-v[2], v[0]), Math.asin(Math.max(-1, Math.min(1, v[1]))));
+        }
+      }
+    };
+    if (f >= 50 && f < 262) X.missile = { pos: m, dir: v };
+    if (f >= 50 && f < 262 && kind === "triple" && u > 0.5) for (let k = 0; k < 6; k++) {
+      const a = k / 6 * Math.PI * 2, sp = (u - 0.5) / 0.5;
+      X.bill.push({ p: V3.add(m, [Math.cos(a) * 170 * sp, -10 * sp, Math.sin(a) * 170 * sp]), r: 16, a: 0.8, fire: true });
+    }
+    if (f >= 40 && f < 58) {
+      const k = 1 - (f - 40) / 18, tip = V3.add(sh, V3.add(V3.mul(dirT, 80), [0, 50, 0]));
+      X.bill.push({ p: tip, r: 90 * k + 20, a: 1, fire: true });
+      for (let i = 0; i < 5; i++) X.bill.push({ p: V3.add(tip, [rnd(-30, 30), rnd(0, 40), rnd(-30, 30)]), r: 50, a: 0.5 * k, c: "225,225,235" });
+    }
+    let cp, look;
+    if (f < 50) {
+      const k = f / 50;
+      cp = [-280 + 60 * k, 40 + 10 * k, 170 - 30 * k];
+      look = [-60, 45, 20];
+    } else if (f < 230) {
+      const k = (f - 50) / 180, side = V3.norm(V3.cross(v, [0, 1, 0])), ang = -0.6 + k * 2.4, up = [0, 1, 0];
+      const off = V3.add(V3.mul(v, -150), V3.add(V3.mul(side, Math.cos(ang) * 150), V3.mul(up, 40 + Math.sin(ang) * 60)));
+      cp = V3.add(m, off);
+      look = V3.add(m, V3.mul(v, 90));
+    } else {
+      const t = f - 230, ang = 2.4 + t * 0.012, rad = t < 32 ? 330 - t * 3 : 240 + (t - 32) * 1.4, hgt = t < 32 ? 70 : 90 + (t - 32) * 0.9;
+      cp = [T[0] + Math.cos(ang) * rad, hgt, T[2] + Math.sin(ang) * rad];
+      look = [T[0], t < 32 ? 50 : 70 + (t - 32) * 0.6, T[2]];
+    }
+    if (f >= 262) {
+      const t = (f - 262) * 0.6, big = kind === "nuke" || h.ko;
+      X.noRing = true;
+      X.noTag = true;
+      X.shock = t * (big ? 36 : 26);
+      const fly = h.ko || h.dmg >= 40, jump = fly ? Math.sin(Math.min(1, t / 34) * Math.PI) * (big ? 170 : 120) : Math.sin(Math.min(1, t / 14) * Math.PI) * 25;
+      X.tankPos = [T[0] + (fly ? t * 1.2 : 0), jump, T[2] - (fly ? t * 0.8 : 0)];
+      X.tankYaw = Math.PI * 0.1 + (fly ? t * 0.2 : 0);
+      X.tankTilt = fly ? t * 0.08 : 0;
+      X.charred = h.ko && t > 3;
+      const R0 = big ? 300 : 170, k = Math.min(1, t / 14), fade = Math.max(0, 1 - Math.max(0, t - 18) / 34), centers = kind === "triple" ? [0, 1, 2, 3, 4, 5].map((i) => [Math.cos(i / 6 * Math.PI * 2) * 170, Math.sin(i / 6 * Math.PI * 2) * 170]) : [[0, 0]];
+      centers.forEach(([ox, oz], ci) => {
+        const kk = Math.min(1, Math.max(0, t - ci * 3) / 14), sc2 = ci ? 0.55 : 1;
+        X.bill.push({ p: [T[0] + ox, 40 + t * (big ? 2.4 : 1), T[2] + oz], r: R0 * sc2 * (0.3 + 0.7 * kk), a: fade, fire: true });
+        for (let i = 0; i < 8; i++) {
+          const a = i / 8 * Math.PI * 2, d = R0 * sc2 * 0.7 * kk;
+          X.bill.push({ p: [T[0] + ox + Math.cos(a) * d, 30 + Math.sin(i * 3.7) * R0 * sc2 * 0.3 * kk + t * 1.5, T[2] + oz + Math.sin(a) * d], r: R0 * sc2 * 0.45 * (0.4 + 0.6 * kk), a: fade * 0.9, fire: true });
+        }
+      });
+      for (let i = 0; i < 12; i++) {
+        const a = i / 12 * Math.PI * 2, d = R0 * 1.1 * k + t * 3;
+        X.bill.push({ p: [T[0] + Math.cos(a) * d, 20 + t * 2.2 * (i % 3), T[2] + Math.sin(a) * d], r: R0 * 0.55, a: Math.min(0.7, t / 20) * 0.8, c: "90,80,95" });
+      }
+      if (kind === "nuke") {
+        const hgt = Math.min(1, t / 30) * 800;
+        for (let i = 0; i < 8; i++) X.bill.push({ p: [T[0], 60 + hgt * i / 8, T[2]], r: 100 + i * 8, a: Math.min(0.85, t / 12), c: "235,190,140" });
+        X.bill.push({ p: [T[0], 60 + hgt, T[2]], r: 330 * Math.min(1, t / 30), a: 0.9, c: "225,170,130" });
+      }
+    }
+    const C = cam3(cp, V3.sub(look, cp), W, H);
+    render3D(c, C, P, W, H, S, now, X);
+    c.restore();
+    if (f >= 262 && f < 270) {
+      c.fillStyle = `rgba(255,255,240,${1 - (f - 262) / 8})`;
+      c.fillRect(0, 0, W, H);
+    }
+    const bar = H * 0.1;
+    c.fillStyle = "#000";
+    c.fillRect(0, 0, W, bar);
+    c.fillRect(0, H - bar, W, bar);
+    const vg = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(1, "rgba(0,0,0,.45)");
+    c.fillStyle = vg;
+    c.fillRect(0, 0, W, H);
+    const pad = 22 * U, by = game.teams[h.by], to = game.teams[h.to];
+    if (Math.floor(f / 18) % 2 === 0) {
+      c.beginPath();
+      c.arc(pad + 8 * U, bar / 2, 8 * U, 0, 7);
+      c.fillStyle = "#FF2D55";
+      c.fill();
+    }
+    povText(c, "\u23EA REPETICI\xD3N \xB7 TIRAZO DE LA RONDA", pad + 24 * U, bar / 2 + 6 * U, 18, "#fff", "left", U);
+    const spd = f < 50 ? "x0.5" : f < 230 ? "x0.3" : f < 262 ? "x0.1" : "x0.4";
+    povText(c, `\u{1F39E} ${spd}`, W - pad, bar / 2 + 6 * U, 18, "#FFD21A", "right", U);
+    const wn = WEAPONS[h.kind] && WEAPONS[h.kind].name || (h.kind === "double" ? "Doble ca\xF1onazo" : "Ca\xF1onazo");
+    tkxText(c, `${by.name}`, W / 2 - 30 * U, H - bar / 2, 26, by.color, U, "right");
+    tkxText(c, "\u279C", W / 2, H - bar / 2, 26, "#fff", U);
+    tkxText(c, `${to.name}`, W / 2 + 30 * U, H - bar / 2, 26, to.color, U, "left");
+    povText(c, `${(WEAPONS[h.kind] || {}).icon || "\u{1F4A3}"} ${wn}`, pad, H - bar / 2 + 6 * U, 15, "#fff", "left", U);
+    if (f >= 262) {
+      const t = f - 262, s = 1 + Math.max(0, 0.8 - t * 0.05);
+      c.save();
+      c.translate(W / 2, H * 0.27);
+      c.scale(s, s);
+      tkxText(c, h.ko ? "\u{1F480} \xA1KO! \u{1F480}" : `-${h.dmg} \u2764`, 0, 0, 64, h.ko ? "#FF4F6D" : "#FFD21A", U);
+      c.restore();
+      if (t > 20) tkxText(c, h.ko ? `${by.name} mand\xF3 a ${to.name} al hospital` : "\xA1TIRAZO DE LA RONDA!", W / 2, H * 0.27 + 54 * U, 24, "#fff", U);
+    }
+    if (f < 14) {
+      c.fillStyle = `rgba(0,0,0,${1 - f / 14})`;
+      c.fillRect(0, 0, W, H);
+    }
+    if (f > RP_END - 16) {
+      c.fillStyle = `rgba(0,0,0,${(f - (RP_END - 16)) / 16})`;
+      c.fillRect(0, 0, W, H);
+    }
+    povText(c, "Toca para saltar \u23ED", W - 16 * U, H - bar - 8 * U, 12, "rgba(255,255,255,.8)", "right", U);
+  }
+  tkCanvas.addEventListener("pointerdown", (e) => {
+    if (tk && tk.replay) {
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      if (tk.replay.f > 20 && tk.replay.f < RP_END - 16) tk.replay.f = RP_END - 16;
+    }
+  }, true);
+  function gateBuilding(c, cx, y0, S, winter) {
+    const con = S.concrete, dk = shade(con, 0.8), lt = shade(con, 1.06);
+    [-1, 1].forEach((sd) => {
+      const x = cx + sd * 150;
+      poly(c, [[x - 50, y0], [x + 50, y0], [x + 38, y0 - 250], [x - 38, y0 - 250]], con);
+      poly(c, [[x - 38, y0 - 250], [x + 38, y0 - 250], [x + 46, y0 - 270], [x - 46, y0 - 270]], dk);
+      for (let i = 1; i < 6; i++) {
+        c.strokeStyle = "rgba(43,35,102,.25)";
+        c.lineWidth = 2;
+        c.beginPath();
+        c.moveTo(x - 50 + i * 2.2, y0 - i * 42);
+        c.lineTo(x + 50 - i * 2.2, y0 - i * 42);
+        c.stroke();
+      }
+      poly(c, [[x - 16, y0 - 60], [x + 16, y0 - 60], [x + 12, y0 - 200], [x - 12, y0 - 200]], dk, INK, 2);
+      poly(c, [[x - 30, y0 - 270], [x + 30, y0 - 270], [x + 22, y0 - 300], [x + sd * 44, y0 - 292], [x + sd * 30, y0 - 306], [x - 6, y0 - 318], [x - 26, y0 - 300]], lt);
+      c.fillStyle = INK;
+      c.beginPath();
+      c.arc(x + sd * 8, y0 - 298, 4, 0, 7);
+      c.fill();
+      poly(c, [[x + sd * 30, y0 - 306], [x + sd * 52, y0 - 298], [x + sd * 36, y0 - 292]], "#FFB400", INK, 2.5);
+      if (winter) snowCap(c, [[x - 46, y0 - 270], [x + 46, y0 - 270], [x + 46, y0 - 276], [x - 46, y0 - 276]]);
+    });
+    poly(c, [[cx - 196, y0 - 220], [cx + 196, y0 - 220], [cx + 196, y0 - 262], [cx - 196, y0 - 262]], dk);
+    c.font = "900 17px Nunito, sans-serif";
+    c.textAlign = "center";
+    c.fillStyle = "#FFE7A8";
+    c.fillText("HEROICO COLEGIO MILITAR", cx, y0 - 235);
+    c.strokeStyle = INK;
+    c.lineWidth = 3.5;
+    for (let x = cx - 96; x <= cx + 96; x += 16) {
+      c.beginPath();
+      c.moveTo(x, y0);
+      c.lineTo(x, y0 - 120);
+      c.stroke();
+      c.fillStyle = "#FFD21A";
+      c.beginPath();
+      c.moveTo(x - 4, y0 - 120);
+      c.lineTo(x, y0 - 132);
+      c.lineTo(x + 4, y0 - 120);
+      c.fill();
+    }
+    c.lineWidth = 4;
+    c.beginPath();
+    c.moveTo(cx - 100, y0 - 40);
+    c.lineTo(cx + 100, y0 - 40);
+    c.moveTo(cx - 100, y0 - 100);
+    c.lineTo(cx + 100, y0 - 100);
+    c.stroke();
+    c.beginPath();
+    c.arc(cx, y0 - 70, 22, 0, 7);
+    c.fillStyle = "#F5C542";
+    c.fill();
+    c.lineWidth = 3;
+    c.stroke();
+    c.beginPath();
+    c.arc(cx, y0 - 70, 14, 0, 7);
+    c.fillStyle = "#1B8A4B";
+    c.fill();
+    c.stroke();
+    if (winter) snowCap(c, [[cx - 196, y0 - 262], [cx + 196, y0 - 262], [cx + 196, y0 - 268], [cx - 196, y0 - 268]]);
+  }
+  function tkxSnipe(targets) {
+    const ti = targets[0], tt = game.tanks[ti], t = curTank();
+    if (!tt || !t) {
+      tk.snipeGo = true;
+      launchHoming(targets, "sniper");
+      tk.snipeGo = false;
+      return;
+    }
+    tk.snipe = { f: 0, ti, targets: targets.slice(), seed: Math.random() * 9 };
+    tk.zmulPrev = tk.zmul || 1;
+    tk.fitPrev2 = !!tk.fit;
+    tk.fit = false;
+    tk.zmul = 2.1;
+    game.weapon = baseW();
+    game.phase = "busy";
+    tk.busyFrames = 0;
+    renderTkUI();
+    tk.cam.follow = "point";
+    tk.cam.target = tt.x - view2().vw / 2;
+    tk.cam.ty = tt.y - 40;
+    SFX.play("lock");
+    sayFx(t, pickLine(TAUNT_L()));
+    const step = () => {
+      if (!tk || !tk.snipe) return;
+      const S = tk.snipe, f = ++S.f, tg = game.tanks[S.ti];
+      if (tg && tg.alive) {
+        tk.cam.follow = "point";
+        tk.cam.target = tg.x - view2().vw / 2;
+        tk.cam.ty = tg.y - 40;
+      }
+      if (f % 26 === 0) {
+        beep(70, 0.12);
+        setTimeout(() => beep(60, 0.1), 140);
+      }
+      if (f === 40 || f === 62 || f === 84) beep(1300, 0.06);
+      if (f >= 106) {
+        tk.snipe = null;
+        tk.snipeArmed = true;
+        tk.snipeGo = true;
+        launchHoming(S.targets, "sniper");
+        tk.snipeGo = false;
+        tk.slow = 70;
+        tk.flash = 0.5;
+        boom(60);
+        SFX.play("x_sniper");
+        float(t.x, t.y - 150, "\u{1F4A5} \xA1BANG!", "#fff");
+        return;
+      }
+      later(1, step);
+    };
+    later(1, step);
+  }
+  function tkxHeadshot(x, y) {
+    tk.snipeArmed = false;
+    tk.slow = 50;
+    tk.flash = 1;
+    tk.punch = 1;
+    tk.crack = { f: 0, x, y, seed: Math.random() * 99 };
+    SFX.play("x_bigbomb");
+    SFX.play("crowd");
+    tkxBig("\u{1F3AF} \xA1HEADSHOT! \u{1F3AF}", "Tiro de francotirador", "#FF2D55", 120);
+    for (let i = 0; i < 40; i++) {
+      const a = rnd(0, Math.PI * 2), v = rnd(4, 14);
+      tk.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rnd(20, 40), max: 40, size: rnd(3, 7), col: i % 2 ? "#fff" : "#FF2D55", g: 0.1, fire: true });
+    }
+    later(90, () => {
+      if (tk) {
+        tk.zmul = tk.zmulPrev || 1;
+        tk.fit = !!tk.fitPrev2;
+      }
+    });
+  }
+  function tkxScope(c, W, H, U) {
+    const S = tk.snipe;
+    if (!S) return;
+    const tg = game.tanks[S.ti];
+    if (!tg) return;
+    const { zoom, camY } = view2(), f = S.f;
+    let px = (tg.x - tk.cam.x) * zoom, py = (tg.y - 18 * TS - camY) * zoom;
+    const steady = Math.min(1, f / 90), sw = (1 - steady) * 60 * U + 6 * U;
+    px += Math.sin(f * 0.07 + S.seed) * sw;
+    py += Math.cos(f * 0.05 + S.seed) * sw * 0.7;
+    const R = Math.min(W, H) * 0.36, cx = W / 2, cy = H / 2;
+    const ox = cx + (px - cx) * Math.min(1, f / 25), oy = cy + (py - cy) * Math.min(1, f / 25);
+    c.save();
+    c.beginPath();
+    c.rect(0, 0, W, H);
+    c.arc(ox, oy, R, 0, Math.PI * 2, true);
+    c.fillStyle = "rgba(5,5,12,.93)";
+    c.fill("evenodd");
+    const g = c.createRadialGradient(ox, oy, R * 0.75, ox, oy, R);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(1, "rgba(0,0,0,.65)");
+    c.fillStyle = g;
+    c.beginPath();
+    c.arc(ox, oy, R, 0, 7);
+    c.fill();
+    c.lineWidth = 6 * U;
+    c.strokeStyle = "#111";
+    c.beginPath();
+    c.arc(ox, oy, R, 0, 7);
+    c.stroke();
+    c.strokeStyle = "rgba(10,10,10,.9)";
+    c.lineWidth = 2.5 * U;
+    c.beginPath();
+    c.moveTo(ox - R, oy);
+    c.lineTo(ox - 14 * U, oy);
+    c.moveTo(ox + 14 * U, oy);
+    c.lineTo(ox + R, oy);
+    c.moveTo(ox, oy - R);
+    c.lineTo(ox, oy - 14 * U);
+    c.moveTo(ox, oy + 14 * U);
+    c.lineTo(ox, oy + R);
+    c.stroke();
+    c.lineWidth = 6 * U;
+    [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => {
+      c.beginPath();
+      c.moveTo(ox + dx * R * 0.62, oy + dy * R * 0.62);
+      c.lineTo(ox + dx * R, oy + dy * R);
+      c.stroke();
+    });
+    c.fillStyle = "#111";
+    for (let i = 1; i < 6; i++) {
+      [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => {
+        c.beginPath();
+        c.arc(ox + dx * i * R * 0.1, oy + dy * i * R * 0.1, 2.5 * U, 0, 7);
+        c.fill();
+      });
+    }
+    const lock = f > 84;
+    c.fillStyle = lock ? "#FF2D55" : "rgba(255,45,85,.6)";
+    c.beginPath();
+    c.arc(ox, oy, (lock ? 5 : 3.5) * U, 0, 7);
+    c.fill();
+    if (lock) {
+      c.strokeStyle = "#FF2D55";
+      c.lineWidth = 3 * U;
+      c.beginPath();
+      c.arc(ox, oy, 26 * U * (1 + 0.1 * Math.sin(f / 3)), 0, 7);
+      c.stroke();
+    }
+    c.restore();
+    const tm = game.teams[tg.team], dist = Math.round(Math.abs(tg.x - curTank().x) * 1.7);
+    povText(c, `\u{1F3AF} OBJETIVO: ${tm.name}`, 24 * U, 40 * U, 20, "#FF6B85", "left", U);
+    povText(c, `DISTANCIA ${dist.toLocaleString()} m \xB7 VIENTO ${game.wind}`, 24 * U, 66 * U, 15, "#7CFF8A", "left", U);
+    povText(c, f % 26 < 8 ? "\u2665" : "\u2661", W - 30 * U, 44 * U, 30, "#FF2D55", "right", U);
+    const cd = f < 40 ? "RESPIRA\u2026" : f < 62 ? "3" : f < 84 ? "2" : "1";
+    tkxText(c, cd, W / 2, H * 0.86, cd.length > 1 ? 30 : 60, cd.length > 1 ? "#fff" : "#FFD21A", U);
+  }
+  function tkxCrack(c, W, H, U) {
+    const k = tk.crack;
+    if (!k) return;
+    k.f++;
+    if (k.f > 110) {
+      tk.crack = null;
+      return;
+    }
+    const { zoom, camY } = view2(), px = (k.x - tk.cam.x) * zoom, py = (k.y - camY) * zoom, a = Math.min(1, (110 - k.f) / 30);
+    c.save();
+    c.globalAlpha = a;
+    c.strokeStyle = "rgba(255,255,255,.9)";
+    c.lineWidth = 2.5 * U;
+    let s = k.seed;
+    const R = () => {
+      s = (s * 9301 + 49297) % 233280;
+      return s / 233280;
+    };
+    for (let i = 0; i < 14; i++) {
+      let ang = i / 14 * Math.PI * 2 + R() * 0.3, x = px, y = py, len = Math.max(W, H) * (0.25 + R() * 0.45);
+      c.beginPath();
+      c.moveTo(x, y);
+      for (let d = 0; d < len; d += 30 * U) {
+        ang += (R() - 0.5) * 0.5;
+        x += Math.cos(ang) * 30 * U;
+        y += Math.sin(ang) * 30 * U;
+        c.lineTo(x, y);
+      }
+      c.stroke();
+    }
+    for (let r = 1; r < 4; r++) {
+      c.beginPath();
+      c.arc(px, py, r * 40 * U, 0, 7);
+      c.stroke();
+    }
+    if (k.f < 10) {
+      c.globalAlpha = 1 - k.f / 10;
+      c.fillStyle = "#FF2D55";
+      c.fillRect(0, 0, W, H);
+    }
+    c.restore();
+  }
+  const SPLIT_LINES = ["\xA1Pa' todos hay, no se empujen!", "\xA1Uno pa' ti, otro pa' ti y otro pa' tu compadre!", "\xA1Combo familiar, cadetes!", "\xA1Repartiendo plomo como tamales en posada!", "\xA1Dos p\xE1jaros de un tiro\u2026 y de pil\xF3n el nido!", "\xA1A ver qui\xE9n llora m\xE1s bonito!", "\xA1Aqu\xED no hay favoritos: a todos les toca!", "\xA1Lleg\xF3 el cartero con paquetes pa' todos!"];
+  const SPLIT_ALB = ["\xA1Hay pa' todos y de a doble, no se peleen!", "\xA1A los dos les doy parejo, nom\xE1s no se volteen!", "\xA1Ah\xED les va su lechita\u2026 de plomo!", "\xA1Se las dej\xE9 ir a todos por igual!"];
+  function tkxSplitStart(targets, kind) {
+    if (!targets || targets.length < 2) return;
+    const pool = ALB_ON() && Math.random() < 0.5 ? SPLIT_ALB : SPLIT_LINES;
+    tk.split = { targets: targets.slice(0, 3), f: 0, kind, hit: {}, phrase: pool[Math.floor(Math.random() * pool.length)], slowed: {} };
+    SFX.play("whoosh");
+  }
+  function tkxSplitTick() {
+    const S = tk.split;
+    if (!S) return;
+    S.f++;
+    const live = tk.shots.filter((s) => s.homing && S.targets.includes(s.target));
+    live.forEach((s) => {
+      const tt = game.tanks[s.target];
+      if (tt && !S.slowed[s.target] && Math.hypot(tt.x - s.x, tt.y - s.y) < 170) {
+        S.slowed[s.target] = 1;
+        tk.slow = Math.max(tk.slow || 0, 18);
+      }
+    });
+    if (!live.length && S.f > 60) {
+      S.end = S.end || S.f;
+    }
+    if (S.end && S.f - S.end > 75 || S.f > 600) tk.split = null;
+  }
+  function tkxSplitHit(ti, dmg) {
+    const S = tk.split;
+    if (!S || !S.targets.includes(ti)) return;
+    S.hit[ti] = (S.hit[ti] || 0) + dmg;
+    S.hitF = S.hitF || {};
+    S.hitF[ti] = S.f;
+  }
+  function tkxDrawSplit() {
+    const S = tk.split, c = tkCtx;
+    sizeTk();
+    const W = tkCanvas.width, H = tkCanvas.height, U = Math.min(W, H) / 620, n = S.targets.length, pw = W / n;
+    const cam = tk.cam, save = { x: cam.x, y: cam.y, ty: cam.ty, target: cam.target, follow: cam.follow }, zmul = tk.zmul, fit = tk.fit;
+    const orig = c.setTransform;
+    tk._inSplit = true;
+    tk.fit = false;
+    tk.zmul = Math.max(1.25, zmul || 1);
+    S.targets.forEach((ti, i) => {
+      const tt = game.tanks[ti];
+      if (!tt) return;
+      const { vw } = view2();
+      cam.follow = "free";
+      cam.x = Math.max(0, Math.min(Math.max(0, TK.W - vw), tt.x - vw / 2));
+      cam.y = tt.y - 10;
+      cam.ty = null;
+      cam.target = cam.x;
+      const ox = (tt.x - cam.x) * view2().zoom, dx = i * pw + pw / 2 - ox;
+      c.save();
+      orig.call(c, 1, 0, 0, 1, 0, 0);
+      c.beginPath();
+      c.rect(i * pw, 0, pw, H);
+      c.clip();
+      c.setTransform = function(a, b, cc, d, e, f) {
+        return orig.call(this, a, b, cc, d, e + dx, f);
+      };
+      try {
+        drawTk();
+      } catch (err) {
+      }
+      c.setTransform = orig;
+      c.restore();
+    });
+    Object.assign(cam, save);
+    tk.zmul = zmul;
+    tk.fit = fit;
+    tk._inSplit = false;
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    for (let i = 1; i < n; i++) {
+      c.fillStyle = INK;
+      c.fillRect(i * pw - 5 * U, 0, 10 * U, H);
+      c.fillStyle = "#FFD21A";
+      c.fillRect(i * pw - 2 * U, 0, 4 * U, H);
+    }
+    S.targets.forEach((ti, i) => {
+      const tm = game.teams[ti], cx = i * pw + pw / 2, hit = S.hit[ti];
+      tkxText(c, `\u{1F3AF} ${tm.name}`, cx, H * 0.2, 24, tm.color, U);
+      if (hit) {
+        const k = S.f - S.hitF[ti], s = 1 + Math.max(0, 0.9 - k * 0.06);
+        c.save();
+        c.translate(cx, H * 0.34);
+        c.scale(s, s);
+        tkxText(c, `\u{1F4A5} -${hit}`, 0, 0, 52, "#FFD21A", U);
+        c.restore();
+      }
+    });
+    const sh = game.teams[game.turn];
+    c.fillStyle = "rgba(20,14,40,.72)";
+    c.fillRect(0, H * 0.82, W, H * 0.13);
+    tkxText(c, S.phrase, W / 2, H * 0.875, 30, "#fff", U);
+    tkxText(c, `${(WEAPONS[S.kind] || {}).icon || "\u{1F680}"} ${sh.name} dispara a ${n} a la vez`, W / 2, H * 0.79, 18, sh.color, U);
+    tkxOverlay(c);
+    drawMini();
+  }
   function renderTkUI() {
     if (!game || game.mode !== "tanks") return;
     const team = game.teams[game.turn];
     $("#tkTeams").innerHTML = game.teams.map((tm, i) => {
       const tt = game.tanks[i];
-      return `<div class="tkchip${i === game.turn ? " on" : ""}" data-i="${i}" style="--tc:${tm.color};cursor:pointer" title="Show this tank"><span class="dot" style="background:${tm.color}"></span><span class="nm">${esc(tm.name)}</span><span class="hp"><i style="width:${tt.alive ? Math.max(0, tt.hp) : 0}%;background:${tt.hp > 60 ? "#3FBF4F" : tt.hp > 30 ? "#FFB400" : "#FF4F6D"}"></i><em>${tt.alive ? "\u2764 " + Math.max(0, Math.round(tt.hp)) : "\u{1F480}"}</em></span><b>${tm.score}<small>pts</small></b></div>`;
+      return `<div class="tkchip${i === game.turn ? " on" : ""}" data-i="${i}" style="--tc:${tm.color};cursor:pointer" title="Show this tank"><span class="dot" style="background:${tm.color}"></span><span class="nm">${esc(tm.name)}</span><span class="hp"><i style="width:${tt.alive ? Math.max(0, tt.hp) : 0}%;background:${tt.hp > 60 ? "#3FBF4F" : tt.hp > 30 ? "#FFB400" : "#FF4F6D"}"></i><em>${tt.alive ? "\u2764 " + Math.max(0, Math.round(tt.hp)) : "\u{1F480}"}</em></span><b>${tm.score}<small>pts</small></b>${game.streak && game.streak[i] >= 2 ? `<span class="tkstk">\u{1F525}${game.streak[i]}</span>` : ""}</div>`;
     }).join("");
     const tb = $("#tkTurn");
     tb.style.setProperty("--tc", team.color);
@@ -13662,6 +14855,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
         closeModal();
         const t = curTank();
         rewardCorrect();
+        tkxAfterAnswer(true, q);
         game.weapon = baseW();
         if (!t.alive) {
           game.phase = "busy";
@@ -13683,6 +14877,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
         tk.acted = false;
         game.phase = "busy";
         tk.busyFrames = 40;
+        tkxAfterAnswer(false, q);
         renderTkUI();
       }
     });
