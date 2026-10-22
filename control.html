@@ -5679,7 +5679,7 @@ function onMsg(m) {
     if (!RM.st || RM.st.qi !== m.qi || m.phase !== "q") {
       if (!RM.st || RM.st.qi !== m.qi) RM.ans = {};
     }
-    const changed = !RM.st || RM.st.phase !== m.phase || m.phase === "none" && !$("#cxSet") || m.phase === "lobby" && (RM.st.setId !== m.setId || RM.st.all !== m.all) || m.phase === "pick" && RM.edit != null && JSON.stringify((RM.st.looks || {})[RM.edit]) !== JSON.stringify((m.looks || {})[RM.edit]) || m.phase === "pick" && (RM.st.roster || []).length !== (m.roster || []).length || RM.st.qi !== m.qi || RM.st.total !== m.total || m.phase === "pick" && RM.st.reg !== m.reg || RM.st.slide !== m.slide;
+    const changed = !RM.st || RM.st.phase !== m.phase || m.phase === "none" && !$("#cxSet") || m.phase === "lobby" && (RM.st.setId !== m.setId || RM.st.all !== m.all || RM.st.v !== m.v) || m.phase === "pick" && RM.edit != null && JSON.stringify((RM.st.looks || {})[RM.edit]) !== JSON.stringify((m.looks || {})[RM.edit]) || m.phase === "pick" && (RM.st.roster || []).length !== (m.roster || []).length || RM.st.qi !== m.qi || RM.st.total !== m.total || m.phase === "pick" && RM.st.reg !== m.reg || RM.st.slide !== m.slide;
     if (m.phase !== "pick") RM.edit = null;
     const wasRead = RM.readEnd > performance.now();
     RM.readEnd = m.phase === "q" && m.readMs ? performance.now() + m.readMs : 0;
@@ -5724,7 +5724,8 @@ function render() {
   else if (s.phase === "lobby") body = `<div class="cx-card"><b>\u{1F4DA} Tema</b></div>
       <select id="cxSet2" class="cx-sel">${(s.sets || []).map((o) => `<option value="${esc(o.id)}"${o.id === s.setId ? " selected" : ""}>${esc(o.x)}</option>`).join("")}</select>
       <select id="cxQn" class="cx-sel">${[5, 10, 15, 20].filter((k) => k < (s.all || 99)).map((k) => `<option value="${k}"${s.qn === k ? " selected" : ""}>${k} preguntas</option>`).join("")}<option value="0"${!s.qn ? " selected" : ""}>Todas (${s.all || ""})</option></select>
-      <button class="cb go huge" data-c="start">\u{1F3C1} Arrancar carrera</button>`;
+      ${s.vars ? `<select id="cxVar" class="cx-sel">${s.vars.map((o) => `<option value="${o[0]}"${o[0] === s.v ? " selected" : ""}>${esc(o[1])}</option>`).join("")}</select>` : ""}
+      <button class="cb go huge" data-c="start">${s.v && s.v !== "race" ? "\u25B6 Arrancar juego" : "\u{1F3C1} Arrancar carrera"}</button>`;
   else if (s.phase === "end") body = `<div class="cx-card"><h2>\u{1F3C6} \xA1Termin\xF3!</h2>${(s.top || []).map((t, i) => `<p class="cx-top">${["\u{1F947}", "\u{1F948}", "\u{1F949}"][i]} ${esc(t)}</p>`).join("")}<p class="rmsmall">Pantalla: ${["\u{1F3C6} Podio", "\u{1F605} Los \xFAltimos", "\u{1F4CA} Calificaciones"][s.slide || 0]}</p></div>
       <div class="cx-grid"><button class="cb big" data-c="eprev">\u25C0 Atr\xE1s</button><button class="cb go big" data-c="enext">Siguiente \u25B6</button></div>`;
   else if (s.phase === "pick" && RM.edit != null && s.looks && s.looks[RM.edit]) body = editBody(s);
@@ -5774,6 +5775,7 @@ function render() {
     cmd("open", { set: e.target.value });
   };
   if ($("#cxQn")) $("#cxQn").onchange = (e) => cmd("qn", { v: +e.target.value });
+  if ($("#cxVar")) $("#cxVar").onchange = (e) => cmd("var", { v: e.target.value });
   if ($("#cxOpen")) $("#cxOpen").onclick = () => {
     const v = $("#cxSet").value;
     lsSet("scanrace.set", v);
