@@ -27733,6 +27733,38 @@ onmessage = function(e){ var m = e.data, out = [];
     });
     c.restore();
   }
+  (function() {
+    try {
+      const sc0 = document.querySelector('.gcard[data-mode="scan"]');
+      if (!sc0 || window.SC48) return;
+      const CARDS = [
+        ["zombie", "\u{1F9DF}", "Defiende el Colegio", "\xA1Una horda de zombis contra la puerta del Colegio! Cada respuesta buena es un disparo. Con tarjetas QR.", "#2E7D32", "linear-gradient(#1B0F2E,#7A2E3A)", "\u{1F9DF}\u{1F9DF}\u{1F9DF}\u{1F9DF}"],
+        ["boss", "\u{1F479}", "Jefe final", "Todo el grupo contra el teacher jefe. Respuesta buena = golpe; si fallan, contraataca. Con tarjetas QR.", "#7B4DFF", "linear-gradient(#2B1640,#5B2A6E)", "\u{1F4D8}\u270F\uFE0F\u2B50"],
+        ["royale", "\u2620\uFE0F", "\xDAltimo en pie", "3 corazones por cadete. Error = pierdes uno. El \xFAltimo vivo gana. Con tarjetas QR.", "#E11D2E", "linear-gradient(#2A1F4A,#E86A5A)", "\u2764\uFE0F\u2764\uFE0F\u{1F5A4}"],
+        ["para", "\u{1FA82}", "Paracaidistas", "Aciertos = te acercas al blanco. Errores = \xE1rbol, cables o carretera. Con tarjetas QR.", "#1E88E5", "linear-gradient(#3E8EF0,#BFE4FF)", "\u{1F3AF}\u{1F333}\u26A1\u{1F697}"]
+      ];
+      let after = sc0;
+      CARDS.slice().forEach(([v, ic, name, desc, col, bg, deco]) => {
+        const b = document.createElement("button");
+        b.className = "gcard";
+        b.dataset.mode = "scan";
+        b.dataset.var = v;
+        b.style.setProperty("--gc", col);
+        b.innerHTML = `<div class="gart" style="background:${bg};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span style="font-size:64px;line-height:1">${ic}</span><span style="font-size:24px;letter-spacing:4px">${deco}</span></div><b>${name}</b><span>${desc}</span><em>Play</em>`;
+        b.onclick = () => {
+          cfg.mode = "scan";
+          cfg.scanVar = v;
+          openSetup();
+        };
+        after.parentNode.insertBefore(b, after.nextSibling);
+        after = b;
+      });
+      sc0.addEventListener("click", () => {
+        cfg.scanVar = "race";
+      }, true);
+    } catch (e) {
+    }
+  })();
   function rmQInfo() {
     const md = $("#modal");
     if (!md || $("#overlay").hidden) return null;
