@@ -25859,6 +25859,7 @@ onmessage = function(e){ var m = e.data, out = [];
   }
   function scStatePayload() {
     if (game && game.mode === "tanks" && view === "play" && typeof tk !== "undefined" && tk) return tkRemotePayload();
+    if (game && view === "play" && game.mode !== "scan" && game.mode !== "tanks") return genPayload();
     const base = { t: "st" };
     if (!game || game.mode !== "scan" || !sc || view !== "play") return Object.assign(base, { phase: "none", sets: scSetsForPhone() });
     const o = Object.assign(base, { phase: game.phase, kind: sc.kind, n: scMaxCards(sc.kind), reg: sc.students.length, roster: sc.students.map((s) => s.no), title: (game.set.title || "").slice(0, 80), total: game.order.length, qi: sc.qi });
@@ -26063,7 +26064,9 @@ onmessage = function(e){ var m = e.data, out = [];
       S.kills = 0;
       S.wave = 0;
       S.shake = 0;
-      for (let i = 0; i < 70; i++) scvSpawnZ(S, scvR(0.5, 1.3));
+      S.extra = 0;
+      const n0 = Math.max(24, Math.round(Math.max(8, sc.students.length) * 2.5));
+      for (let i = 0; i < n0; i++) scvSpawnZ(S, scvR(0.55, 1.3));
     }
     if (v === "boss") {
       S.max = Math.max(60, Math.round(Math.max(1, sc.students.length) * Math.max(1, game.order.length) * 0.55)) * 10;
@@ -26147,13 +26150,9 @@ onmessage = function(e){ var m = e.data, out = [];
     const S = scvInit();
     if (S.v === "zombie") {
       S.wave++;
-      const n = Math.max(0, Math.min(220 - S.zs.filter((z) => !z.dead).length, 24 + S.wave * 8));
-      for (let i = 0; i < n; i++) scvSpawnZ(S, scvR(1.02, 1.5));
-      scvBig(`\u{1F9DF} OLEADA ${S.wave}`, `\xA1Vienen ${n} zombis m\xE1s!`, "#9BE564", 2200);
-      try {
-        SFX.play("siren");
-      } catch (e) {
-      }
+      const live = S.zs.filter((z) => !z.dead).length, want = scvZTarget(S);
+      for (let i = live; i < want; i++) scvSpawnZ(S, scvR(1.02, 1.4));
+      scvBig(`\u{1F9DF} OLEADA ${S.wave}`, `${Math.max(live, want)} zombis contra ${sc.students.length} cadetes`, "#9BE564", 1800);
     }
     if (S.v === "boss") {
       const L = ["\xBFYa estudiaron o qu\xE9?", "Esta s\xED est\xE1 f\xE1cil\u2026 para m\xED.", "\xA1Levanten la tarjeta, no la ceja!", "Les voy a poner falta\u2026", "\xA1El que falle hace mortero!"];
@@ -26183,11 +26182,16 @@ onmessage = function(e){ var m = e.data, out = [];
     if (S.v === "para") scvPDraw(c, W, H, t, U, top, S);
     scvDrawCommon(c, W, H, U);
   }
-  function scvSpawnZ(S, fx) {
-    S.zs.push({ fx, ly: Math.random(), sp: scvR(0.6, 1.4), hue: Math.floor(scvR(70, 120)), shirt: ["#6B4F3A", "#3E5A7A", "#7A3E3E", "#5A6B3A", "#4A4A5A", "#8A7A5A", "#2E5E4E"][Math.floor(Math.random() * 7)], ph: Math.random() * 9, dead: 0, kind: Math.random() < 0.12 ? "big" : Math.random() < 0.2 ? "cad" : "n" });
+  function scvSpawnZ(S, fx, kind) {
+    if (S.zs.length >= Math.min(320, Math.max(80, sc.students.length * 9))) return;
+    S.zs.push({ fx, ly: Math.random(), sp: kind === "potro" ? scvR(2.6, 3.4) : scvR(0.6, 1.4), hue: Math.floor(scvR(70, 120)), shirt: ["#6B4F3A", "#3E5A7A", "#7A3E3E", "#5A6B3A", "#4A4A5A", "#8A7A5A", "#2E5E4E"][Math.floor(Math.random() * 7)], ph: Math.random() * 9, dead: 0, kind: kind || (Math.random() < 0.1 ? "big" : Math.random() < 0.2 ? "cad" : "n") });
+  }
+  function scvZTarget(S) {
+    const n = Math.max(8, sc.students.length);
+    return Math.max(Math.round(n * 1.5), Math.min(Math.round(n * 7), Math.round(n * 2.5 + (S.extra || 0))));
   }
   function scvZDraw(c, W, H, t, U, top, S) {
-    const gx = W * 0.24, gnd = top, dt = 1 / 60;
+    const gx = W * 0.3, gnd = top, dt = 1 / 60, now = performance.now(), n = sc.students.length;
     let g = c.createLinearGradient(0, 0, 0, gnd);
     g.addColorStop(0, "#1B0F2E");
     g.addColorStop(1, "#7A2E3A");
@@ -26203,18 +26207,17 @@ onmessage = function(e){ var m = e.data, out = [];
     c.fill();
     c.fillStyle = "#2A1A35";
     for (let i = 0; i < 14; i++) {
-      const x = W * 0.3 + i * W * 0.055, h = gnd * (0.15 + scHash(i + 3) * 0.3);
-      c.fillRect(x, gnd - h, W * 0.045, h);
+      const x = W * 0.32 + i * W * 0.05, h = gnd * (0.15 + scHash(i + 3) * 0.3);
+      c.fillRect(x, gnd - h, W * 0.04, h);
     }
     g = c.createLinearGradient(0, gnd, 0, H);
     g.addColorStop(0, "#3B3A2A");
     g.addColorStop(1, "#22201A");
     c.fillStyle = g;
     c.fillRect(0, gnd, W, H - gnd);
-    const wallW = W * 0.035, hp = S.gate / 100, gw = Math.min(gx * 1.25, gnd * 1.6);
-    scvGate(c, gx * 0.5, gnd + 4, gw, Math.min(gnd * 0.9, gw * 0.55));
-    c.fillStyle = "rgba(20,10,30,.35)";
-    c.fillRect(0, 0, gx * 1.1, gnd);
+    const gw = gx * 0.92, gcx = gx * 0.47, base = gnd + (H - gnd) * 0.52, gh = Math.min(base - gnd + gnd * 0.35, gw * 0.62), roofY = base - gh;
+    scvGate(c, gcx, base, gw, gh);
+    const wallW = W * 0.03, hp = S.gate / 100;
     for (let y = gnd - 10 * U, r = 0; y < H + 20; y += 22 * U, r++) {
       for (let k = 0; k < 2; k++) {
         const x = gx - wallW + r % 2 * wallW * 0.4 + k * wallW * 0.5;
@@ -26237,40 +26240,56 @@ onmessage = function(e){ var m = e.data, out = [];
     }
     const bw = W * 0.2;
     c.fillStyle = "rgba(0,0,0,.5)";
-    scRR(c, 14, top - 46 * U, bw, 30 * U, 10);
+    scRR(c, 14, H - 44 * U, bw, 30 * U, 10);
     c.fill();
     c.fillStyle = hp > 0.5 ? "#3FBF4F" : hp > 0.25 ? "#FFB400" : "#FF4F6D";
-    scRR(c, 17, top - 43 * U, (bw - 6) * Math.max(0, hp), 24 * U, 8);
+    scRR(c, 17, H - 41 * U, (bw - 6) * Math.max(0, hp), 24 * U, 8);
     c.fill();
-    scvText(c, `\u{1F3DB} PUERTA ${Math.max(0, Math.round(S.gate))}%`, 14 + bw / 2, top - 31 * U, 15 * U, "#fff");
-    scvText(c, `\u{1F9DF} ${S.kills} eliminados \xB7 ${S.zs.filter((z) => !z.dead).length} vienen`, W * 0.5, top - 31 * U, 22 * U, "#9BE564", "center");
-    const pos = scvGrid(sc.students.length, 8, gnd + 6, gx - wallW - 16, H - gnd - 10, 110 * U);
+    scvText(c, `\u{1F3DB} PUERTA ${Math.max(0, Math.round(S.gate))}%`, 14 + bw / 2, H - 29 * U, 15 * U, "#fff");
+    const liveN = S.zs.filter((z) => !z.dead).length;
+    scvText(c, `\u{1F9DF} ${S.kills} eliminados \xB7 ${liveN} atacando`, W * 0.62, gnd + 24 * U, 22 * U, "#9BE564", "center");
     S.pos = {};
-    const live = S.zs.filter((z) => !z.dead), atGate = live.filter((z) => z.fx * W <= gx + 30);
+    const nRoof = Math.ceil(n * 0.4), nIn = Math.round(n * 0.2), nLow = Math.max(0, n - nRoof - nIn);
+    const rs = Math.min(70 * U, gw / Math.max(1, nRoof) * 1.7), is = Math.min(64 * U, gw * 0.6 / Math.max(1, nIn) * 1.7);
+    const low = scvGrid(nLow, 8, base + 12 * U, gx - wallW - 16, H - base - 20 * U, 90 * U);
+    const slot = sc.students.map((s, i) => {
+      if (i < nRoof) return { x: gcx - gw / 2 + gw * (i + 0.5) / nRoof, y: roofY + 2, size: rs, z: "roof" };
+      if (i < nRoof + nIn) {
+        const k = i - nRoof;
+        return { x: gcx - gw * 0.3 + gw * 0.6 * (k + 0.5) / Math.max(1, nIn), y: base - 4, size: is, z: "in" };
+      }
+      const p = low[i - nRoof - nIn];
+      return { x: p.x, y: p.y, size: p.size, z: "low" };
+    });
     const moving = game.phase === "q" || game.phase === "reveal";
+    if (moving && liveN < scvZTarget(S) && tkxEvery(S, 14)) scvSpawnZ(S, scvR(1.02, 1.25));
     S.zs.forEach((z) => {
       if (z.dead) {
         z.dead += dt;
         return;
       }
-      if (moving) z.fx -= z.sp * 9e-4 * (1 + S.wave * 0.04) * (S.surge > 0 ? 6 : 1);
+      if (moving) z.fx -= z.sp * 8e-4 * (S.mud > now ? 0.4 : 1) * (S.surge > 0 ? 5 : 1);
+      if (z.push) {
+        z.fx += z.push;
+        z.push *= 0.8;
+        if (z.push < 2e-4) z.push = 0;
+      }
       if (z.fx * W < gx + 18) z.fx = (gx + 18 + scvR(0, 10)) / W;
     });
     if (S.surge > 0) S.surge--;
+    const atGate = S.zs.filter((z) => !z.dead && z.fx * W <= gx + 30);
     if (atGate.length && moving) {
-      S.gate -= atGate.length * 25e-4;
-      S.shake = Math.min(8, atGate.length * 0.3);
+      S.gate -= atGate.length * 16e-4;
       if (S.gate <= 0 && !S.breach) scvZBreach(S);
     }
     S.zs = S.zs.filter((z) => !z.dead || z.dead < 2.2);
-    const zl = S.zs.slice().sort((a, b) => a.ly - b.ly);
-    zl.forEach((z) => {
+    S.zs.slice().sort((a, b) => a.ly - b.ly).forEach((z) => {
       const y = gnd + 20 + z.ly * (H - gnd - 24), sz = (40 + z.ly * 55) * U * (z.kind === "big" ? 1.5 : 1), x = z.fx * W;
       if (x > W + 80) return;
       scvZombie(c, x, y, sz, t, z);
     });
     sc.students.forEach((s, i) => {
-      const p = pos[i];
+      const p = slot[i];
       if (!p) return;
       S.pos[s.no] = p;
       scvAvatar(c, s, p.x, p.y, p.size, t * 0.3 + i, false);
@@ -26282,12 +26301,49 @@ onmessage = function(e){ var m = e.data, out = [];
       c.fillRect(-p.size * 0.06, -p.size * 0.02, p.size * 0.12, p.size * 0.1);
       c.restore();
     });
+    if (moving && sc.students.length && tkxEvery(S, 9, "amb")) {
+      const s = sc.students[Math.floor(Math.random() * sc.students.length)], p = S.pos[s.no], z = S.zs.filter((z2) => !z2.dead)[Math.floor(Math.random() * Math.max(1, liveN))];
+      if (p && z) {
+        const y1 = gnd + 20 + z.ly * (H - gnd - 24) - (40 + z.ly * 55) * U * 0.8;
+        S.shots.push({ x0: p.x + p.size * 0.55, y0: p.y - p.size * 0.6, x1: z.fx * W, y1, z, t: 0, amb: true });
+      }
+    }
+    if (S.reinf) {
+      const R = S.reinf, k = (now - R.t0) / 1e3;
+      if (k > 6) {
+        S.reinf = null;
+      } else R.squad.forEach((m, i) => {
+        const inX = Math.min(1, k / 1.2), outK = Math.max(0, (k - 5) / 1), x = -60 + (m.x - -60) * inX - outK * W * 0.4, y = m.y;
+        c.save();
+        c.translate(x, y - m.size * 0.5);
+        scDrawRunner(c, m.look, m.size, t + i, inX < 1 || outK > 0);
+        c.restore();
+        c.fillStyle = m.off ? "#FFD21A" : "#fff";
+        c.strokeStyle = "#1A1530";
+        c.lineWidth = 2;
+        scRR(c, x - 16 * U, y - m.size * 1.18, 32 * U, 18 * U, 6);
+        c.fill();
+        c.stroke();
+        scvText(c, m.off ? "OF" : "4\xBA", x, y - m.size * 1.18 + 9 * U, 11 * U, "#1A1530", "center", false);
+        c.fillStyle = "#2B2838";
+        c.fillRect(x + m.size * 0.12, y - m.size * 0.65, m.size * 0.5, m.size * 0.08);
+        if (inX >= 1 && outK === 0 && (Math.floor(now / 90) + i) % 5 === 0) {
+          const z = S.zs.filter((z2) => !z2.dead && !z2.tg).sort((a, b) => a.fx - b.fx)[0];
+          if (z) {
+            z.tg = 1;
+            const y1 = gnd + 20 + z.ly * (H - gnd - 24) - (40 + z.ly * 55) * U * 0.8;
+            S.shots.push({ x0: x + m.size * 0.6, y0: y - m.size * 0.6, x1: z.fx * W, y1, z, t: 0 });
+          }
+        }
+      });
+      if (k < 1.5) scvText(c, R.say, W * 0.62, gnd + 60 * U, 20 * U, "#FFD21A");
+    }
     S.shots = S.shots.filter((sh) => {
       sh.t++;
       if (sh.t < 0) return true;
       const k = Math.min(1, sh.t / 6), x = sh.x0 + (sh.x1 - sh.x0) * k, y = sh.y0 + (sh.y1 - sh.y0) * k;
-      c.strokeStyle = sh.miss ? "rgba(255,255,255,.5)" : "#FFE15C";
-      c.lineWidth = 4 * U;
+      c.strokeStyle = sh.miss ? "rgba(255,255,255,.5)" : sh.amb ? "rgba(255,225,92,.55)" : "#FFE15C";
+      c.lineWidth = (sh.amb ? 2 : 4) * U;
       c.beginPath();
       c.moveTo(sh.x0 + (sh.x1 - sh.x0) * Math.max(0, k - 0.35), sh.y0 + (sh.y1 - sh.y0) * Math.max(0, k - 0.35));
       c.lineTo(x, y);
@@ -26295,11 +26351,16 @@ onmessage = function(e){ var m = e.data, out = [];
       if (sh.t < 4) {
         c.fillStyle = "#FFD21A";
         c.beginPath();
-        c.arc(sh.x0, sh.y0, 10 * U, 0, 7);
+        c.arc(sh.x0, sh.y0, (sh.amb ? 6 : 10) * U, 0, 7);
         c.fill();
       }
       if (sh.t === 6) {
-        if (sh.z && !sh.z.dead) {
+        if (sh.amb) {
+          if (sh.z && !sh.z.dead) {
+            sh.z.push = 6e-3;
+            S.fx.push({ x: sh.x1, y: sh.y1, vx: scvR(-1, 2), vy: scvR(-3, -1), t: 0, col: "#7BC043" });
+          }
+        } else if (sh.z && !sh.z.dead) {
           sh.z.dead = 1e-3;
           S.kills++;
           for (let i = 0; i < 8; i++) S.fx.push({ x: sh.x1, y: sh.y1, vx: scvR(-3, 3), vy: scvR(-5, -1), t: 0, col: "#7BC043" });
@@ -26307,6 +26368,7 @@ onmessage = function(e){ var m = e.data, out = [];
       }
       return sh.t < 10;
     });
+    if (S.shots.length > 400) S.shots.splice(0, S.shots.length - 400);
     S.fx = S.fx.filter((p) => {
       p.t++;
       p.x += p.vx;
@@ -26320,6 +26382,7 @@ onmessage = function(e){ var m = e.data, out = [];
       c.globalAlpha = 1;
       return p.t < 40;
     });
+    if (S.fx.length > 300) S.fx.splice(0, S.fx.length - 300);
     c.fillStyle = "rgba(170,200,160,.08)";
     for (let i = 0; i < 5; i++) {
       const x = (t * 20 + i * W * 0.3) % (W * 1.4) - W * 0.2;
@@ -26334,15 +26397,25 @@ onmessage = function(e){ var m = e.data, out = [];
       if (S.flash < 0.02) S.flash = 0;
     }
   }
+  function tkxEvery(S, frames, key) {
+    key = key || "sp";
+    S._ev = S._ev || {};
+    S._ev[key] = (S._ev[key] || 0) + 1;
+    if (S._ev[key] >= frames) {
+      S._ev[key] = 0;
+      return true;
+    }
+    return false;
+  }
   function scvZombie(c, x, y, sz, t, z) {
-    const u = sz / 10, step = Math.sin(t * 3 * z.sp + z.ph), dead = z.dead;
+    const u = sz / 10, potro = z.kind === "potro", step = Math.sin(t * (potro ? 9 : 3) * z.sp + z.ph), dead = z.dead;
     c.save();
     c.translate(x, y);
     if (dead) {
       c.globalAlpha = Math.max(0, 1 - dead / 2.2);
       c.rotate(Math.min(1.5, dead * 3));
       c.translate(0, -dead * 4 * u);
-    }
+    } else if (potro) c.rotate(-0.25);
     c.fillStyle = "rgba(0,0,0,.25)";
     c.beginPath();
     c.ellipse(0, 0, u * 2.6, u * 0.6, 0, 0, 7);
@@ -26353,19 +26426,19 @@ onmessage = function(e){ var m = e.data, out = [];
     c.lineWidth = u * 1.1;
     c.beginPath();
     c.moveTo(0, -u * 4);
-    c.lineTo(-u * 1 + step * u, 0);
+    c.lineTo(-u * 1 + step * u * (potro ? 2 : 1), 0);
     c.moveTo(0, -u * 4);
-    c.lineTo(u * 1 - step * u, 0);
+    c.lineTo(u * 1 - step * u * (potro ? 2 : 1), 0);
     c.stroke();
-    c.strokeStyle = "#3A3A4A";
+    c.strokeStyle = potro ? "#2E3B2A" : "#3A3A4A";
     c.lineWidth = u * 0.8;
     c.beginPath();
     c.moveTo(0, -u * 4);
-    c.lineTo(-u * 1 + step * u, 0);
+    c.lineTo(-u * 1 + step * u * (potro ? 2 : 1), 0);
     c.moveTo(0, -u * 4);
-    c.lineTo(u * 1 - step * u, 0);
+    c.lineTo(u * 1 - step * u * (potro ? 2 : 1), 0);
     c.stroke();
-    c.fillStyle = z.kind === "cad" ? "#3E4A2E" : z.shirt;
+    c.fillStyle = z.kind === "cad" || potro ? "#3E4A2E" : z.shirt;
     c.strokeStyle = dk;
     c.lineWidth = 2;
     c.beginPath();
@@ -26376,12 +26449,14 @@ onmessage = function(e){ var m = e.data, out = [];
     c.closePath();
     c.fill();
     c.stroke();
-    c.fillStyle = skin;
-    c.beginPath();
-    c.moveTo(-u * 0.4, -u * 4.3);
-    c.lineTo(u * 0.2, -u * 5.2);
-    c.lineTo(u * 0.6, -u * 4.3);
-    c.fill();
+    if (!potro) {
+      c.fillStyle = skin;
+      c.beginPath();
+      c.moveTo(-u * 0.4, -u * 4.3);
+      c.lineTo(u * 0.2, -u * 5.2);
+      c.lineTo(u * 0.6, -u * 4.3);
+      c.fill();
+    }
     const ar = Math.sin(t * 2 + z.ph) * u * 0.4;
     c.strokeStyle = dk;
     c.lineWidth = u * 1;
@@ -26407,7 +26482,18 @@ onmessage = function(e){ var m = e.data, out = [];
     c.ellipse(hx, hy, u * 1.5, u * 1.7, -0.2, 0, 7);
     c.fill();
     c.stroke();
-    if (z.kind === "cad") {
+    if (potro) {
+      c.fillStyle = "#3A4A2C";
+      c.beginPath();
+      c.arc(hx, hy - u * 0.6, u * 1.55, Math.PI, 0);
+      c.fill();
+      c.stroke();
+      c.fillRect(hx - u * 2.6, hy - u * 0.8, u * 1.6, u * 0.4);
+      c.fillStyle = "#FFD21A";
+      c.font = `900 ${Math.max(8, u * 1.4)}px sans-serif`;
+      c.textAlign = "center";
+      c.fillText("1\xBA", hx, hy - u * 1.1);
+    } else if (z.kind === "cad") {
       c.fillStyle = "#4B5D3A";
       c.beginPath();
       c.arc(hx, hy - u * 0.5, u * 1.6, Math.PI, 0);
@@ -26453,9 +26539,30 @@ onmessage = function(e){ var m = e.data, out = [];
       scvSnd("big");
     }, 2400);
   }
+  function scvZReinforce(S) {
+    const W = $("#scRace").clientWidth, H = $("#scRace").clientHeight, top = scRoadTop(H), U = scvU(W, H), gx = W * 0.3, n = 7;
+    const squad = [];
+    for (let i = 0; i < n; i++) {
+      const off = i === n - 1;
+      squad.push({ off, x: gx + 20 * U + i % 2 * 34 * U, y: top + 40 * U + i * (H - top - 60 * U) / (n - 1), size: 64 * U, look: { sp: 0, hat: off ? 2 : 3, gl: off ? 1 : 0, shoe: 5, shirt: off ? 40 : 220, skin: Math.floor(Math.random() * 3) } });
+    }
+    S.reinf = { t0: performance.now(), squad, say: ["\xA1Aguanten, terceros!", "\xA1Aqu\xED 4\xBA a\xF1o, vamos con todo!", "\xA1A mi mando, fuego!"][Math.floor(Math.random() * 3)] };
+    scvSnd("siren");
+    scvBig("\u{1F396}\uFE0F \xA1REFUERZOS!", "Llegan los de 4\xBA a\xF1o y un oficial a ayudar", "#FFD21A", 2600);
+  }
+  function scvZPotros(S) {
+    const n = Math.max(8, Math.round(sc.students.length * 1.2));
+    for (let i = 0; i < n; i++) setTimeout(() => {
+      if (sc && sc.vs === S) scvSpawnZ(S, scvR(1.02, 1.15), "potro");
+    }, i * 90);
+    S.extra = (S.extra || 0) + n * 0.5;
+    scvSnd("splat");
+    scvBig("\u{1F434} \xA1LOS POTROS SE VOLVIERON ZOMBIS!", `${n} cadetes de 1er a\xF1o corren a morder`, "#9BE564", 2800);
+  }
   function scvZReveal(S, hits, miss, answered, joke) {
     const W = $("#scRace").clientWidth, H = $("#scRace").clientHeight, top = scRoadTop(H);
     const shooters = joke === "all" ? sc.students : joke === "none" ? [] : hits;
+    const wrong = joke === "all" ? 0 : joke === "none" ? sc.students.length : sc.students.length - hits.length;
     let k = 0;
     shooters.forEach((s) => {
       const p = S.pos && S.pos[s.no];
@@ -26475,6 +26582,11 @@ onmessage = function(e){ var m = e.data, out = [];
       if (!p) return;
       S.shots.push({ x0: p.x + p.size * 0.55, y0: p.y - p.size * 0.6, x1: p.x + W * 0.4, y1: top * 0.4, miss: true, t: -i * 4 });
     });
+    S.extra = (S.extra || 0) - shooters.length * 1.2 + wrong * 1.6;
+    const burst = Math.round(wrong * 1.5);
+    for (let i = 0; i < burst; i++) setTimeout(() => {
+      if (sc && sc.vs === S) scvSpawnZ(S, scvR(1.02, 1.2));
+    }, 900 + i * 40);
     const tot = Math.max(1, answered.length), ratio = joke === "all" ? 1 : joke === "none" ? 0 : hits.length / tot;
     let shotsN = 0;
     const shotT = setInterval(() => {
@@ -26484,26 +26596,23 @@ onmessage = function(e){ var m = e.data, out = [];
       }
       scvSnd("shot");
     }, 120);
-    if (ratio < 0.5) {
+    if (ratio >= 0.75 || ratio >= 0.6 && Math.random() < 0.35) setTimeout(() => {
+      if (sc && sc.vs === S) scvZReinforce(S);
+    }, 1300);
+    else if (ratio < 0.4) setTimeout(() => {
+      if (sc && sc.vs === S) scvZPotros(S);
+    }, 1300);
+    else if (ratio < 0.5) {
       S.surge = 50;
-      S.gate -= 8;
+      S.gate -= 6;
       setTimeout(() => {
-        scvBig("\u{1F9DF} \xA1AVANZAN!", ratio === 0 ? "\xA1Nadie le atin\xF3! \u{1F631}" : "M\xE1s de la mitad fall\xF3\u2026", "#9BE564", 2200);
+        scvBig("\u{1F9DF} \xA1AVANZAN!", "M\xE1s de la mitad fall\xF3\u2026", "#9BE564", 2e3);
         scvSnd("splat");
       }, 900);
-    } else if (ratio >= 0.8) {
-      setTimeout(() => {
-        S.flash = 0.7;
-        scvSnd("big");
-        let n = 0;
-        S.zs.filter((z) => !z.dead).sort((a, b) => a.fx - b.fx).slice(0, 10).forEach((z) => {
-          z.dead = 1e-3;
-          n++;
-          S.kills++;
-        });
-        scvBig("\u{1F4A3} \xA1GRANADAZO!", `${Math.round(ratio * 100)}% acert\xF3: +${n} zombis volando`, "#FFD21A", 2200);
-      }, 1400);
     }
+    if (burst) setTimeout(() => {
+      if (sc && sc.vs === S) scvFloat(W * 0.75, top + 80, `+${burst} \u{1F9DF}`, "#9BE564", 30, 80);
+    }, 1e3);
     if (S.gate <= 0 && !S.breach) scvZBreach(S);
   }
   let scvBossImg = null;
@@ -27537,16 +27646,53 @@ onmessage = function(e){ var m = e.data, out = [];
     });
     c.restore();
   }
+  function rmQInfo() {
+    const md = $("#modal");
+    if (!md || $("#overlay").hidden) return null;
+    const qt = md.querySelector(".qtext");
+    return {
+      text: qt ? qt.textContent.slice(0, 200) : "",
+      opts: [...md.querySelectorAll("#opts .opt")].map((b) => ({ i: +b.dataset.i, x: (() => {
+        const l = b.querySelector(".let"), sp = b.querySelectorAll("span");
+        return (l ? l.textContent + ") " + (sp[sp.length - 1] ? sp[sp.length - 1].textContent : "") : b.textContent).replace(/\s+/g, " ").trim().slice(0, 90);
+      })(), d: b.disabled, ok: b.classList.contains("right"), no: b.classList.contains("wrong") })),
+      audio: md.querySelectorAll(".spd").length,
+      plays: (md.querySelector("#playsLeft") || {}).textContent || "",
+      txt: !!md.querySelector("#showTxt") && !md.querySelector("#showTxt").disabled,
+      open: [...md.querySelectorAll("#rightQ,#wrongQ")].length ? 1 : 0,
+      v: md.querySelector(".verdict") ? md.querySelector(".verdict").textContent : ""
+    };
+  }
+  const RM_MODE = { tiles: "\u{1F7E6} Tile Board", c4: "\u{1F534} Cuatro en l\xEDnea", plinko: "\u26AA Ball Drop", box: "\u{1F94A} Knockout Royale", tanks: "\u{1FA96} Tanques" };
+  function genPayload() {
+    const o = { t: "st", phase: "gen", mode: RM_MODE[game.mode] || game.mode, title: (game.set && game.set.title || "").slice(0, 70) };
+    const q = rmQInfo();
+    if (q) o.q = q;
+    else {
+      const sec = ["vGame", "vPl", "vBox"].map((id) => document.getElementById(id)).find((e) => e && !e.hidden);
+      if (sec) {
+        let k = 0;
+        o.btns = [];
+        sec.querySelectorAll("button").forEach((b) => {
+          if (k >= 90 || b.disabled || !b.offsetParent) return;
+          const r = b.getBoundingClientRect();
+          if (r.width < 8 || r.height < 8) return;
+          const x = (b.textContent || b.getAttribute("aria-label") || "").replace(/\s+/g, " ").trim().slice(0, 40);
+          if (!x) return;
+          b.dataset.rm = k;
+          o.btns.push({ k, x });
+          k++;
+        });
+        o.btns.sort((p, q2) => (/^\d+$/.test(q2.x) ? 1 : 0) - (/^\d+$/.test(p.x) ? 1 : 0));
+      }
+    }
+    o.scores = (game.teams || []).map((x) => [x.name, x.color, x.score]);
+    return o;
+  }
   function tkRemotePayload() {
     const t = curTank(), tm = game.teams[game.turn], ov = !$("#overlay").hidden, md = $("#modal");
     const o = { t: "st", phase: "tanks", tp: game.phase, team: tm.name, col: tm.color, wind: game.wind, asked: game.asked, total: game.total, replay: !!(tk && tk.replay) };
-    if (ov && md) {
-      const qt = md.querySelector(".qtext");
-      o.q = { text: qt ? qt.textContent.slice(0, 160) : "", opts: [...md.querySelectorAll("#opts .opt")].map((b) => ({ i: +b.dataset.i, x: (() => {
-        const l = b.querySelector(".let"), sp = b.querySelectorAll("span");
-        return (l ? l.textContent + ") " + (sp[sp.length - 1] ? sp[sp.length - 1].textContent : "") : b.textContent).replace(/\s+/g, " ").trim().slice(0, 90);
-      })(), d: b.disabled, ok: b.classList.contains("right"), no: b.classList.contains("wrong") })), audio: !!md.querySelector(".spd"), v: md.querySelector(".verdict") ? md.querySelector(".verdict").textContent : "" };
-    }
+    if (ov && md) o.q = rmQInfo();
     if (t) {
       o.ang = Math.round(t.angle);
       o.pow = Math.round(t.power);
@@ -27568,16 +27714,48 @@ onmessage = function(e){ var m = e.data, out = [];
     return o;
   }
   function tkRemote(m) {
-    if (!game || game.mode !== "tanks" || !tk) return;
+    if (!game) return;
+    if (m.a === "ans") {
+      const b = document.querySelector(`#opts .opt[data-i="${+m.i}"]`);
+      if (b && !b.disabled) b.click();
+      scSyncLast = "";
+      scSync(true);
+      return;
+    }
+    if (m.a === "audio") {
+      const bs = document.querySelectorAll("#modal .spd"), b = bs[Math.min(bs.length - 1, +m.r || 0)];
+      if (b && !b.disabled) b.click();
+      scSyncLast = "";
+      scSync(true);
+      return;
+    }
+    if (m.a === "qtxt") {
+      const b = $("#showTxt");
+      if (b && !b.disabled) b.click();
+      scSyncLast = "";
+      scSync(true);
+      return;
+    }
+    if (m.a === "judge") {
+      const b = $(m.ok ? "#rightQ" : "#wrongQ");
+      if (b) b.click();
+      scSyncLast = "";
+      scSync(true);
+      return;
+    }
+    if (m.a === "btn") {
+      const b = document.querySelector(`[data-rm="${+m.k}"]`);
+      if (b && !b.disabled) b.click();
+      setTimeout(() => {
+        scSyncLast = "";
+        scSync(true);
+      }, 300);
+      return;
+    }
+    if (game.mode !== "tanks" || !tk) return;
     const a = m.a, t = curTank(), act = game.phase === "act";
     if (a === "ask") {
       if (game.phase === "question" && $("#overlay").hidden && !tk.replay) askTank();
-    } else if (a === "ans") {
-      const b = document.querySelector(`#opts .opt[data-i="${+m.i}"]`);
-      if (b && !b.disabled) b.click();
-    } else if (a === "audio") {
-      const b = document.querySelector("#modal .spd");
-      if (b) b.click();
     } else if (a === "move" && act) tryMove(+m.d < 0 ? -1 : 1);
     else if (a === "ang" && act && t) {
       t.angle = Math.max(0, Math.min(180, m.v != null ? +m.v : t.angle + (+m.d || 0)));
@@ -27610,6 +27788,30 @@ onmessage = function(e){ var m = e.data, out = [];
     scSyncLast = "";
     scSync(true);
   }
+  setInterval(() => {
+    try {
+      if (game && view === "play" && game.mode !== "scan") scSync();
+    } catch (e) {
+    }
+  }, 700);
+  setInterval(() => {
+    try {
+      let el = document.getElementById("rmPill");
+      const on = game && view === "play" && game.mode !== "scan" && game.mode !== "tanks";
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "rmPill";
+        el.style.cssText = "position:fixed;right:12px;bottom:12px;z-index:50;padding:4px 12px;border-radius:999px;background:#fff;color:#2B2366;border:3px solid #2B2366;font:900 18px Nunito,sans-serif;pointer-events:none";
+        document.body.appendChild(el);
+      }
+      el.hidden = !on;
+      if (on) {
+        const ok = RT.lastIn && performance.now() - RT.lastIn < 3e4, t = `\u{1F4F1} ${scLinkCode()}${ok ? " \u2705" : ""}`;
+        if (el.textContent !== t) el.textContent = t;
+      }
+    } catch (e) {
+    }
+  }, 1e3);
   wireScan();
   try {
     setTimeout(scEnsureLink, 1500);

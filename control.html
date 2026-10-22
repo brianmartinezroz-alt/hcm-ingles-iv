@@ -5676,7 +5676,7 @@ function onMsg(m) {
     return;
   }
   if (m.t === "st") {
-    if (m.phase === "tanks") {
+    if (m.phase === "tanks" || m.phase === "gen") {
       const prev = RM.st;
       RM.st = m;
       if (CAM.on) camClose();
@@ -5732,8 +5732,12 @@ function render() {
     tkRender(s);
     return;
   }
+  if (s && s.phase === "gen") {
+    genRender(s);
+    return;
+  }
   if (!s) body = `<div class="cx-card">\u23F3 Buscando la pantalla <b>${esc(RM.code)}</b>\u2026<br><span class="rmsmall">Abre el juego en la pantalla del sal\xF3n. Si no conecta, dale "Conectar ahora" o escanea su QR.</span></div><button class="cb go huge" id="cxNow">\u{1F504} Conectar ahora</button><button class="cb scan big" id="cxQR2">\u{1F4F7} Escanear QR de la pantalla</button><button class="cb" id="cxNew">\u{1F522} Escribir el c\xF3digo</button>`;
-  else if (s.phase === "none") body = `<div class="cx-card">\u2705 \xA1Pantalla conectada! Elige el set y dale Empezar.</div>
+  else if (s.phase === "none") body = `<div class="cx-card">\u2705 \xA1Pantalla conectada!<br><span class="rmsmall">\u{1FA96} Tanques, \u{1F7E6} Tile Board, \u{1F94A} Box, \u26AA Ball Drop: \xE1brelos en la pantalla y aqu\xED te sale su control.<br>\u{1F4F7} Juegos con tarjetas QR: elige el tema y dale Empezar.</span></div>
       <select id="cxSet" class="cx-sel">${(s.sets || []).map((o) => `<option value="${esc(o.id)}"${o.id === lsGet("scanrace.set") ? " selected" : ""}>${esc(o.x)}</option>`).join("")}</select>
       <button class="cb go huge" id="cxOpen">\u{1F3C1} Empezar</button>`;
   else if (s.phase === "lobby") body = `<div class="cx-card"><b>\u{1F4DA} Tema</b></div>
@@ -5938,11 +5942,8 @@ function tkRender(s) {
   const ph = { question: "\u2753 Toca preguntar", act: "\u{1F3AF} \xA1A disparar!", busy: "\u{1F4A5} \xA1Boom!", target: "\u{1F3AF} Elige objetivo", replay: "\u{1F39E} Repetici\xF3n", over: "\u{1F3C1} Fin del juego" }[s.tp] || s.tp;
   let b = `<div class="cx-card" style="border-left:12px solid ${s.col}"><b style="color:${s.col}">${esc(s.team)}</b> \xB7 ${ph}<br><span class="rmsmall">Pregunta ${Math.min(s.asked + (s.tp === "question" ? 1 : 0), s.total)} de ${s.total} \xB7 \u{1F32C} Viento ${s.wind === 0 ? "calmo" : (s.wind < 0 ? "\u25C0 " : "") + Math.abs(s.wind) + (s.wind > 0 ? " \u25B6" : "")}</span></div>`;
   if (s.replay) b += `<button class="cb go huge" data-tk="skip">\u23ED Saltar repetici\xF3n</button>`;
-  else if (s.q) {
-    b += `<div class="cx-card"><b>${esc(s.q.text)}</b>${s.q.v ? `<br><b style="color:${/Correct/.test(s.q.v) ? "#16a34a" : "#dc2626"}">${s.q.v === "Correct!" ? "\u2714 \xA1Correcto!" : "\u2718 \xA1Incorrecto!"}</b>` : ""}</div>`;
-    b += s.q.opts.map((o) => `<button class="cb big" data-tk="ans" data-i="${o.i}" ${o.d ? "disabled" : ""} style="text-align:left;${o.ok ? "background:#16a34a" : o.no ? "background:#dc2626" : ""}">${esc(o.x)}</button>`).join("");
-    if (s.q.audio) b += `<button class="cb" data-tk="audio">\u{1F50A} Escuchar</button>`;
-  } else if (s.tg) b += `<div class="cx-card"><b>\u{1F3AF} \xBFA qui\xE9n le disparas?</b></div>` + s.tg.map((o) => `<button class="cb big" data-tk="tg" data-k="${o.t}" style="${o.on ? "background:#E11D2E" : ""}">${o.on ? "\u{1F3AF} " : ""}${esc(o.n)}</button>`).join("") + `<div class="cx-grid"><button class="cb" data-tk="tgx">\u2715 Cancelar</button><button class="cb end big" data-tk="tggo" ${s.tgOk ? "" : "disabled"}>\u{1F680} \xA1Lanzar!</button></div>`;
+  else if (s.q) b += qBlock(s.q);
+  else if (s.tg) b += `<div class="cx-card"><b>\u{1F3AF} \xBFA qui\xE9n le disparas?</b></div>` + s.tg.map((o) => `<button class="cb big" data-tk="tg" data-k="${o.t}" style="${o.on ? "background:#E11D2E" : ""}">${o.on ? "\u{1F3AF} " : ""}${esc(o.n)}</button>`).join("") + `<div class="cx-grid"><button class="cb" data-tk="tgx">\u2715 Cancelar</button><button class="cb end big" data-tk="tggo" ${s.tgOk ? "" : "disabled"}>\u{1F680} \xA1Lanzar!</button></div>`;
   else if (s.tp === "question") b += `<button class="cb go huge" data-tk="ask">\u2753 Preguntar</button>`;
   else if (s.tp === "target") b += `<div class="cx-card">\u{1F300} Teletransporte: toca el mapa en la pantalla o\u2026</div><button class="cb go big" data-tk="tele">\u{1F300} Lugar al azar</button>`;
   else if (s.tp === "act" && s.alive) {
@@ -5966,13 +5967,7 @@ function tkRender(s) {
     RM.st = null;
     showCode();
   };
-  document.querySelectorAll("[data-tk]").forEach((el) => el.onclick = () => {
-    const a = el.dataset.tk, x = {};
-    if (el.dataset.d) x.d = +el.dataset.d;
-    if (el.dataset.i) x.i = +el.dataset.i;
-    if (el.dataset.k) x.k = isNaN(+el.dataset.k) ? el.dataset.k : +el.dataset.k;
-    tk(a, x);
-  });
+  wireTk();
   const sl = (id, a, conv) => {
     const el = $(id);
     if (!el) return;
@@ -5991,6 +5986,39 @@ function tkRender(s) {
   };
   sl("#tkAng", "ang", (v) => 180 - v);
   sl("#tkPow", "pow", (v) => v);
+  conn();
+}
+function qBlock(q) {
+  let b = `<div class="cx-card"><b>${esc(q.text || (q.audio ? "\u{1F50A} Pregunta de audio" : "Pregunta"))}</b>${q.v ? `<br><b style="color:${/Correct/.test(q.v) ? "#16a34a" : "#dc2626"}">${q.v === "Correct!" ? "\u2714 \xA1Correcto!" : "\u2718 \xA1Incorrecto!"}</b>` : ""}</div>`;
+  if (q.audio && !q.v) b += `<div class="cx-card" style="text-align:center"><b>\u{1F50A} Audio</b> <span class="rmsmall">${esc(q.plays || "")}</span><div class="cx-grid" style="grid-template-columns:repeat(${Math.min(3, q.audio)},1fr);margin-top:8px"><button class="cb go" data-tk="audio" data-r="0">\u25B6 Normal</button>${q.audio > 1 ? `<button class="cb" data-tk="audio" data-r="1">\u{1F422} Lento</button>` : ""}${q.audio > 2 ? `<button class="cb" data-tk="audio" data-r="2">\u{1F40C} Muy lento</button>` : ""}</div>${q.txt ? `<button class="cb small" data-tk="qtxt" style="margin-top:8px">\u{1F4DD} Ver texto (pierde el turno)</button>` : ""}</div>`;
+  b += q.opts.map((o) => `<button class="cb big" data-tk="ans" data-i="${o.i}" ${o.d ? "disabled" : ""} style="text-align:left;${o.ok ? "background:#16a34a" : o.no ? "background:#dc2626" : ""}">${esc(o.x)}</button>`).join("");
+  if (q.open && !q.v) b += `<div class="cx-grid"><button class="cb end big" data-tk="judge" data-ok="0">\u2717 Mal</button><button class="cb chk big" data-tk="judge" data-ok="1">\u2713 Bien</button></div>`;
+  return b;
+}
+function wireTk() {
+  document.querySelectorAll("[data-tk]").forEach((el) => el.onclick = () => {
+    const a = el.dataset.tk, x = {};
+    if (el.dataset.d) x.d = +el.dataset.d;
+    if (el.dataset.i) x.i = +el.dataset.i;
+    if (el.dataset.r) x.r = +el.dataset.r;
+    if (el.dataset.ok) x.ok = el.dataset.ok === "1";
+    if (el.dataset.k) x.k = isNaN(+el.dataset.k) ? el.dataset.k : +el.dataset.k;
+    tk(a, x);
+  });
+}
+function genRender(s) {
+  let b = `<div class="cx-card"><b>${esc(s.mode)}</b><br><span class="rmsmall">${esc(s.title || "")}</span></div>`;
+  if (s.q) b += qBlock(s.q);
+  else if (s.btns && s.btns.length) b += `<div class="cx-card"><b>\u{1F446} Botones de la pantalla</b></div><div class="cx-grid" style="grid-template-columns:repeat(4,1fr)">${s.btns.filter((o) => /^\d+$/.test(o.x)).map((o) => `<button class="cb" data-tk="btn" data-k="${o.k}">${esc(o.x)}</button>`).join("")}</div><div class="cx-grid" style="margin-top:10px">${s.btns.filter((o) => !/^\d+$/.test(o.x)).map((o) => `<button class="cb small" data-tk="btn" data-k="${o.k}">${esc(o.x)}</button>`).join("")}</div>`;
+  else b += `<div class="cx-card">\u23F3 Esperando en la pantalla\u2026</div>`;
+  if (s.scores && s.scores.length) b += `<div class="cx-card" style="font-size:15px">${s.scores.map((x) => `<div><b style="color:${x[1]}">${esc(x[0])}</b> \xB7 ${x[2]} pts</div>`).join("")}</div>`;
+  $("#app").innerHTML = `<div class="cx-head"><span id="cxConn" class="cx-conn">\u25CB</span><span><b>\u{1F3AE} Control</b> <button id="cxCode" class="cx-codebtn">\u{1F522} ${esc(RM.code)}</button></span></div><div id="cxStat" class="cx-stat"></div><div class="cx-body">${b}</div>`;
+  $("#cxCode").onclick = () => {
+    if (RT.role) rtStop();
+    RM.st = null;
+    showCode();
+  };
+  wireTk();
   conn();
 }
 </script>
