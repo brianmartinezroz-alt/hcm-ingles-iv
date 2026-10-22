@@ -691,6 +691,7 @@ body.tkpov #tkCanvas{position:fixed!important;left:0!important;top:0!important;w
 .tknuket{position:absolute;left:50%;top:74px;transform:translateX(-50%);z-index:6;padding:6px 16px;border-radius:999px;background:#1E1838;color:#B6FF5C;border:3px solid #B6FF5C;font-family:'Lilita One','Arial Rounded MT Bold',sans-serif;font-size:24px;box-shadow:0 4px 0 #0E0A20;pointer-events:none;white-space:nowrap}
 .tknuket.warn{background:#FF2D55;color:#fff;border-color:#fff;animation:clockPulse .5s ease-in-out infinite alternate}
 .tkstk{margin-left:4px;font-weight:900;color:#FF8A1F;font-size:.95em}
+.tkphone{position:absolute;right:12px;top:74px;z-index:6;padding:4px 12px;border-radius:999px;background:#fff;color:#2B2366;border:3px solid #2B2366;font:900 18px Nunito,sans-serif;pointer-events:none}
 #vTank[data-phase="replay"] .tkhud,#vTank[data-phase="replay"] .tkpan{display:none!important}
 @media (max-width:760px){.tknuket{top:58px;font-size:18px}}
 @keyframes clockPulse{to{transform:scale(1.15)}}
@@ -10229,8 +10230,9 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
   }
   function launchHoming(targets, kind) {
     if (kind === "sniper" && !tk.snipeGo) return tkxSnipe(targets);
+    if (kind === "barrage" && targets.length > 1) return tkxMulti3D(targets, kind);
     tk.turnKind = kind;
-    if ((kind === "twin" || kind === "barrage") && targets.length > 1) tkxSplitStart(targets, kind);
+    if (kind === "twin" && targets.length > 1) tkxSplitStart(targets, kind);
     const t = curTank(), spec = WEAPONS[kind];
     game.shotsLeft = Math.max(0, game.shotsLeft - 1);
     targets.forEach((ti, k) => {
@@ -10366,11 +10368,11 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       if (s.trail.length > 16) s.trail.shift();
       if (s.homing) {
         const tt = game.tanks[s.target];
-        const lockAt = s.kind === "sniper" ? 14 : 28;
+        const lockAt = s.kind === "sniper" ? 14 : s.kind === "twin" || s.kind === "barrage" ? 8 : 28;
         if (s.age > lockAt && tt && tt.alive) {
-          const dx = tt.x - s.x, dy = tt.y - 18 * TS - s.y, d = Math.hypot(dx, dy) || 1, sp = s.kind === "sniper" ? 20 : 10;
-          s.vx += (dx / d * sp - s.vx) * (s.kind === "sniper" ? 0.2 : 0.09);
-          s.vy += (dy / d * sp - s.vy) * (s.kind === "sniper" ? 0.2 : 0.09);
+          const dx = tt.x - s.x, dy = tt.y - 18 * TS - s.y, d = Math.hypot(dx, dy) || 1, sp = s.kind === "sniper" ? 20 : s.kind === "twin" || s.kind === "barrage" ? 24 : 10;
+          s.vx += (dx / d * sp - s.vx) * (s.kind === "sniper" || s.kind === "twin" || s.kind === "barrage" ? 0.22 : 0.09);
+          s.vy += (dy / d * sp - s.vy) * (s.kind === "sniper" || s.kind === "twin" || s.kind === "barrage" ? 0.22 : 0.09);
           if (s.kind === "sniper" && s.age % 1 === 0) tk.parts.push({ x: s.x, y: s.y, vx: 0, vy: 0, life: 28, max: 28, size: rnd(5, 9), col: "rgba(255,255,255,.7)", smoke: true, g: 0 });
           if (d < 18 * TS) {
             explode(tt.x, tt.y - 18 * TS, s.r, s.dmg, s.owner, s.kind, tt);
@@ -11370,6 +11372,11 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     if (tk.replay) {
       sizeTk();
       tkxDrawReplay();
+      return;
+    }
+    if (tk.m3) {
+      sizeTk();
+      tkxDrawM3();
       return;
     }
     if (tk.split && !tk._inSplit && !tk.pov) {
@@ -13474,7 +13481,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
   SHOT_TRAIL.rapid = "#FF5A1F";
   BOOM_COLS.rapid = ["#FF3D1F", "#FFD21A", "#FFFFFF"];
   const TKX_NUKE_EVERY = 240;
-  const RP_END = 400;
+  const RP_END = 380;
   const BD_NAMES = { hcm: "Campus HCM", plaza: "Plaza de honor HCM", puerta: "Puerta de Honor HCM", cdmx: "CDMX \xB7 Reforma", centro: "CDMX \xB7 Centro", nature: "Bosque" };
   const SEASON_ES = { spring: "Primavera", summer: "Verano", autumn: "Oto\xF1o", winter: "Invierno" };
   function tkxBig(txt, sub, col, frames) {
@@ -13507,6 +13514,12 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     }
     if (game.nukeLeft <= 0 && !tk.nukeEv && game.phase === "question" && $("#overlay").hidden && !tk.replay && !tk.pov) tkxNukeAll();
     tkxClockEl();
+    if (tk.frame % 30 === 0) {
+      try {
+        scSync();
+      } catch (e) {
+      }
+    }
     (tk.shots || []).forEach((s) => {
       if (s.kind === "rapid") {
         for (let i = 0; i < 2; i++) tk.parts.push({ x: s.x - s.vx * i * 0.5, y: s.y - s.vy * i * 0.5, vx: rnd(-0.6, 0.6), vy: rnd(-0.6, 0.6), life: rnd(12, 20), max: 20, size: rnd(5, 10), col: i ? "#FFD21A" : "#FF3D1F", g: 0, fire: true });
@@ -13542,6 +13555,24 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       el.textContent = txt;
     }
     el.classList.toggle("warn", s <= 15 || !!tk.nukeEv);
+    let pc = document.getElementById("tkPhone");
+    if (!pc) {
+      pc = document.createElement("div");
+      pc.id = "tkPhone";
+      pc.className = "tkphone";
+      $("#vTank").appendChild(pc);
+    }
+    let code = "";
+    try {
+      code = scLinkCode();
+    } catch (e) {
+    }
+    const on2 = typeof rtStatus === "function" && rtStatus() !== "off" && RT.lastIn && performance.now() - RT.lastIn < 3e4;
+    const pt = `\u{1F4F1} ${code}${on2 ? " \u2705" : ""}`;
+    if (pc._t !== pt) {
+      pc._t = pt;
+      pc.textContent = pt;
+    }
   }
   function tkxRec(t, amt, by) {
     if (by == null || by === t.team || amt <= 0 || !tk) return;
@@ -14062,8 +14093,8 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
   function tkxStepReplay() {
     const R = tk.replay;
     if (!R) return;
-    const P = R.P, f = ++R.f, T = P.T3;
-    if (f === 44) {
+    const P = R.P, f0 = R.f, f = R.f += 2.6, T = P.T3, X = (k) => f0 < k && f >= k;
+    if (X(44)) {
       SFX.play("f_bigbomb");
       boom(70);
       P.shake = 16;
@@ -14077,7 +14108,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       s.p[1] += 0.2;
     });
     P.trail = P.trail.filter((s) => s.age < 220);
-    if (f === 262) {
+    if (X(262)) {
       SFX.play("x_bigbomb", 120);
       boom(140);
       P.shake = 30;
@@ -14087,7 +14118,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
         P.debris.push({ p: [T[0] + rnd(-20, 20), 30 + rnd(0, 20), T[2] + rnd(-20, 20)], v: [Math.cos(a) * sp, 5 + Math.random() * 9, Math.sin(a) * sp], s: 3 + Math.random() * 7, r: Math.random() * 6, col: i % 3 === 0 ? col : i % 3 === 1 ? "#2B2838" : "#6B6480" });
       }
     }
-    if (f === 290) SFX.play("crowd");
+    if (X(290)) SFX.play("crowd");
     P.debris.forEach((d) => {
       d.v[1] -= 0.28;
       d.p = V3.add(d.p, V3.mul(d.v, 0.6));
@@ -14638,6 +14669,195 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     tkxOverlay(c);
     drawMini();
   }
+  const M3_END = 150, M3_IMP = 88;
+  function tkxMulti3D(targets, kind) {
+    const t = curTank();
+    if (!t) return;
+    tk.turnKind = kind;
+    game.shotsLeft = Math.max(0, game.shotsLeft - 1);
+    game.weapon = baseW();
+    game.phase = "busy";
+    tk.busyFrames = 0;
+    renderTkUI();
+    const n = targets.length, P = { f: 0, kind: "cruise", team: t.team, shooter: t, foe: game.tanks[targets[0]], imp: {}, elev: 30, shake: 0 };
+    povScene(P);
+    const T = P.T3;
+    P.tg = targets.map((ti, k) => ({ ti, pos: [T[0] + (k - (n - 1) / 2) * 90, 0, T[2] + (k - (n - 1) / 2) * 460], dl: k * 5 }));
+    P.objs = P.objs.filter((o) => P.tg.every((g) => Math.hypot(o.x - g.pos[0], o.z - g.pos[2]) > 260));
+    tk.m3 = P;
+    SFX.play("siren");
+    alarmFx();
+    sayFx(t, pickLine(TAUNT_L()));
+    const step = () => {
+      if (!tk || !tk.m3) return;
+      const f = ++P.f;
+      if (f === 6) {
+        SFX.play("f_twin");
+        boom(60);
+        P.shake = 14;
+      }
+      if (f === M3_IMP) {
+        SFX.play("x_bigbomb", 120);
+        boom(140);
+        P.shake = 30;
+      }
+      P.tg.forEach((g) => {
+        if (f === M3_IMP + g.dl) {
+          const col = game.teams[g.ti].color;
+          for (let i = 0; i < 16; i++) {
+            const a = Math.random() * Math.PI * 2, sp = 3 + Math.random() * 7;
+            P.debris.push({ p: [g.pos[0] + rnd(-20, 20), 30, g.pos[2] + rnd(-20, 20)], v: [Math.cos(a) * sp, 5 + Math.random() * 9, Math.sin(a) * sp], s: 3 + Math.random() * 6, r: Math.random() * 6, col: i % 2 ? col : "#2B2838" });
+          }
+        }
+      });
+      P.debris.forEach((d) => {
+        d.v[1] -= 0.4;
+        d.p = V3.add(d.p, d.v);
+        d.r += 0.12;
+        if (d.p[1] < d.s * 0.7) {
+          d.p[1] = d.s * 0.7;
+          d.v = [d.v[0] * 0.6, -d.v[1] * 0.3, d.v[2] * 0.6];
+        }
+      });
+      if (f >= M3_END) {
+        tkxEndMulti3D();
+        return;
+      }
+      later(1, step);
+    };
+    later(1, step);
+  }
+  function tkxEndMulti3D() {
+    const P = tk.m3;
+    tk.m3 = null;
+    if (!P) return;
+    const spec = WEAPONS[P.tg.length ? tk.turnKind || "barrage" : "barrage"] || WEAPONS.barrage;
+    tkxSplitStart(P.tg.map((g) => g.ti), tk.turnKind || "barrage");
+    if (tk.split) tk.split.f = 40;
+    P.tg.forEach((g, k) => later(2 + k * 4, () => {
+      const tt = game.tanks[g.ti];
+      if (!tk || !tt || !tt.alive) return;
+      explode(tt.x, tt.y - 18 * TS, spec.r, spec.dmg, P.team, tk.turnKind || "barrage", tt);
+    }));
+  }
+  function tkxM3Pos(P, g, u) {
+    const s = [-40, 46, 0], e = [g.pos[0], 30, g.pos[2]];
+    return [s[0] + (e[0] - s[0]) * u, s[1] + (e[1] - s[1]) * u + 380 * 4 * u * (1 - u), s[2] + (e[2] - s[2]) * u];
+  }
+  function tkxDrawM3() {
+    const P = tk.m3, f = P.f, c = tkCtx, W = tkCanvas.width, H = tkCanvas.height, U = Math.min(W, H) / 620, now = performance.now(), S = tk.S;
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    let sx = 0, sy = 0;
+    if (P.shake) {
+      sx = rnd(-P.shake, P.shake) * U;
+      sy = rnd(-P.shake, P.shake) * U;
+      P.shake *= 0.9;
+      if (P.shake < 0.5) P.shake = 0;
+    }
+    c.save();
+    c.translate(sx, sy);
+    const tcol = game.teams[P.team].color, imp = f >= M3_IMP;
+    const uOf = (g) => Math.max(0, Math.min(1, (f - 6 - g.dl * 0.4) / (M3_IMP - 6)));
+    const X = { bill: [], noFlare: true, noTag: true, noRing: true };
+    X.tankPos = P.tg[0].pos;
+    X.extra = (faces) => {
+      tank3(faces, [-80, 0, 0], tcol, Math.atan2(0.2, -1), false, 0);
+      P.tg.forEach((g, k) => {
+        if (k === 0) return;
+        const tt = game.tanks[g.ti];
+        if (!tt) return;
+        const t2 = f - (M3_IMP + g.dl), jump = t2 > 0 ? Math.sin(Math.min(1, t2 / 24) * Math.PI) * 90 : 0;
+        tank3(faces, [g.pos[0], jump, g.pos[2]], game.teams[g.ti].color, Math.PI * 0.1 + (t2 > 0 ? t2 * 0.15 : 0), t2 > 3, t2 > 0 ? t2 * 0.06 : 0);
+      });
+      if (!imp || f < M3_IMP + 10) P.tg.forEach((g) => {
+        const u = uOf(g);
+        if (u <= 0 || u >= 1) return;
+        const m = tkxM3Pos(P, g, u), m2 = tkxM3Pos(P, g, Math.min(1, u + 0.02));
+        missile3(faces, m, V3.norm(V3.sub(m2, m)), "cruise", tcol);
+      });
+    };
+    {
+      const t0 = f - M3_IMP;
+      if (t0 > 0) {
+        const jump = Math.sin(Math.min(1, t0 / 24) * Math.PI) * 90;
+        X.tankPos = [P.tg[0].pos[0], jump, P.tg[0].pos[2]];
+        X.tankYaw = Math.PI * 0.1 + t0 * 0.15;
+        X.tankTilt = t0 * 0.06;
+        X.charred = t0 > 3;
+      }
+    }
+    P.tg.forEach((g) => {
+      const u = uOf(g);
+      if (u > 0 && u < 1) {
+        for (let i = 0; i < 8; i++) {
+          const p = tkxM3Pos(P, g, Math.max(0, u - i * 0.02));
+          X.bill.push({ p, r: 14 + i * 4, a: 0.55 - i * 0.06, c: "235,235,240" });
+        }
+        X.bill.push({ p: tkxM3Pos(P, g, u), r: 18, a: 1, fire: true });
+      }
+      const t2 = f - (M3_IMP + g.dl);
+      if (t2 >= 0) {
+        const k = Math.min(1, t2 / 10), fade = Math.max(0, 1 - Math.max(0, t2 - 14) / 30), R0 = 190;
+        X.bill.push({ p: [g.pos[0], 40 + t2, g.pos[2]], r: R0 * (0.3 + 0.7 * k), a: fade, fire: true });
+        for (let i = 0; i < 6; i++) {
+          const a = i / 6 * Math.PI * 2, d = R0 * 0.6 * k;
+          X.bill.push({ p: [g.pos[0] + Math.cos(a) * d, 30 + t2 * 1.4, g.pos[2] + Math.sin(a) * d], r: R0 * 0.4, a: fade * 0.85, fire: true });
+        }
+        for (let i = 0; i < 6; i++) {
+          const a = i / 6 * Math.PI * 2, d = R0 * 0.9 * k + t2 * 2;
+          X.bill.push({ p: [g.pos[0] + Math.cos(a) * d, 20 + t2 * 2, g.pos[2] + Math.sin(a) * d], r: R0 * 0.5, a: Math.min(0.6, t2 / 16), c: "90,80,95" });
+        }
+      }
+    });
+    let cp, look;
+    if (!imp) {
+      const u = Math.max(0.02, uOf(P.tg[0])), cen = P.tg.map((g) => tkxM3Pos(P, g, u)).reduce((a, b) => V3.add(a, b), [0, 0, 0]).map((v) => v / P.tg.length), ahead = P.tg.map((g) => tkxM3Pos(P, g, Math.min(1, u + 0.12))).reduce((a, b) => V3.add(a, b), [0, 0, 0]).map((v) => v / P.tg.length);
+      const dir = V3.norm(V3.sub(ahead, cen));
+      cp = V3.add(V3.sub(cen, V3.mul(dir, 220)), [0, 70, -60 + Math.sin(f * 0.08) * 40]);
+      look = ahead;
+    } else {
+      const t0 = f - M3_IMP, mid = P.tg.reduce((a, g) => V3.add(a, g.pos), [0, 0, 0]).map((v) => v / P.tg.length), ang = -1.9 + t0 * 8e-3;
+      cp = [mid[0] + Math.cos(ang) * 900, 260 + t0 * 1.5, mid[2] + Math.sin(ang) * 900];
+      look = [mid[0], 60, mid[2]];
+    }
+    const C = cam3(cp, V3.sub(look, cp), W, H);
+    render3D(c, C, P, W, H, S, now, X);
+    P.tg.forEach((g) => {
+      const p = proj3(C, [g.pos[0], 150, g.pos[2]]);
+      if (!p) return;
+      const tm = game.teams[g.ti];
+      povText(c, `\u{1F3AF} ${tm.name}`, p[0], p[1], 18, tm.color, "center", U);
+      const t2 = f - (M3_IMP + g.dl);
+      if (t2 > 0) {
+        const s = 1 + Math.max(0, 0.6 - t2 * 0.05);
+        c.save();
+        c.translate(p[0], p[1] - 40 * U);
+        c.scale(s, s);
+        povText(c, `\u{1F4A5} -${(WEAPONS[tk.turnKind] || WEAPONS.barrage).dmg}`, 0, 0, 30, "#FFD21A", "center", U);
+        c.restore();
+      }
+    });
+    c.restore();
+    if (f >= M3_IMP && f < M3_IMP + 6) {
+      c.fillStyle = `rgba(255,255,240,${1 - (f - M3_IMP) / 6})`;
+      c.fillRect(0, 0, W, H);
+    }
+    if (!imp) speedLines(c, W, H, U, 24, 0.5);
+    const bar = H * 0.08;
+    c.fillStyle = "#000";
+    c.fillRect(0, 0, W, bar);
+    c.fillRect(0, H - bar, W, bar);
+    povText(c, `\u{1F680} ${(WEAPONS[tk.turnKind] || WEAPONS.barrage).name.toUpperCase()} \xB7 ${P.tg.length} OBJETIVOS`, 20 * U, bar / 2 + 6 * U, 18, "#FFD21A", "left", U);
+    povText(c, `${game.teams[P.team].name}`, W - 20 * U, bar / 2 + 6 * U, 18, tcol, "right", U);
+    if (f < 8) {
+      c.fillStyle = `rgba(0,0,0,${1 - f / 8})`;
+      c.fillRect(0, 0, W, H);
+    }
+    if (f > M3_END - 10) {
+      c.fillStyle = `rgba(255,255,255,${(f - (M3_END - 10)) / 10})`;
+      c.fillRect(0, 0, W, H);
+    }
+  }
   function renderTkUI() {
     if (!game || game.mode !== "tanks") return;
     const team = game.teams[game.turn];
@@ -14705,6 +14925,10 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     $("#tkWind").innerHTML = w === 0 ? "Wind: calm" : `Wind ${w < 0 ? "\u25C0" : ""}<b>${Math.abs(w)}</b>${w > 0 ? "\u25B6" : ""}`;
     tkLive.a = tkLive.p = null;
     updateTkLive();
+    try {
+      scSync();
+    } catch (e) {
+    }
   }
   function updateTkLive() {
     if (!game || game.phase !== "act") return;
@@ -25634,6 +25858,7 @@ onmessage = function(e){ var m = e.data, out = [];
     return allSets().filter((s) => s.questions.some((q) => q.type === "mc" || q.type === "tf")).slice(0, 40).map((s) => ({ id: s.id, x: (s.title || "").slice(0, 70) }));
   }
   function scStatePayload() {
+    if (game && game.mode === "tanks" && view === "play" && typeof tk !== "undefined" && tk) return tkRemotePayload();
     const base = { t: "st" };
     if (!game || game.mode !== "scan" || !sc || view !== "play") return Object.assign(base, { phase: "none", sets: scSetsForPhone() });
     const o = Object.assign(base, { phase: game.phase, kind: sc.kind, n: scMaxCards(sc.kind), reg: sc.students.length, roster: sc.students.map((s) => s.no), title: (game.set.title || "").slice(0, 80), total: game.order.length, qi: sc.qi });
@@ -25679,6 +25904,10 @@ onmessage = function(e){ var m = e.data, out = [];
   }
   function scOnRemote(m) {
     scRenderLink();
+    if (m.t === "tk") {
+      tkRemote(m);
+      return;
+    }
     if (m.t === "_open" || m.t === "hello") {
       scSyncLast = "";
       scSync(true);
@@ -27307,6 +27536,79 @@ onmessage = function(e){ var m = e.data, out = [];
       c.fillRect(fx + i * w * 0.04, fy, w * 0.04, h * 0.12);
     });
     c.restore();
+  }
+  function tkRemotePayload() {
+    const t = curTank(), tm = game.teams[game.turn], ov = !$("#overlay").hidden, md = $("#modal");
+    const o = { t: "st", phase: "tanks", tp: game.phase, team: tm.name, col: tm.color, wind: game.wind, asked: game.asked, total: game.total, replay: !!(tk && tk.replay) };
+    if (ov && md) {
+      const qt = md.querySelector(".qtext");
+      o.q = { text: qt ? qt.textContent.slice(0, 160) : "", opts: [...md.querySelectorAll("#opts .opt")].map((b) => ({ i: +b.dataset.i, x: (() => {
+        const l = b.querySelector(".let"), sp = b.querySelectorAll("span");
+        return (l ? l.textContent + ") " + (sp[sp.length - 1] ? sp[sp.length - 1].textContent : "") : b.textContent).replace(/\s+/g, " ").trim().slice(0, 90);
+      })(), d: b.disabled, ok: b.classList.contains("right"), no: b.classList.contains("wrong") })), audio: !!md.querySelector(".spd"), v: md.querySelector(".verdict") ? md.querySelector(".verdict").textContent : "" };
+    }
+    if (t) {
+      o.ang = Math.round(t.angle);
+      o.pow = Math.round(t.power);
+      o.alive = !!t.alive;
+    }
+    if (game.phase === "act") {
+      const inv = game.inv[game.turn];
+      o.w = game.weapon;
+      o.inv = ITEM_KEYS.filter((k) => inv[k] > 0).map((k) => [k, WEAPONS[k].icon, WEAPONS[k].name, inv[k], WPN_KEYS.includes(k) ? 1 : 0]);
+      o.puUsed = !!game.puUsed;
+      o.moved = !!game.moved;
+      o.base = [baseW(), WEAPONS[baseW()].icon, WEAPONS[baseW()].name];
+    }
+    if (!$("#tgSheet").hidden) {
+      o.tg = [...document.querySelectorAll("#tgGrid .tgcard")].map((b) => ({ t: +b.dataset.t, n: (b.querySelector("b") || {}).textContent || "", on: b.getAttribute("aria-pressed") === "true" }));
+      o.tgOk = !$("#tgGo").disabled;
+    }
+    o.scores = game.teams.map((x, i) => [x.name, x.color, x.score, game.tanks[i] && game.tanks[i].alive ? Math.max(0, Math.round(game.tanks[i].hp)) : 0]);
+    return o;
+  }
+  function tkRemote(m) {
+    if (!game || game.mode !== "tanks" || !tk) return;
+    const a = m.a, t = curTank(), act = game.phase === "act";
+    if (a === "ask") {
+      if (game.phase === "question" && $("#overlay").hidden && !tk.replay) askTank();
+    } else if (a === "ans") {
+      const b = document.querySelector(`#opts .opt[data-i="${+m.i}"]`);
+      if (b && !b.disabled) b.click();
+    } else if (a === "audio") {
+      const b = document.querySelector("#modal .spd");
+      if (b) b.click();
+    } else if (a === "move" && act) tryMove(+m.d < 0 ? -1 : 1);
+    else if (a === "ang" && act && t) {
+      t.angle = Math.max(0, Math.min(180, m.v != null ? +m.v : t.angle + (+m.d || 0)));
+      tk.cam.follow = "tank";
+      renderTkUI();
+    } else if (a === "pow" && act && t) {
+      t.power = Math.max(10, Math.min(100, m.v != null ? +m.v : t.power + (+m.d || 0)));
+      renderTkUI();
+    } else if (a === "wpn" && act) {
+      game.weapon = WEAPONS[m.k] ? m.k : baseW();
+      renderTkUI();
+    } else if (a === "pu" && act) usePU(m.k);
+    else if (a === "fire" && act) fire();
+    else if (a === "tg") {
+      const b = document.querySelector(`#tgGrid .tgcard[data-t="${+m.k}"]`);
+      if (b) b.click();
+    } else if (a === "tggo") {
+      const b = $("#tgGo");
+      if (b && !b.disabled) b.click();
+    } else if (a === "tgx") {
+      $("#tgCancel").click();
+    } else if (a === "tele" && game.phase === "target" && game.target === "teleport") {
+      const x = rnd(120, TK.W - 120);
+      targetClick(x, surfaceY(x | 0) - 2);
+    } else if (a === "skip" && tk.replay) {
+      tk.replay.f = Math.max(tk.replay.f, RP_END - 16);
+    } else if (a === "fit") {
+      $("#tkFit").click();
+    }
+    scSyncLast = "";
+    scSync(true);
   }
   wireScan();
   try {

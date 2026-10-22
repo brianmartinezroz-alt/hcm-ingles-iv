@@ -5676,6 +5676,17 @@ function onMsg(m) {
     return;
   }
   if (m.t === "st") {
+    if (m.phase === "tanks") {
+      const prev = RM.st;
+      RM.st = m;
+      if (CAM.on) camClose();
+      const key = JSON.stringify(Object.assign({}, m, { _i: 0 }));
+      if (RM.tkKey !== key && !RM.tkDrag) {
+        RM.tkKey = key;
+        render();
+      } else status();
+      return;
+    }
     if (!RM.st || RM.st.qi !== m.qi || m.phase !== "q") {
       if (!RM.st || RM.st.qi !== m.qi) RM.ans = {};
     }
@@ -5717,6 +5728,10 @@ function status() {
 function render() {
   const s = RM.st;
   let body = "";
+  if (s && s.phase === "tanks") {
+    tkRender(s);
+    return;
+  }
   if (!s) body = `<div class="cx-card">\u23F3 Buscando la pantalla <b>${esc(RM.code)}</b>\u2026<br><span class="rmsmall">Abre el juego en la pantalla del sal\xF3n. Si no conecta, dale "Conectar ahora" o escanea su QR.</span></div><button class="cb go huge" id="cxNow">\u{1F504} Conectar ahora</button><button class="cb scan big" id="cxQR2">\u{1F4F7} Escanear QR de la pantalla</button><button class="cb" id="cxNew">\u{1F522} Escribir el c\xF3digo</button>`;
   else if (s.phase === "none") body = `<div class="cx-card">\u2705 \xA1Pantalla conectada! Elige el set y dale Empezar.</div>
       <select id="cxSet" class="cx-sel">${(s.sets || []).map((o) => `<option value="${esc(o.id)}"${o.id === lsGet("scanrace.set") ? " selected" : ""}>${esc(o.x)}</option>`).join("")}</select>
@@ -5915,6 +5930,69 @@ setInterval(() => {
   } else if (el) el.textContent = Math.ceil(left / 1e3);
 }, 250);
 boot();
+function tk(a, extra) {
+  rtSend(Object.assign({ t: "tk", a }, extra || {}));
+  vib(20);
+}
+function tkRender(s) {
+  const ph = { question: "\u2753 Toca preguntar", act: "\u{1F3AF} \xA1A disparar!", busy: "\u{1F4A5} \xA1Boom!", target: "\u{1F3AF} Elige objetivo", replay: "\u{1F39E} Repetici\xF3n", over: "\u{1F3C1} Fin del juego" }[s.tp] || s.tp;
+  let b = `<div class="cx-card" style="border-left:12px solid ${s.col}"><b style="color:${s.col}">${esc(s.team)}</b> \xB7 ${ph}<br><span class="rmsmall">Pregunta ${Math.min(s.asked + (s.tp === "question" ? 1 : 0), s.total)} de ${s.total} \xB7 \u{1F32C} Viento ${s.wind === 0 ? "calmo" : (s.wind < 0 ? "\u25C0 " : "") + Math.abs(s.wind) + (s.wind > 0 ? " \u25B6" : "")}</span></div>`;
+  if (s.replay) b += `<button class="cb go huge" data-tk="skip">\u23ED Saltar repetici\xF3n</button>`;
+  else if (s.q) {
+    b += `<div class="cx-card"><b>${esc(s.q.text)}</b>${s.q.v ? `<br><b style="color:${/Correct/.test(s.q.v) ? "#16a34a" : "#dc2626"}">${s.q.v === "Correct!" ? "\u2714 \xA1Correcto!" : "\u2718 \xA1Incorrecto!"}</b>` : ""}</div>`;
+    b += s.q.opts.map((o) => `<button class="cb big" data-tk="ans" data-i="${o.i}" ${o.d ? "disabled" : ""} style="text-align:left;${o.ok ? "background:#16a34a" : o.no ? "background:#dc2626" : ""}">${esc(o.x)}</button>`).join("");
+    if (s.q.audio) b += `<button class="cb" data-tk="audio">\u{1F50A} Escuchar</button>`;
+  } else if (s.tg) b += `<div class="cx-card"><b>\u{1F3AF} \xBFA qui\xE9n le disparas?</b></div>` + s.tg.map((o) => `<button class="cb big" data-tk="tg" data-k="${o.t}" style="${o.on ? "background:#E11D2E" : ""}">${o.on ? "\u{1F3AF} " : ""}${esc(o.n)}</button>`).join("") + `<div class="cx-grid"><button class="cb" data-tk="tgx">\u2715 Cancelar</button><button class="cb end big" data-tk="tggo" ${s.tgOk ? "" : "disabled"}>\u{1F680} \xA1Lanzar!</button></div>`;
+  else if (s.tp === "question") b += `<button class="cb go huge" data-tk="ask">\u2753 Preguntar</button>`;
+  else if (s.tp === "target") b += `<div class="cx-card">\u{1F300} Teletransporte: toca el mapa en la pantalla o\u2026</div><button class="cb go big" data-tk="tele">\u{1F300} Lugar al azar</button>`;
+  else if (s.tp === "act" && s.alive) {
+    const arrow = `<span style="display:inline-block;transform:rotate(${-s.ang}deg);font-size:30px">\u279C</span>`;
+    b += `<div class="cx-card" style="text-align:center"><b>\xC1ngulo ${s.ang}\xB0</b> ${arrow}
+      <div class="cx-grid" style="grid-template-columns:repeat(4,1fr);margin-top:8px"><button class="cb" data-tk="ang" data-d="10">\u293A 10</button><button class="cb" data-tk="ang" data-d="2">\u293A 2</button><button class="cb" data-tk="ang" data-d="-2">2 \u293B</button><button class="cb" data-tk="ang" data-d="-10">10 \u293B</button></div>
+      <input type="range" id="tkAng" min="0" max="180" value="${180 - s.ang}" style="width:100%;margin-top:10px">
+      <b>Potencia ${s.pow}%</b>
+      <div class="cx-grid" style="grid-template-columns:1fr 3fr 1fr;align-items:center"><button class="cb" data-tk="pow" data-d="-5">\u2212</button><input type="range" id="tkPow" min="10" max="100" value="${s.pow}" style="width:100%"><button class="cb" data-tk="pow" data-d="5">+</button></div></div>
+      <div class="cx-grid"><button class="cb" data-tk="move" data-d="-1" ${s.moved ? "disabled" : ""}>\u25C0 Mover</button><button class="cb" data-tk="move" data-d="1" ${s.moved ? "disabled" : ""}>Mover \u25B6</button></div>`;
+    const ws = (s.inv || []).filter((x) => x[4]), pus = (s.inv || []).filter((x) => !x[4]);
+    b += `<div class="cx-card"><b>\u{1F4A3} Arma</b><div class="cx-grid" style="margin-top:6px"><button class="cb small" data-tk="wpn" data-k="${s.base[0]}" style="${s.w === s.base[0] ? "background:#7B4DFF" : ""}">${s.base[1]} ${esc(s.base[2])}</button>${ws.map((x) => `<button class="cb small" data-tk="wpn" data-k="${x[0]}" style="${s.w === x[0] ? "background:#7B4DFF" : ""}">${x[1]} ${esc(x[2])} \xD7${x[3]}</button>`).join("")}</div>
+      ${pus.length ? `<b>\u{1F381} Power-up ${s.puUsed ? "(ya usaste uno)" : "(1 por turno)"}</b><div class="cx-grid" style="margin-top:6px">${pus.map((x) => `<button class="cb small" data-tk="pu" data-k="${x[0]}" ${s.puUsed ? "disabled" : ""}>${x[1]} ${esc(x[2])} \xD7${x[3]}</button>`).join("")}</div>` : ""}</div>
+      <button class="cb end huge" data-tk="fire">\u{1F525} \xA1FUEGO!</button>`;
+  } else if (s.tp === "busy") b += `<div class="cx-card" style="text-align:center;font-size:40px">\u{1F4A5}</div>`;
+  b += `<button class="cb small" data-tk="fit">\u{1F5FA}\uFE0F Ver todo el mapa / acercar</button>`;
+  b += `<div class="cx-card" style="font-size:15px">${(s.scores || []).map((x) => `<div><b style="color:${x[1]}">${esc(x[0])}</b> \xB7 \u2764 ${x[3]} \xB7 ${x[2]} pts</div>`).join("")}</div>`;
+  $("#app").innerHTML = `<div class="cx-head"><span id="cxConn" class="cx-conn">\u25CB</span><span><b>\u{1FA96} Control del tanque</b> <button id="cxCode" class="cx-codebtn">\u{1F522} ${esc(RM.code)}</button></span></div><div id="cxStat" class="cx-stat"></div><div class="cx-body">${b}</div>`;
+  $("#cxCode").onclick = () => {
+    if (RT.role) rtStop();
+    RM.st = null;
+    showCode();
+  };
+  document.querySelectorAll("[data-tk]").forEach((el) => el.onclick = () => {
+    const a = el.dataset.tk, x = {};
+    if (el.dataset.d) x.d = +el.dataset.d;
+    if (el.dataset.i) x.i = +el.dataset.i;
+    if (el.dataset.k) x.k = isNaN(+el.dataset.k) ? el.dataset.k : +el.dataset.k;
+    tk(a, x);
+  });
+  const sl = (id, a, conv) => {
+    const el = $(id);
+    if (!el) return;
+    el.oninput = () => {
+      RM.tkDrag = true;
+    };
+    el.onchange = () => {
+      RM.tkDrag = false;
+      tk(a, { v: conv(+el.value) });
+    };
+    el.ontouchend = () => {
+      setTimeout(() => {
+        RM.tkDrag = false;
+      }, 300);
+    };
+  };
+  sl("#tkAng", "ang", (v) => 180 - v);
+  sl("#tkPow", "pow", (v) => v);
+  conn();
+}
 </script>
 </body>
 </html>
