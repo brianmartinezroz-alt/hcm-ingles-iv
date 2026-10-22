@@ -23052,6 +23052,10 @@ onmessage = function(e){ var m = e.data, out = [];
     clearInterval(scTimerId);
     renderScan();
     Music.play("victory");
+    try {
+      if (typeof scvEnding === "function") scvEnding();
+    } catch (e) {
+    }
   }
   function scSkip() {
     if (game.phase !== "q") return;
@@ -26121,6 +26125,7 @@ onmessage = function(e){ var m = e.data, out = [];
     if (!scvOn() || !sc.vs || !sc.vs.out) return true;
     if (sc.v === "royale") return !sc.vs.out[s.no];
     if (sc.v === "zombie" || sc.v === "zpov") return sc.vs.out[s.no] == null;
+    if (sc.v === "para" && sc.vs.j && sc.vs.j[s.no] && sc.vs.j[s.no].skipQ === sc.qi) return false;
     return true;
   }
   const scvR = (a, b) => a + Math.random() * (b - a);
@@ -26218,6 +26223,8 @@ onmessage = function(e){ var m = e.data, out = [];
       S.j = {};
       S.alt = 1;
       S.gust = 0;
+      S.bio = 0;
+      S.bioT = 0;
     }
     return S;
   }
@@ -29229,30 +29236,75 @@ onmessage = function(e){ var m = e.data, out = [];
     }
   }
   function scvPJ(S, s) {
-    if (!S.j[s.no]) S.j[s.no] = { x: scvR(0.06, 0.94), vx: 0, sw: Math.random() * 9, land: null, cx: null };
+    if (!S.j[s.no]) S.j[s.no] = { x: 0.5 + scvR(-0.03, 0.03), vx: 0, sw: Math.random() * 9, land: null, cx: null };
     return S.j[s.no];
   }
-  const SCV_TARGET = 0.62;
+  const SCV_TARGET = 0.5;
   function scvPReveal(S, hits, miss, qi, joke) {
-    const total = Math.max(1, game.order.length), last = qi >= total - 1;
+    const total = Math.max(1, game.order.length), last = qi >= total - 1, now = performance.now(), B = SCV_BIOMES[S.bio || 0];
     const win = new Set((joke === "all" ? sc.students : joke === "none" ? [] : hits).map((s) => s.no));
     S.gust = 1;
     scvSnd("whoosh");
+    let zaps = 0, lost = 0;
     sc.students.forEach((s) => {
       const J = scvPJ(S, s);
-      if (win.has(s.no)) J.x += (SCV_TARGET - J.x) * 0.45 + scvR(-0.01, 0.01);
-      else {
-        const d = s.ans[qi] ? scvR(0.06, 0.12) : scvR(0.1, 0.18);
-        J.x += Math.random() < 0.5 ? -d : d;
-        J.spin = performance.now();
+      if (J.skipQ === qi) {
+        lost++;
+        return;
       }
+      if (win.has(s.no)) J.x += (SCV_TARGET - J.x) * 0.5 + scvR(-8e-3, 8e-3);
+      else {
+        const d = (s.ans[qi] ? scvR(0.05, 0.08) : scvR(0.07, 0.11)) * (B.k === "snow" ? 1.7 : 1), dir = Math.abs(J.x - SCV_TARGET) < 0.012 ? Math.random() < 0.5 ? -1 : 1 : Math.sign(J.x - SCV_TARGET);
+        J.x += dir * d;
+        J.spin = now;
+        if (B.k === "storm" && !last) {
+          J.zapT = now + 600 + Math.random() * 900;
+          J.zapS = 0;
+          J.skipQ = qi + 1;
+          zaps++;
+        }
+      }
+    });
+    let windTxt = "";
+    if (B.k === "wind" || B.k !== "storm" && Math.random() < 0.25) {
+      const dx = (Math.random() < 0.5 ? -1 : 1) * scvR(0.04, 0.07);
+      sc.students.forEach((s) => {
+        scvPJ(S, s).x += dx;
+      });
+      S.gust = 1.6;
+      windTxt = dx < 0 ? "\u2B05\uFE0F \xA1El viento empuja a TODOS a la izquierda!" : "\u27A1\uFE0F \xA1El viento empuja a TODOS a la derecha!";
+    }
+    if (B.k === "desert") sc.students.forEach((s) => {
+      scvPJ(S, s).x += scvR(-0.03, 0.03);
+    });
+    sc.students.forEach((s) => {
+      const J = scvPJ(S, s);
       J.x = Math.max(0.03, Math.min(0.97, J.x));
     });
     S.alt = Math.max(0, 1 - (qi + 1) / total);
     if (last) setTimeout(() => scvPLand(S), 1600);
-    else scvBig(win.size >= sc.students.length / 2 ? "\u{1F3AF} \xA1Bien dirigidos!" : "\u{1F32C}\uFE0F \xA1R\xC1FAGA DE VIENTO!", win.size >= sc.students.length / 2 ? "Los que acertaron se acercan al blanco" : "Los que fallaron salen volando de lado", win.size >= sc.students.length / 2 ? "#3FBF4F" : "#4DA8FF", 1800);
+    else if (zaps) scvBig(`\u{1F329}\uFE0F \xA1${zaps} ELECTROCUTADOS POR UN RAYO!`, "Los que fallaron pierden su siguiente turno", "#FFD21A", 2200);
+    else if (windTxt) scvBig("\u{1F32C}\uFE0F \xA1R\xC1FAGA DE VIENTO!", windTxt, "#4DA8FF", 2e3);
+    else scvBig(win.size >= sc.students.length / 2 ? "\u{1F3AF} \xA1Bien dirigidos!" : "\u{1F62C} \xA1Se est\xE1n desviando!", win.size >= sc.students.length / 2 ? "Los que acertaron se acercan al blanco" : "Los que fallaron se van hacia los peligros", win.size >= sc.students.length / 2 ? "#3FBF4F" : "#FF6B85", 1800);
+    if (!last && (qi + 1) % 2 === 0) setTimeout(() => {
+      if (!sc || sc.vs !== S) return;
+      S.bio = ((S.bio || 0) + 1 + Math.floor(Math.random() * (SCV_BIOMES.length - 1))) % SCV_BIOMES.length;
+      S.bioT = performance.now();
+      const B2 = SCV_BIOMES[S.bio];
+      scvSnd("whoosh");
+      scvBig(`\u{1F30D} CAMBIO DE BIOMA: ${B2.n}`, B2.d, B2.col, 2800);
+    }, 2300);
   }
   function scvPZone(x) {
+    if (x < 0.16) return ["\u{1F333}", "\xA1Se qued\xF3 en el \xE1rbol!", 0, "tree"];
+    if (x < 0.3) return ["\u{1F697}", "\xA1LO ATROPELLARON!", 0, "car"];
+    if (x < 0.38) return ["\u26A1", "\xA1ELECTROCUTADO!", 0, "cable"];
+    if (x <= 0.62) return ["\u{1F642}", "Cerquita", 1, "ok"];
+    if (x < 0.72) return ["\u{1F335}", "\xA1En los nopales!", 0, "cactus"];
+    if (x < 0.84) return ["\u{1F69A}", "\xA1LO ATROPELL\xD3 UN CAMI\xD3N!", 0, "car"];
+    return ["\u{1F4A6}", "\xA1Al lago!", 0, "lake"];
+  }
+  function scvPZoneOld(x) {
     if (x < 0.12) return ["\u{1F333}", "\xA1Se qued\xF3 en el \xE1rbol!", 0, "tree"];
     if (x < 0.245) return ["\u{1F697}", "\xA1LO ATROPELLARON!", 0, "car"];
     if (x < 0.44) return ["\u26A1", "\xA1ELECTROCUTADO!", 0, "cable"];
@@ -29270,8 +29322,8 @@ onmessage = function(e){ var m = e.data, out = [];
       const J = scvPJ(S, s), d = Math.abs(J.x - SCV_TARGET);
       let r;
       if (d < 0.03) r = ["\u{1F3AF}", "\xA1CENTRO!", 3, "ok"];
-      else if (d < 0.08) r = ["\u{1F44D}", "\xA1Buen aterrizaje!", 2, "ok"];
-      else if (d < 0.15) r = ["\u{1F642}", "Cerquita", 1, "ok"];
+      else if (d < 0.07) r = ["\u{1F44D}", "\xA1Buen aterrizaje!", 2, "ok"];
+      else if (d < 0.12) r = ["\u{1F642}", "Cerquita", 1, "ok"];
       else r = scvPZone(J.x);
       J.land = r;
       J.landT = performance.now() + (r[3] === "car" ? 500 + Math.random() * 1800 : 0);
@@ -29311,13 +29363,624 @@ onmessage = function(e){ var m = e.data, out = [];
     c.fillRect(w * 0.22, L * 0.44, w * 0.2, L * 0.05);
     c.restore();
   }
+  const SCV_BIOMES = [
+    { k: "forest", n: "\u{1F333} Bosque", d: "Todo tranquilo\u2026 por ahora", col: "#3FBF4F" },
+    { k: "wind", n: "\u{1F32C}\uFE0F Ventarr\xF3n", d: "El viento mueve a TODOS de lugar", col: "#4DA8FF" },
+    { k: "storm", n: "\u{1F329}\uFE0F Tormenta el\xE9ctrica", d: "Si fallas te cae un RAYO: electrocutado y pierdes 1 turno", col: "#FFD21A" },
+    { k: "snow", n: "\u2744\uFE0F Nieve", d: "Los que fallan se resbalan el doble", col: "#BFE3FF" },
+    { k: "desert", n: "\u{1F3DC}\uFE0F Desierto", d: "Corrientes de aire caliente sacuden a todos", col: "#FFB400" }
+  ];
+  function scvSkel(c, x, y, size) {
+    c.save();
+    c.translate(x, y);
+    c.strokeStyle = "#fff";
+    c.fillStyle = "#fff";
+    c.lineWidth = size * 0.06;
+    c.lineCap = "round";
+    c.beginPath();
+    c.arc(0, -size * 0.95, size * 0.17, 0, 7);
+    c.fill();
+    c.fillStyle = "#1A1530";
+    c.beginPath();
+    c.arc(-size * 0.06, -size * 0.97, size * 0.04, 0, 7);
+    c.arc(size * 0.06, -size * 0.97, size * 0.04, 0, 7);
+    c.fill();
+    c.beginPath();
+    c.moveTo(0, -size * 0.78);
+    c.lineTo(0, -size * 0.38);
+    for (let r = 0; r < 3; r++) {
+      c.moveTo(-size * 0.14, -size * (0.72 - r * 0.1));
+      c.lineTo(size * 0.14, -size * (0.72 - r * 0.1));
+    }
+    c.moveTo(0, -size * 0.7);
+    c.lineTo(-size * 0.35, -size * 1.05);
+    c.moveTo(0, -size * 0.7);
+    c.lineTo(size * 0.35, -size * 1.05);
+    c.moveTo(0, -size * 0.38);
+    c.lineTo(-size * 0.2, 0);
+    c.moveTo(0, -size * 0.38);
+    c.lineTo(size * 0.2, 0);
+    c.stroke();
+    c.restore();
+  }
+  function scvBolt(c, x0, y0, x1, y1, w) {
+    c.strokeStyle = "#FFF6A8";
+    c.lineWidth = w;
+    c.shadowColor = "#BFE3FF";
+    c.shadowBlur = 18;
+    c.beginPath();
+    c.moveTo(x0, y0);
+    const n = 9;
+    for (let i = 1; i <= n; i++) {
+      const k = i / n;
+      c.lineTo(x0 + (x1 - x0) * k + (i < n ? scvR(-30, 30) : 0), y0 + (y1 - y0) * k);
+    }
+    c.stroke();
+    c.shadowBlur = 0;
+  }
+  function scvPBiomeFx(c, W, H, t, U, top, hy, S, now) {
+    const B = SCV_BIOMES[S.bio || 0], k = Math.min(1, (now - (S.bioT || 0)) / 1500);
+    if (B.k === "snow") {
+      c.fillStyle = `rgba(245,250,255,${0.6 * k})`;
+      c.fillRect(0, hy, W, H - hy);
+      c.fillStyle = `rgba(230,240,255,${0.25 * k})`;
+      c.fillRect(0, 0, W, hy);
+    }
+    if (B.k === "desert") {
+      c.fillStyle = `rgba(232,190,110,${0.55 * k})`;
+      c.fillRect(0, hy, W, H - hy);
+      c.fillStyle = `rgba(255,170,70,${0.2 * k})`;
+      c.fillRect(0, 0, W, hy);
+      for (let i = 0; i < 6; i++) {
+        const x = scHash(i + 70) * W, y = hy + 30 + scHash(i + 80) * (H - hy - 60);
+        c.fillStyle = "#4E8A3A";
+        c.fillRect(x - 4 * U, y - 40 * U, 8 * U, 40 * U);
+        c.fillRect(x - 14 * U, y - 30 * U, 10 * U, 6 * U);
+        c.fillRect(x - 14 * U, y - 40 * U, 5 * U, 12 * U);
+      }
+    }
+    if (B.k === "storm") {
+      c.fillStyle = `rgba(18,22,42,${0.5 * k})`;
+      c.fillRect(0, 0, W, H);
+      c.fillStyle = `rgba(40,44,60,${0.9 * k})`;
+      for (let i = 0; i < 9; i++) {
+        const x = i * W / 8 + Math.sin(t * 0.3 + i) * 30, r = (60 + scHash(i) * 50) * U;
+        c.beginPath();
+        c.arc(x, top + 10 * U, r, 0, 7);
+        c.fill();
+      }
+      if (!S.nextL || now > S.nextL) {
+        S.nextL = now + scvR(1500, 4e3);
+        S.flashL = now;
+        S.boltX = scvR(W * 0.1, W * 0.9);
+        scvSnd("boom");
+      }
+      if (S.flashL && now - S.flashL < 220) {
+        c.fillStyle = `rgba(255,255,255,${0.5 * (1 - (now - S.flashL) / 220)})`;
+        c.fillRect(0, 0, W, H);
+        scvBolt(c, S.boltX, top, S.boltX + scvR(-80, 80), hy + 40, 4);
+      }
+    }
+    if (B.k === "wind" && (!S.gust || S.gust < 0.6)) S.gust = 0.6;
+  }
+  function scvPFxTop(c, W, H, t, U, top, S, now) {
+    const B = SCV_BIOMES[S.bio || 0];
+    if (B.k === "snow") {
+      c.fillStyle = "rgba(255,255,255,.9)";
+      for (let i = 0; i < 70; i++) {
+        const x = ((scHash(i) * W + t * 20 * (1 + i % 3) + Math.sin(t + i) * 20) % W + W) % W, y = (scHash(i + 9) * H + t * 60 * (1 + i % 4 * 0.4)) % H;
+        c.beginPath();
+        c.arc(x, y, (2 + i % 3) * U, 0, 7);
+        c.fill();
+      }
+    }
+    if (B.k === "storm") {
+      c.strokeStyle = "rgba(190,210,255,.45)";
+      c.lineWidth = 1.5;
+      c.beginPath();
+      for (let i = 0; i < 90; i++) {
+        const x = ((scHash(i) * W * 1.2 - t * 120) % W + W) % W, y = (scHash(i + 5) * H + t * 900) % H;
+        c.moveTo(x, y);
+        c.lineTo(x - 8, y + 24);
+      }
+      c.stroke();
+    }
+  }
+  function scvBoina() {
+    let i = SC_HAT.findIndex((h) => h[0] === "boina");
+    if (i < 0) {
+      SC_HAT.push(["boina", "\u{1F534} Boina"]);
+      i = SC_HAT.length - 1;
+    }
+    return i;
+  }
+  function scvAvatarL(c, s, look, x, y, size, t, run) {
+    c.save();
+    c.translate(x, y - size * 0.5);
+    const bp = scDrawRunner(c, look, size, t, !!run);
+    const br = Math.max(9, size * 0.17);
+    c.beginPath();
+    c.arc(bp[0], bp[1], br, 0, 7);
+    c.fillStyle = "#fff";
+    c.fill();
+    c.lineWidth = 2;
+    c.strokeStyle = "#1A1530";
+    c.stroke();
+    c.fillStyle = "#1B1440";
+    c.font = `900 ${Math.round(br * (s.no >= 10 ? 1.1 : 1.4))}px Nunito, system-ui, sans-serif`;
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    c.fillText(s.no, bp[0], bp[1] + 1);
+    c.textBaseline = "alphabetic";
+    c.restore();
+    return [x + bp[0], y - size * 0.5 + bp[1]];
+  }
+  function scvBadge(c, x, y, s, glow) {
+    c.save();
+    c.translate(x, y);
+    if (glow) {
+      c.fillStyle = `rgba(255,230,120,${glow * 0.5})`;
+      c.beginPath();
+      c.arc(0, 0, s * 1.3, 0, 7);
+      c.fill();
+    }
+    c.strokeStyle = "#1A1530";
+    c.lineWidth = Math.max(1.5, s * 0.06);
+    [-1, 1].forEach((d) => {
+      c.fillStyle = "#D7DCE3";
+      c.beginPath();
+      c.moveTo(d * s * 0.2, 0);
+      c.quadraticCurveTo(d * s * 0.9, -s * 0.55, d * s * 1.25, -s * 0.2);
+      c.quadraticCurveTo(d * s * 0.95, -s * 0.05, d * s * 1.05, s * 0.1);
+      c.quadraticCurveTo(d * s * 0.7, s * 0.05, d * s * 0.75, s * 0.25);
+      c.quadraticCurveTo(d * s * 0.45, s * 0.2, d * s * 0.2, s * 0.25);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.strokeStyle = "#9AA3AF";
+      c.beginPath();
+      for (let k = 0; k < 3; k++) {
+        c.moveTo(d * s * (0.35 + k * 0.25), -s * (0.05 + k * 0.08));
+        c.lineTo(d * s * (0.3 + k * 0.25), s * 0.15);
+      }
+      c.stroke();
+      c.strokeStyle = "#1A1530";
+    });
+    c.fillStyle = "#F5F5F5";
+    c.beginPath();
+    c.arc(0, -s * 0.05, s * 0.32, Math.PI, 0);
+    c.closePath();
+    c.fill();
+    c.stroke();
+    c.beginPath();
+    c.moveTo(-s * 0.3, -s * 0.05);
+    c.lineTo(0, s * 0.35);
+    c.lineTo(s * 0.3, -s * 0.05);
+    c.moveTo(0, -s * 0.05);
+    c.lineTo(0, s * 0.35);
+    c.stroke();
+    c.fillStyle = "#FFD21A";
+    c.beginPath();
+    c.arc(0, s * 0.38, s * 0.09, 0, 7);
+    c.fill();
+    c.stroke();
+    c.restore();
+  }
+  function scvConfetti(c, W, H, t) {
+    const cols = ["#FF4F6D", "#FFD21A", "#4DA8FF", "#3FBF4F", "#B06BFF", "#fff"];
+    for (let i = 0; i < 90; i++) {
+      const x = (scHash(i) * W + Math.sin(t * 2 + i) * 30) % W, y = (scHash(i + 3) * H + t * (80 + i % 5 * 30)) % (H + 20) - 10;
+      c.save();
+      c.translate(x, y);
+      c.rotate(t * 3 + i);
+      c.fillStyle = cols[i % cols.length];
+      c.fillRect(-4, -2, 8, 4);
+      c.restore();
+    }
+  }
+  function scvEnding() {
+    if (!scvOn() || !sc || !sc.students.length) return false;
+    const v = sc.v;
+    if (v !== "zombie" && v !== "zpov" && v !== "para") return false;
+    const S = sc.vs || scvInit();
+    if (S.endRun) return true;
+    S.endRun = true;
+    const ranked = sc.students.slice().sort((a, b) => (b.pts || 0) - (a.pts || 0)), win = ranked.slice(0, Math.min(3, ranked.length)), nL = Math.min(6, Math.max(0, ranked.length - win.length)), lose = ranked.slice(ranked.length - nL).reverse();
+    const ov = document.createElement("div");
+    ov.style.cssText = "position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;background:#000";
+    const cv = document.createElement("canvas");
+    cv.style.cssText = "width:100%;height:100%;display:block";
+    ov.appendChild(cv);
+    const sk = document.createElement("button");
+    sk.textContent = "Ver podio \u23ED";
+    sk.style.cssText = "position:absolute;right:18px;bottom:18px;font:900 20px Nunito,system-ui,sans-serif;padding:10px 18px;border-radius:14px;border:3px solid #1A1530;background:#fff;color:#1A1530;box-shadow:0 4px 0 #1A1530;cursor:pointer";
+    ov.appendChild(sk);
+    document.body.appendChild(ov);
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    let W = 0, H = 0;
+    const fit = () => {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      cv.width = Math.round(W * dpr);
+      cv.height = Math.round(H * dpr);
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    const c = cv.getContext("2d"), t0 = performance.now(), st = {};
+    let raf = 0, done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", fit);
+      ov.style.transition = "opacity .4s";
+      ov.style.opacity = "0";
+      setTimeout(() => ov.remove(), 450);
+    };
+    sk.onclick = finish;
+    S.endSkip = finish;
+    const frame = () => {
+      if (done) return;
+      const ms = performance.now() - t0;
+      c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      c.clearRect(0, 0, W, H);
+      try {
+        (v === "para" ? scvEndPara : scvEndZ)(c, W, H, ms / 1e3, st, S, win, lose);
+      } catch (e) {
+        try {
+          console.warn("ending", e);
+        } catch (_) {
+        }
+        finish();
+        return;
+      }
+      if (ms < 500) {
+        c.fillStyle = `rgba(0,0,0,${1 - ms / 500})`;
+        c.fillRect(0, 0, W, H);
+      }
+      if (ms > 3e4) return finish();
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return true;
+  }
+  function scvEndZ(c, W, H, t, st, S, win, lose) {
+    const U = scvU(W, H), hy = H * 0.5, gy = H * 0.9;
+    let g = c.createLinearGradient(0, 0, 0, hy);
+    g.addColorStop(0, "#14060C");
+    g.addColorStop(1, "#8A2430");
+    c.fillStyle = g;
+    c.fillRect(0, 0, W, hy);
+    c.fillStyle = "#F6F0D2";
+    c.beginPath();
+    c.arc(W * 0.82, hy * 0.35, Math.min(W, H) * 0.06, 0, 7);
+    c.fill();
+    for (let i = 0; i < 26; i++) {
+      const x = i * W / 25 - 10, h = hy * 0.1 + scHash(i + 11) * hy * 0.25, w = W / 26 * 0.9;
+      c.fillStyle = "#24182E";
+      c.fillRect(x, hy - h, w, h);
+    }
+    g = c.createLinearGradient(0, hy, 0, H);
+    g.addColorStop(0, "#3E3626");
+    g.addColorStop(1, "#1C1810");
+    c.fillStyle = g;
+    c.fillRect(0, hy, W, H - hy);
+    const bw = Math.min(W * 0.075, H * 0.12), rows = [8, 7, 6, 5, 4, 3], rh = bw * 0.42;
+    if (!st.pyr || st.pw !== W) {
+      st.pw = W;
+      const pc = document.createElement("canvas");
+      pc.width = Math.ceil(W);
+      pc.height = Math.ceil(H);
+      const p2 = pc.getContext("2d");
+      let id = 0;
+      rows.forEach((cnt, r) => {
+        for (let k = 0; k < cnt; k++) {
+          const x = W / 2 + (k - (cnt - 1) / 2) * bw * 0.95, y = gy - r * rh;
+          const z = { kind: id % 7 === 0 ? "big" : id % 3 === 0 ? "cad" : id % 5 === 0 ? "potro" : "n", sh: id % 4, hb: id % 2, headless: id % 4 === 0 };
+          const e = scvZSprite(z, bw * 0.95, id % 8, false), kk = bw * 0.95 / e.sb;
+          p2.save();
+          p2.translate(x + (id % 2 ? -bw * 0.45 : bw * 0.45), y);
+          p2.rotate(id % 2 ? Math.PI / 2 : -Math.PI / 2);
+          p2.drawImage(e.cv, -e.ox * kk, -e.oy * kk, e.cv.width * kk, e.cv.height * kk);
+          p2.restore();
+          p2.fillStyle = "rgba(90,20,20,.35)";
+          p2.beginPath();
+          p2.arc(x + scvR(-bw * 0.3, bw * 0.3), y - rh * 0.3, bw * 0.08, 0, 7);
+          p2.fill();
+          id++;
+        }
+      });
+      st.pyr = pc;
+    }
+    c.fillStyle = "rgba(120,15,15,.4)";
+    c.beginPath();
+    c.ellipse(W / 2, gy + 6 * U, bw * 4.6, bw * 0.35, 0, 0, 7);
+    c.fill();
+    c.drawImage(st.pyr, 0, 0, W, H);
+    const topY = gy - rows.length * rh;
+    [W * 0.2, W * 0.8].forEach((sx, k) => {
+      const a = Math.sin(t * 0.8 + k) * 0.08;
+      const gg = c.createLinearGradient(sx, 0, W / 2, topY);
+      gg.addColorStop(0, "rgba(255,240,180,.35)");
+      gg.addColorStop(1, "rgba(255,240,180,0)");
+      c.fillStyle = gg;
+      c.beginPath();
+      c.moveTo(sx, 0);
+      c.lineTo(W / 2 - W * 0.12 + a * W, topY + 20);
+      c.lineTo(W / 2 + W * 0.12 + a * W, topY + 20);
+      c.closePath();
+      c.fill();
+    });
+    lose.forEach((s, i) => {
+      const side = i % 2 ? 1 : -1, slot = Math.floor(i / 2), x = W / 2 + side * (W * 0.33 + slot * W * 0.06), y = H * 0.97 - slot * H * 0.04, sz = H * 0.2 * (1 - slot * 0.12);
+      const cyc = (t + i * 1.3) % 5, dead = cyc > 3.2 ? Math.min(2, (cyc - 3.2) * 1.2) : 0, z = st["z" + i] || (st["z" + i] = { kind: "cad", sh: i % 4, hb: 1, ph: i * 1.7, sp: 0.8, ly: 0.5 });
+      z.dead = dead > 0 ? Math.max(1e-3, dead) : 0;
+      if (cyc > 3.1 && cyc < 3.2 && !z.shotNow) {
+        z.shotNow = 1;
+        scvShotSnd("rifle", 0.35);
+        if (Math.random() < 0.6) scvGroan(0.3);
+      }
+      if (cyc < 1) z.shotNow = 0;
+      scvZDrawOne(c, z, x + Math.sin(t * 0.8 + i) * 20 * U, y, sz, t, true);
+      if (cyc > 3 && cyc < 3.2) {
+        const w0 = win[i % Math.max(1, win.length)];
+        c.strokeStyle = "#FFD21A";
+        c.lineWidth = 3;
+        c.beginPath();
+        c.moveTo(W / 2, topY - H * 0.08);
+        c.lineTo(x, y - sz * 0.9);
+        c.stroke();
+      }
+      c.fillStyle = "rgba(0,0,0,.6)";
+      scRR(c, x - 46 * U, y - sz * 1.25 - 18 * U, 92 * U, 26 * U, 8);
+      c.fill();
+      scvText(c, `\u{1F9DF} ${scLabel(s)} \xB7 ${s.pts || 0}`, x, y - sz * 1.25 - 5 * U, 14 * U, "#9BE564");
+    });
+    const pos = [[W / 2, topY], [W / 2 - bw * 1.2, topY + rh * 1], [W / 2 + bw * 1.2, topY + rh * 1]], med = ["\u{1F947}", "\u{1F948}", "\u{1F949}"];
+    [2, 1, 0].forEach((i) => {
+      const s = win[i];
+      if (!s) return;
+      const jump = Math.abs(Math.sin(t * 4 + i * 1.2)) * 28 * U * (i === 0 ? 1.3 : 1), sz = H * (i === 0 ? 0.19 : 0.16), x = pos[i][0], y = pos[i][1] - jump;
+      scvAvatar(c, s, x, y, sz, t * 0.6 + i, false);
+      scvText(c, med[i], x, y - sz * 1.25, sz * 0.32, "#fff", "center", false);
+      scvText(c, "\u{1F4AA}", x + sz * 0.42, y - sz * 0.75 + Math.sin(t * 8 + i) * 4, sz * 0.22, "#fff", "center", false);
+      c.fillStyle = "rgba(0,0,0,.6)";
+      scRR(c, x - 60 * U, y - sz * 1.62 - 16 * U, 120 * U, 28 * U, 8);
+      c.fill();
+      scvText(c, `${scLabel(s)} \xB7 ${s.pts || 0} pts`, x, y - sz * 1.62 - 2 * U, 15 * U, "#FFD21A");
+    });
+    scvConfetti(c, W, H, t);
+    if (!st.nextG || t > st.nextG) {
+      scvGroan(0.3);
+      st.nextG = t + scvR(1.2, 2.8);
+    }
+    if (!st.nextF || t > st.nextF) {
+      scvShotSnd("far", 0.2);
+      st.nextF = t + scvR(0.3, 1);
+    }
+    c.fillStyle = "rgba(0,0,0,.55)";
+    scRR(c, W * 0.18, 18 * U, W * 0.64, 104 * U, 18);
+    c.fill();
+    scvText(c, "\u{1F3C6} \xA1SOBREVIVIERON AL ATAQUE ZOMBI!", W / 2, 54 * U, 40 * U, "#FFD21A");
+    scvText(c, "Arriba de la pir\xE1mide de zombis los mejores \xB7 los de menos puntos\u2026 ahora son zombis \u{1F9DF}", W / 2, 98 * U, 18 * U, "#fff");
+  }
+  function scvEndPara(c, W, H, t, st, S, win, lose) {
+    const U = scvU(W, H), gy = H * 0.58;
+    let g = c.createLinearGradient(0, 0, 0, gy);
+    g.addColorStop(0, "#2F7BE0");
+    g.addColorStop(1, "#BFE4FF");
+    c.fillStyle = g;
+    c.fillRect(0, 0, W, gy);
+    for (let i = 0; i < 5; i++) {
+      const x = (scHash(i) * W * 1.4 + t * 14) % (W + 300) - 150, y = H * 0.08 + scHash(i + 5) * H * 0.2, r = (26 + scHash(i + 2) * 30) * U;
+      c.fillStyle = "rgba(255,255,255,.85)";
+      c.beginPath();
+      c.arc(x, y, r, 0, 7);
+      c.arc(x + r, y - r * 0.4, r * 1.1, 0, 7);
+      c.arc(x + r * 2, y, r * 0.9, 0, 7);
+      c.fill();
+    }
+    c.fillStyle = "#6FBF4A";
+    c.fillRect(0, gy, W, H - gy);
+    for (let i = 0; i < 6; i++) {
+      const x = (scHash(i + 40) * W + t * 25) % W, y = (t * 40 + scHash(i + 50) * H * 0.5) % (gy * 0.8);
+      c.fillStyle = "#6F7B58";
+      c.beginPath();
+      c.arc(x, y, 12 * U, Math.PI, 0);
+      c.fill();
+      c.strokeStyle = "rgba(26,21,48,.6)";
+      c.lineWidth = 1;
+      c.beginPath();
+      c.moveTo(x - 12 * U, y);
+      c.lineTo(x, y + 14 * U);
+      c.lineTo(x + 12 * U, y);
+      c.stroke();
+      c.fillStyle = "#1A1530";
+      c.fillRect(x - 2 * U, y + 14 * U, 4 * U, 8 * U);
+    }
+    const pw = Math.min(W * 0.13, 200 * U), base = H * 0.68, hts = [H * 0.16, H * 0.11, H * 0.08], px = [W / 2, W / 2 - pw * 1.05, W / 2 + pw * 1.05], cols = ["#FFD21A", "#D7DCE3", "#E89B5A"], med = ["\u{1F947}", "\u{1F948}", "\u{1F949}"], BO = scvBoina();
+    [1, 2, 0].forEach((i) => {
+      c.fillStyle = cols[i];
+      c.strokeStyle = "#1A1530";
+      c.lineWidth = 3;
+      scRR(c, px[i] - pw / 2, base - hts[i], pw, hts[i] + 20 * U, 10);
+      c.fill();
+      c.stroke();
+      scvText(c, `${i + 1}`, px[i], base - hts[i] * 0.45, hts[i] * 0.45, "#1A1530", "center", false);
+    });
+    [2, 1, 0].forEach((i) => {
+      const s = win[i];
+      if (!s) return;
+      const sz = H * (i === 0 ? 0.2 : 0.17), jump = Math.max(0, Math.sin(t * 3.5 + i * 1.4)) * 20 * U, x = px[i], y = base - hts[i] - jump;
+      const look = Object.assign({}, s.look, { uni: "pix", hat: BO });
+      const bp = scvAvatarL(c, s, look, x, y, sz, t * 0.6 + i, false);
+      const tb = 1.2 + (2 - i) * 0.9, k = Math.max(0, Math.min(1, (t - tb) / 0.9)), bs = sz * 0.16;
+      if (t > tb - 0.4) {
+        const sx = x, sy = -40, bx2 = bp[0] - sz * 0.02, by = bp[1] + sz * 0.2, e = 1 - Math.pow(1 - k, 3);
+        scvBadge(c, sx + (bx2 - sx) * e, sy + (by - sy) * e, bs * (k < 1 ? 1.8 - 0.8 * e : 1), k >= 1 ? 0.5 + 0.5 * Math.sin(t * 6) : 0);
+        if (k >= 1 && !st["b" + i]) {
+          st["b" + i] = 1;
+          try {
+            SFX.play("crowd");
+          } catch (e2) {
+          }
+          jingle && jingle([660, 880, 1320], 90, 0.12);
+        }
+        if (k >= 1 && t - tb < 2.2) {
+          c.fillStyle = "#FFF6A8";
+          for (let q = 0; q < 8; q++) {
+            const a = q / 8 * Math.PI * 2 + t * 3, r = bs * (1.4 + (t - tb - 0.9) * 2);
+            c.beginPath();
+            c.arc(bx2 + Math.cos(a) * r, by + Math.sin(a) * r, 3 * U, 0, 7);
+            c.fill();
+          }
+        }
+      }
+      scvText(c, med[i], x, y - sz * 1.35, sz * 0.3, "#fff", "center", false);
+      c.fillStyle = "rgba(0,0,0,.6)";
+      scRR(c, x - 60 * U, y - sz * 1.7 - 14 * U, 120 * U, 26 * U, 8);
+      c.fill();
+      scvText(c, `${scLabel(s)} \xB7 ${s.pts || 0} pts`, x, y - sz * 1.7 - 1 * U, 14 * U, "#FFD21A");
+    });
+    const n = lose.length, pw2 = n ? Math.min(W * 0.16, (W - 40 * U) / n) : 0, py0 = H * 0.72, ph2 = H * 0.27, fates = ["cable", "lake", "car", "tree"];
+    lose.forEach((s, i) => {
+      const J = S.j && S.j[s.no], kind0 = J && J.land ? J.land[3] : null, kind = kind0 && kind0 !== "ok" && kind0 !== "cactus" ? kind0 : fates[i % fates.length], x0 = W / 2 + (i - (n - 1) / 2) * pw2, cx = x0, by = py0 + ph2 * 0.85, sz = Math.min(ph2 * 0.55, pw2 * 0.6);
+      c.save();
+      c.beginPath();
+      c.rect(x0 - pw2 / 2 + 4, py0, pw2 - 8, ph2 - 6);
+      c.clip();
+      c.fillStyle = kind === "lake" ? "#7CC4F5" : "#9ED97A";
+      c.fillRect(x0 - pw2 / 2, py0, pw2, ph2);
+      if (kind === "cable") {
+        const on = Math.floor(t * 11) % 2 === 0;
+        c.fillStyle = "#6B5A4A";
+        c.fillRect(x0 - pw2 * 0.42, py0 + ph2 * 0.08, 8, ph2);
+        c.fillRect(x0 + pw2 * 0.38, py0 + ph2 * 0.08, 8, ph2);
+        c.strokeStyle = "#1A1530";
+        c.lineWidth = 2;
+        c.beginPath();
+        c.moveTo(x0 - pw2 * 0.42, py0 + ph2 * 0.15);
+        c.quadraticCurveTo(x0, py0 + ph2 * 0.3, x0 + pw2 * 0.42, py0 + ph2 * 0.15);
+        c.stroke();
+        const ay = py0 + ph2 * 0.25 + sz;
+        c.save();
+        c.translate(cx + (on ? 3 : -3), ay);
+        c.rotate(0.15);
+        if (!on) c.globalAlpha = 0.5;
+        scvAvC(st, c, s, 0, 0, sz);
+        c.restore();
+        if (on) {
+          c.fillStyle = "rgba(190,230,255,.4)";
+          c.beginPath();
+          c.arc(cx, ay - sz * 0.5, sz * 0.7, 0, 7);
+          c.fill();
+          scvSkel(c, cx, ay, sz);
+        }
+        c.fillStyle = "#FFD21A";
+        for (let q = 0; q < 5; q++) {
+          c.beginPath();
+          c.arc(cx + scvR(-sz * 0.5, sz * 0.5), ay - scvR(0, sz * 1.2), 2.5, 0, 7);
+          c.fill();
+        }
+      } else if (kind === "lake") {
+        const sink = (t * 0.25 + i * 0.3) % 1, yy = by + sz * 0.1 + sink * sz * 0.6 + Math.sin(t * 5 + i) * 4;
+        c.save();
+        c.beginPath();
+        c.rect(x0 - pw2 / 2, py0, pw2, by - py0);
+        c.clip();
+        scvAvC(st, c, s, cx, yy, sz);
+        c.restore();
+        c.fillStyle = "#4DA8FF";
+        c.fillRect(x0 - pw2 / 2, by, pw2, ph2);
+        c.strokeStyle = "#fff";
+        c.lineWidth = 2;
+        for (let r = 0; r < 3; r++) {
+          const ph = (t * 0.8 + r / 3) % 1;
+          c.globalAlpha = 1 - ph;
+          c.beginPath();
+          c.ellipse(cx, by, sz * (0.3 + ph * 0.5), sz * (0.06 + ph * 0.08), 0, 0, 7);
+          c.stroke();
+        }
+        c.globalAlpha = 1;
+        c.fillStyle = "rgba(230,245,255,.9)";
+        for (let q = 0; q < 4; q++) {
+          const ph = (t * 1.2 + q * 0.25) % 1;
+          c.beginPath();
+          c.arc(cx + Math.sin(q * 2 + t) * sz * 0.2, by - ph * sz * 0.8, 3 + q % 2 * 2, 0, 7);
+          c.fill();
+        }
+        if (Math.floor(t * 2.5) % 2) scvText(c, "\u{1F198}", cx + sz * 0.4, by - sz * 0.9, sz * 0.3, "#fff", "center", false);
+      } else if (kind === "car") {
+        c.fillStyle = "#4A4A52";
+        c.fillRect(x0 - pw2 / 2, by - sz * 0.3, pw2, sz * 0.45);
+        c.save();
+        c.translate(cx, by - sz * 0.05);
+        c.scale(1.5, 0.3);
+        scvAvC(st, c, s, 0, 0, sz);
+        c.restore();
+        for (let q = 0; q < 3; q++) {
+          const a = t * 3 + q * 2.1;
+          scvText(c, "\u2B50", cx + Math.cos(a) * sz * 0.4, by - sz * 0.35 + Math.sin(a) * sz * 0.1, sz * 0.18, "#fff", "center", false);
+        }
+        const carX = x0 - pw2 / 2 - 80 + (t * 260 + i * 90) % (pw2 + 160);
+        c.fillStyle = "#E23B3B";
+        c.strokeStyle = "#1A1530";
+        c.lineWidth = 2;
+        scRR(c, carX - sz * 0.5, by - sz * 0.55, sz, sz * 0.3, 6);
+        c.fill();
+        c.stroke();
+        c.fillStyle = "#BFE3FF";
+        scRR(c, carX - sz * 0.25, by - sz * 0.72, sz * 0.5, sz * 0.2, 5);
+        c.fill();
+        c.stroke();
+        c.fillStyle = "#1A1530";
+        [-0.3, 0.3].forEach((d) => {
+          c.beginPath();
+          c.arc(carX + d * sz, by - sz * 0.25, sz * 0.09, 0, 7);
+          c.fill();
+        });
+      } else {
+        c.fillStyle = "#7A5230";
+        c.fillRect(cx - 6, py0 + ph2 * 0.3, 12, ph2);
+        c.fillStyle = "#2E9A35";
+        c.beginPath();
+        c.arc(cx, py0 + ph2 * 0.32, pw2 * 0.36, 0, 7);
+        c.fill();
+        c.fillStyle = "#6F7B58";
+        c.beginPath();
+        c.arc(cx + sz * 0.2, py0 + ph2 * 0.18, sz * 0.45, Math.PI, 0);
+        c.fill();
+        c.save();
+        c.translate(cx, py0 + ph2 * 0.25 + sz * 0.9 + Math.sin(t * 2 + i) * 3);
+        c.rotate(Math.sin(t * 1.5 + i) * 0.15);
+        scvAvC(st, c, s, 0, 0, sz);
+        c.restore();
+      }
+      c.restore();
+      c.strokeStyle = "#1A1530";
+      c.lineWidth = 3;
+      scRR(c, x0 - pw2 / 2 + 4, py0, pw2 - 8, ph2 - 6, 10);
+      c.stroke();
+      const lbl = { cable: "\u26A1 electrocutado", lake: "\u{1F4A6} ahogado", car: "\u{1F697} atropellado", tree: "\u{1F333} colgado" }[kind];
+      c.fillStyle = "rgba(0,0,0,.65)";
+      scRR(c, x0 - pw2 / 2 + 8, py0 + 6, pw2 - 16, 24 * U, 6);
+      c.fill();
+      scvText(c, `${scLabel(s)} \xB7 ${lbl}`, x0, py0 + 6 + 12 * U, 12 * U, "#FF6B85");
+    });
+    scvConfetti(c, W, H * 0.6, t);
+    c.fillStyle = "rgba(0,0,0,.5)";
+    scRR(c, W * 0.14, 14 * U, W * 0.72, 100 * U, 18);
+    c.fill();
+    scvText(c, "\u{1FA82} \xA1INSIGNIA DE PARACAIDISTA Y BOINA ROJA!", W / 2, 50 * U, 38 * U, "#FFD21A");
+    scvText(c, "Los mejores reciben sus alas\u2026 y los dem\xE1s, bueno\u2026 \u{1F447}", W / 2, 92 * U, 18 * U, "#fff");
+  }
   const P3X = (x) => (x - 0.5) * 2400;
   function scvP3Scene() {
     const trees = [], poles = [], cars = [];
-    [[-1116, -150], [-1e3, 250], [-1120, 700], [-990, 1200], [-1110, 1800], [1130, 1500], [1080, 2300]].forEach(([x, z]) => trees.push({ x, z, h: 150 + Math.abs(Math.sin(x * z)) * 60 }));
+    [[-1116, -150], [-950, 250], [-1120, 700], [-960, 1200], [-1110, 1800], [-1e3, 2400], [1130, 1500], [1080, 2300]].forEach(([x, z]) => trees.push({ x, z, h: 150 + Math.abs(Math.sin(x * z)) * 60 }));
     [-100, 450, 1e3, 1600].forEach((z) => {
-      poles.push({ x: -560, z });
-      poles.push({ x: -170, z });
+      poles.push({ x: -470, z });
+      poles.push({ x: -300, z });
     });
     for (let i = 0; i < 6; i++) cars.push({ road: i % 2, dir: i % 2 ? -1 : 1, off: i * 700, sp: 5 + i % 3 * 2, col: ["#E23B3B", "#3D7BFF", "#FFB400", "#22C55E", "#B06BFF", "#F5F5F5"][i], truck: i === 1 || i === 4 });
     return { trees, poles, cars };
@@ -29365,15 +30028,15 @@ onmessage = function(e){ var m = e.data, out = [];
       const sand = [], wat = [], deep = [];
       for (let k = 0; k < 36; k++) {
         const a = k / 36 * Math.PI * 2;
-        sand.push([1310 + Math.cos(a) * 340, 0.4, 450 + Math.sin(a) * 700]);
-        wat.push([1310 + Math.cos(a) * 300, 0.5, 450 + Math.sin(a) * 650]);
-        deep.push([1340 + Math.cos(a) * 170, 0.6, 500 + Math.sin(a) * 380]);
+        sand.push([1150 + Math.cos(a) * 330, 0.4, 450 + Math.sin(a) * 700]);
+        wat.push([1150 + Math.cos(a) * 290, 0.5, 450 + Math.sin(a) * 650]);
+        deep.push([1180 + Math.cos(a) * 160, 0.6, 500 + Math.sin(a) * 380]);
       }
       quad(sand, "#D9C58E");
       quad(wat, "#4DA8FF");
       quad(deep, "#2F7FD6");
     }
-    [[-940, -600], [680, 1e3]].forEach(([x0, x1]) => {
+    [[-800, -500], [540, 800]].forEach(([x0, x1]) => {
       quad([[x0 - 14, 0.5, -500], [x1 + 14, 0.5, -500], [x1 + 14, 0.5, 8e3], [x0 - 14, 0.5, 8e3]], "#8A8A80");
       quad([[x0, 0.6, -500], [x1, 0.6, -500], [x1, 0.6, 8e3], [x0, 0.6, 8e3]], "#4A4A52");
       for (let z = -500; z < 8e3; z += 260) quad([[(x0 + x1) / 2 - 7, 0.8, z], [(x0 + x1) / 2 + 7, 0.8, z], [(x0 + x1) / 2 + 7, 0.8, z + 130], [(x0 + x1) / 2 - 7, 0.8, z + 130]], "#FFD21A");
@@ -29398,8 +30061,8 @@ onmessage = function(e){ var m = e.data, out = [];
       box3(faces, [p.x, 130, p.z], 7, 130, 7, "#6B5A4A");
       box3(faces, [p.x, 252, p.z], 50, 5, 5, "#5A4A3A");
     });
-    [-150, 300].forEach((z) => prism3(faces, [P3X(0.455), 30, z], 14, 30, 6, "y", "#3E8A3A"));
-    [-50, 450].forEach((z) => prism3(faces, [P3X(0.78), 30, z], 14, 30, 6, "y", "#3E8A3A"));
+    [-150, 300, 700].forEach((z) => prism3(faces, [P3X(0.66), 30, z], 14, 30, 6, "y", "#3E8A3A"));
+    [-50, 450].forEach((z) => prism3(faces, [P3X(0.7), 30, z], 14, 30, 6, "y", "#3E8A3A"));
     scvP3Paint(c, C, faces).sort((a, b) => b.d - a.d).forEach((it) => {
       const fc = it.fc, kk = 0.58 + 0.5 * Math.max(0, V3.dot(fc.n, LIGHT3));
       c.beginPath();
@@ -29414,7 +30077,7 @@ onmessage = function(e){ var m = e.data, out = [];
     c.strokeStyle = "#1A1530";
     c.lineWidth = 1.5;
     [-100, 450, 1e3, 1600].forEach((wz) => [-30, 0, 30].forEach((o) => {
-      const a = proj3(C, [-560 + o * 0.2, 252, wz + o]), b = proj3(C, [-170 + o * 0.2, 252, wz + o]), m = proj3(C, [-365, 212, wz + o]);
+      const a = proj3(C, [-470 + o * 0.2, 252, wz + o]), b = proj3(C, [-300 + o * 0.2, 252, wz + o]), m = proj3(C, [-385, 222, wz + o]);
       if (a && b && m) {
         c.beginPath();
         c.moveTo(a[0], a[1]);
@@ -29454,6 +30117,7 @@ onmessage = function(e){ var m = e.data, out = [];
       S.bg = scvPStatic(W, H, U, dpr, C, sh, SC3, hy);
     }
     c.drawImage(S.bg, 0, 0, W, H);
+    scvPBiomeFx(c, W, H, t, U, top, hy, S, now);
     c.fillStyle = "rgba(255,255,255,.85)";
     for (let i = 0; i < 6; i++) {
       const x = (scHash(i) * W * 1.4 + t * 10 * (1 + i % 3)) % (W + 300) - 150, y = top * 0.3 + scHash(i + 5) * (hy - top * 0.3) * 0.7, r = 22 + scHash(i + 2) * 26;
@@ -29465,7 +30129,7 @@ onmessage = function(e){ var m = e.data, out = [];
     }
     const T = [P3X(SCV_TARGET), 0, 150];
     const faces = [], bills = [];
-    const rx = [[-860, -680], [760, 920]];
+    const rx = [[-725, -575], [605, 735]];
     SC3.cars.forEach((cr) => {
       const lane = rx[cr.road][cr.dir > 0 ? 0 : 1], span = 6400, zz = ((cr.off + t * cr.sp * 60 * cr.dir) % span + span) % span - 400;
       cr.z = zz;
@@ -29496,7 +30160,7 @@ onmessage = function(e){ var m = e.data, out = [];
           y = 150;
           pose = "cable";
         } else if (kind === "car") {
-          const lane = X < 0 ? -770 : 840;
+          const lane = X < 0 ? -650 : 670;
           ox = lane - X;
           pose = "car";
           if (k >= 0 && k < 1.4) {
@@ -29508,7 +30172,7 @@ onmessage = function(e){ var m = e.data, out = [];
             ox += 1.2 * 300 * (i % 2 ? 1 : -1);
           }
         } else if (kind === "lake") {
-          ox = 1150 + i % 3 * 60 - X;
+          ox = 1050 + i % 3 * 60 - X;
           oz = 450 - z;
           pose = "lake";
         }
@@ -29675,6 +30339,33 @@ onmessage = function(e){ var m = e.data, out = [];
         }
         scvAvC(S, c, s, 0, 0, size);
         c.restore();
+        {
+          const J = S.j[s.no];
+          if (J && J.zapT && now > J.zapT && now < J.zapT + 1600) {
+            if (!J.zapS) {
+              J.zapS = 1;
+              scvSnd("zap");
+              scvSnd("boom");
+            }
+            const on = Math.floor(now / 80) % 2 === 0;
+            if (now < J.zapT + 260) scvBolt(c, x + scvR(-40, 40), top, x, y - size * 1.2, 5);
+            c.fillStyle = `rgba(190,230,255,${on ? 0.5 : 0.2})`;
+            c.beginPath();
+            c.arc(x, y - size * 0.6, size * 0.9, 0, 7);
+            c.fill();
+            if (on) scvSkel(c, x, y, size);
+            scvText(c, "\u26A1 \xA1RAYO! pierde 1 turno", x, y - size * 1.95, Math.max(13, size * 0.17), "#FFF6A8");
+          } else if (J && J.skipQ === sc.qi && game.phase === "q") {
+            c.fillStyle = "rgba(80,80,90,.35)";
+            for (let q = 0; q < 3; q++) {
+              const ph = (t * 0.7 + q / 3) % 1;
+              c.beginPath();
+              c.arc(x + Math.sin(q + t) * size * 0.2, y - size * (1.1 + ph * 0.9), size * (0.1 + ph * 0.15), 0, 7);
+              c.fill();
+            }
+            scvText(c, "\u{1F635} sin turno", x, y - size * 1.95, Math.max(12, size * 0.15), "#FF6B85");
+          }
+        }
         if (b.pose === "cable") {
           const on = Math.floor(now / 90) % 2 === 1;
           c.fillStyle = `rgba(190,230,255,${on ? 0.45 : 0.15})`;
@@ -29764,7 +30455,7 @@ onmessage = function(e){ var m = e.data, out = [];
       if (!J || !J.land || J.land[3] !== "car") return;
       const k = (now - J.landT) / 1e3;
       if (k > 0.2 || k < -1.2) return;
-      const X = P3X(J.x) < 0 ? -770 : 840, z = -200 + i % 6 * 110 + Math.floor(i / 6) * 25, zz = z + -k * 900;
+      const X = P3X(J.x) < 0 ? -650 : 670, z = -200 + i % 6 * 110 + Math.floor(i / 6) * 25, zz = z + -k * 900;
       const f2 = [];
       box3(f2, [X, 26, zz], 52, 22, 90, "#E23B3B");
       box3(f2, [X, 58, zz + 8], 46, 18, 45, "#BFE3FF");
@@ -29780,13 +30471,15 @@ onmessage = function(e){ var m = e.data, out = [];
       const p = proj3(C, p3);
       if (p) scvText(c, txt, p[0], p[1], 13 * U, col);
     };
-    lab("\u{1F697} TR\xC1FICO", [-770, 60, -300], "#FFD21A");
-    lab("\u{1F69A} CAMIONES", [840, 60, -300], "#FFD21A");
-    lab("\u26A1 ALTA TENSI\xD3N", [-365, 300, -100], "#FFF6A8");
+    lab("\u{1F697} TR\xC1FICO", [-650, 60, -300], "#FFD21A");
+    lab("\u{1F69A} CAMIONES", [670, 60, -300], "#FFD21A");
+    lab("\u26A1 ALTA TENSI\xD3N", [-385, 300, -100], "#FFF6A8");
     lab("\u{1F3AF} ZONA DE SALTO", [T[0], 30, -260], "#fff");
     lab("\u{1F333} \xC1RBOLES", [-1060, 260, -150], "#fff");
-    lab("\u{1F4A6} LAGO", [1250, 40, 0], "#fff");
-    scvText(c, `\u{1FA82} ALTURA ${Math.round(S.alt * 3e3)} m`, 20, top + 30 * U, 22 * U, "#fff", "left");
+    lab("\u{1F4A6} LAGO", [1100, 40, 0], "#fff");
+    lab("\u{1F335} NOPALES", [P3X(0.67), 80, -200], "#fff");
+    scvPFxTop(c, W, H, t, U, top, S, now);
+    scvText(c, `\u{1FA82} ALTURA ${Math.round(S.alt * 3e3)} m \xB7 ${SCV_BIOMES[S.bio || 0].n}`, 20, top + 30 * U, 22 * U, "#fff", "left");
     if (S.gust > 0) {
       c.strokeStyle = `rgba(255,255,255,${S.gust * 0.7})`;
       c.lineWidth = 3;
