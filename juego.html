@@ -25258,6 +25258,32 @@ onmessage = function(e){ var m = e.data, out = [];
       scRaceRaf = requestAnimationFrame(scRaceLoop);
       return;
     }
+    if (game.phase !== "end" && scvOn()) {
+      const now = performance.now();
+      sc.vdt = sc.vdt == null ? 16 : sc.vdt * 0.93 + Math.min(200, now - (sc.vlast || now)) * 0.07;
+      sc.vlast = now;
+      if (!sc.vq) sc.vq = 1;
+      if (!sc.vqT || now - sc.vqT > 1200) {
+        sc.vqT = now;
+        if (sc.vdt > 26 && sc.vq > 0.5) sc.vq = Math.round(Math.max(0.5, sc.vq - 0.15) * 100) / 100;
+        else if (sc.vdt < 17 && sc.vq < 1) sc.vq = Math.round(Math.min(1, sc.vq + 0.05) * 100) / 100;
+      }
+      const k = dpr * sc.vq;
+      if (cv.width !== Math.round(W * k) || cv.height !== Math.round(H * k)) {
+        cv.width = Math.round(W * k);
+        cv.height = Math.round(H * k);
+      }
+      const c2 = cv.getContext("2d");
+      c2.setTransform(k, 0, 0, k, 0, 0);
+      c2.imageSmoothingEnabled = true;
+      try {
+        scvDraw(c2, W, H, now / 1e3);
+      } catch (e) {
+        console.log(e);
+      }
+      scRaceRaf = requestAnimationFrame(scRaceLoop);
+      return;
+    }
     if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) {
       cv.width = Math.round(W * dpr);
       cv.height = Math.round(H * dpr);
