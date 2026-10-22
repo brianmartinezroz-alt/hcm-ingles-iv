@@ -10,6 +10,7 @@ window.onerror = function(m, src, l, c, e){ try{ var d = document.getElementById
   if (!window.ResizeObserver){ window.ResizeObserver = function(cb){ this.o = function(){ cb([]); }; }; ResizeObserver.prototype.observe = function(){ window.addEventListener('resize', this.o); }; ResizeObserver.prototype.disconnect = function(){ window.removeEventListener('resize', this.o); }; ResizeObserver.prototype.unobserve = function(){}; }
 })();
 </script>
+<meta name="referrer" content="no-referrer">
 <title>Tile Rush · HCM</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
