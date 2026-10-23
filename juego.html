@@ -23040,12 +23040,37 @@ onmessage = function(e){ var m = e.data, out = [];
     beep(520, 0.08);
     setTimeout(() => beep(780, 0.1), 90);
   }
-  const SC_READ = 15;
+  const SC_READ = 15, SC_ANS = 15;
+  function scLockOn() {
+    return !!(sc && !window.SC48 && typeof scvOn === "function" && scvOn() && (sc.v === "zpov" || sc.v === "para"));
+  }
   function scEndRead(silent) {
     if (!sc || !sc.reading) return;
     sc.reading = false;
     sc.readEnd = 0;
     clearInterval(scTimerId);
+    if (scLockOn() && game.phase === "q") {
+      const qi0 = sc.qi;
+      scLeft = SC_ANS;
+      sc.ansEnd = performance.now() + SC_ANS * 1e3;
+      scTimerId = setInterval(() => {
+        if (game.phase !== "q" || sc.qi !== qi0) {
+          clearInterval(scTimerId);
+          return;
+        }
+        scLeft--;
+        scTimeEl();
+        if (scLeft <= 5 && scLeft > 0) beep(880, 0.06);
+        if (scLeft <= 0) {
+          clearInterval(scTimerId);
+          beep(300, 0.4);
+          try {
+            scReveal();
+          } catch (e) {
+          }
+        }
+      }, 1e3);
+    }
     if (!silent) {
       jingle([660, 880, 1320], 90, 0.12);
       scToast("\u270B \xA1Ahora s\xED! Levanten su tarjeta");
@@ -23778,8 +23803,8 @@ onmessage = function(e){ var m = e.data, out = [];
   function scTimeEl() {
     document.querySelectorAll(".sctime").forEach((el) => {
       if (!window.SC48 && game.phase === "q") {
-        el.textContent = sc.reading ? `\u{1F4D6} Lean \xB7 ${Math.max(0, scLeft)}s` : "\u270B \xA1A contestar!";
-        el.classList.toggle("warn", !!sc.reading && scLeft <= 5);
+        el.textContent = sc.reading ? `\u{1F4D6} Lean \xB7 ${Math.max(0, scLeft)}s` : scLockOn() ? `\u270B \xA1Escaneen! \xB7 ${Math.max(0, scLeft)}s` : "\u270B \xA1A contestar!";
+        el.classList.toggle("warn", (!!sc.reading || scLockOn()) && scLeft <= 5);
         el.classList.toggle("go", !sc.reading);
         return;
       }
@@ -23912,7 +23937,7 @@ onmessage = function(e){ var m = e.data, out = [];
     bar.hidden = !show2;
     if (!show2) return;
     const got = Object.keys(sc.answers).length;
-    bar.innerHTML = `<b class="scabn">${sc.reading ? "\u{1F4D6}" : "\u{1F4CB}"} ${got} / ${sc.students.length}</b><div class="scachips">${sc.students.map((s) => `<span class="${sc.answers[s.no] != null ? "on" : ""}">${s.no}${!window.SC48 && sc.answers[s.no] != null ? `<em>${SC_L[sc.answers[s.no]] || ""}</em>` : ""}</span>`).join("")}</div>`;
+    bar.innerHTML = `<b class="scabn">${sc.reading ? "\u{1F4D6}" : "\u{1F4CB}"} ${got} / ${sc.students.length}</b><div class="scachips">${sc.students.map((s) => `<span class="${sc.answers[s.no] != null ? "on" : ""}">${s.no}${!window.SC48 && !scLockOn() && sc.answers[s.no] != null ? `<em>${SC_L[sc.answers[s.no]] || ""}</em>` : ""}</span>`).join("")}</div>`;
   }
   function scRenderDock() {
     if (game.phase === "pick") {
@@ -24064,6 +24089,7 @@ onmessage = function(e){ var m = e.data, out = [];
       const no = +k;
       if (!(no >= 1 && no <= scMaxCards(sc.kind))) return;
       if (!scStu(no)) scLateJoin(no);
+      if (scLockOn() && sc.answers[no] != null) return;
       if (sc.answers[no] == null) {
         fresh++;
         scStu(no).ansT = performance.now();
@@ -24110,6 +24136,7 @@ onmessage = function(e){ var m = e.data, out = [];
       onCard: (no, a) => {
         if (game.phase !== "q") return;
         if (!scStu(no)) scLateJoin(no);
+        if (scLockOn() && sc.answers[no] != null) return;
         const f = sc.answers[no] == null;
         sc.first = sc.first || {};
         if (sc.first[no] == null) sc.first[no] = a;
@@ -26494,7 +26521,7 @@ onmessage = function(e){ var m = e.data, out = [];
   function scvZCap() {
     if (sc && sc.vs && sc.vs.lane2d) {
       const wv = SCV_WAVES[sc.vs.wt] || {};
-      return Math.round(Math.min(75, Math.max(24, sc.students.length * 2.5)) * (wv.cap || 1));
+      return Math.round(Math.min(140, Math.max(30, sc.students.length * 4 + 10)) * (wv.cap ? 1.15 : 1));
     }
     return Math.min(230, Math.max(70, sc.students.length * 7));
   }
@@ -27245,6 +27272,35 @@ onmessage = function(e){ var m = e.data, out = [];
     if (k === "turret") S.turretUntil = now + 22e3;
     if (k === "reinf") scvZReinforce(S);
   }
+  const SCV_LPU = [["flame", "\u{1F525}", "Lanzallamas"], ["grenade", "\u{1F4A3}", "Granada"], ["wall", "\u{1F9F1}", "Barricada"], ["turret", "\u{1F916}", "Torreta"]];
+  function scvZLanePU(S, no) {
+    const pu = SCV_LPU[Math.floor(Math.random() * SCV_LPU.length)], now = performance.now();
+    (S.lpu = S.lpu || {})[no] = { k: pu[0], ic: pu[1], name: pu[2], t0: now };
+    const mine = S.zs.filter((z) => !z.dead && z.lane == no && z.fx < 1.02).sort((a, b) => a.fx - b.fx), p = S.pos && S.pos[no];
+    if (pu[0] === "flame") {
+      scvSnd("big");
+      mine.filter((z) => z.fx < 0.7).forEach((z) => scvZHit(S, z, 5, false));
+      S.lpu[no].fx = "flame";
+    }
+    if (pu[0] === "grenade" && mine[0]) {
+      const f0 = mine[0].fx, q = S.proj(f0, mine[0].ly);
+      scvSnd("boom");
+      (S.booms = S.booms || []).push({ x: q.x, y: q.y - q.sz * 0.3, t: 0, big: 1, r: q.sz * 1.2 });
+      mine.filter((z) => Math.abs(z.fx - f0) < 0.15).forEach((z) => scvZHit(S, z, 6, false));
+    }
+    if (pu[0] === "wall") {
+      S.hold[no] = Math.min(0.6, (S.hold[no] != null ? S.hold[no] : 0.5) + 0.15);
+      S.gate = Math.min(100, S.gate + 4);
+      mine.forEach((z) => {
+        z.push = 0.02;
+      });
+    }
+    if (pu[0] === "turret") S.lpu[no].until = now + 15e3;
+    try {
+      SFX.play("coin");
+    } catch (e) {
+    }
+  }
   function scvZPotros(S) {
     const n = Math.max(8, Math.round(sc.students.length * 1.2));
     for (let i = 0; i < n; i++) setTimeout(() => {
@@ -27264,6 +27320,23 @@ onmessage = function(e){ var m = e.data, out = [];
     sc.students.forEach((s) => {
       if (win.has(s.no) && S.miss[s.no]) S.miss[s.no] = Math.max(0, S.miss[s.no] - 0.3);
     });
+    if (S.lane2d) {
+      S.hold = S.hold || {};
+      S.strk = S.strk || {};
+      sc.students.forEach((s) => {
+        const h = S.hold[s.no] != null ? S.hold[s.no] : 0.5;
+        if (win.has(s.no)) {
+          S.hold[s.no] = Math.min(0.55, h + 0.12);
+          S.strk[s.no] = (S.strk[s.no] || 0) + 1;
+          if (S.strk[s.no] % 2 === 0) setTimeout(() => {
+            if (sc && sc.vs === S) scvZLanePU(S, s.no);
+          }, 1400 + Math.random() * 800);
+        } else {
+          S.hold[s.no] = Math.max(0, h - 0.13);
+          S.strk[s.no] = 0;
+        }
+      });
+    }
     sc.students.forEach((s) => {
       const W0 = S.wpn[s.no] = S.wpn[s.no] || { k: "fx", cs: 0, ws: 0, until: 0 };
       if (win.has(s.no)) {
@@ -27296,9 +27369,10 @@ onmessage = function(e){ var m = e.data, out = [];
     sc.students.forEach((s) => {
       if (!win.has(s.no) || S.out[s.no] != null) return;
       const head = joke === "all" || sc.first && sc.first[s.no] === cor;
-      const shots = (S.wpn[s.no] || {}).k === "bazooka" ? 1 : 3;
+      const shots = (S.wpn[s.no] || {}).k === "bazooka" ? 1 : 3, mineR = S.lane2d ? near.filter((z) => z.lane == s.no && z.fx < 1.02) : null;
       for (let j = 0; j < shots; j++) {
-        const z = near[k++ % Math.max(1, near.length)];
+        const z = S.lane2d ? mineR[j % Math.max(1, mineR.length)] : near[k++ % Math.max(1, near.length)];
+        k++;
         if (z) scvZFire(S, s.no, z, head ? "head" : "body", W, H, U, L, -(k % 30) * 3 - j * 8);
       }
     });
@@ -27317,11 +27391,11 @@ onmessage = function(e){ var m = e.data, out = [];
     if (caught.length) setTimeout(() => {
       if (sc && sc.vs === S) scvBig(`\u{1F9DF} \xA1ATRAPARON A ${caught.length}!`, `#${caught.join(", #")} pierden 1 turno y regresan en paraca\xEDdas`, "#FF6B85", 2400);
     }, 2700);
-    const burst = Math.round(losers.length * 1.5);
+    const burst = S.lane2d ? 0 : Math.round(losers.length * 1.5);
     for (let i = 0; i < burst; i++) setTimeout(() => {
       if (sc && sc.vs === S) scvSpawnZ(S, scvR(1.02, 1.2));
     }, 900 + i * 35);
-    if (losers.length) setTimeout(() => {
+    if (losers.length && !S.lane2d) setTimeout(() => {
       if (sc && sc.vs === S) {
         scvFloat(W * 0.75, L.gnd + 30, `+${burst} \u{1F9DF}`, "#9BE564", 30, 80);
         S.gate -= losers.length * 0.5;
@@ -27329,7 +27403,7 @@ onmessage = function(e){ var m = e.data, out = [];
       }
     }, 1e3);
     const tot = Math.max(1, answered.length), ratio = joke === "all" ? 1 : joke === "none" ? 0 : hits.length / tot;
-    if (ratio >= 0.6) setTimeout(() => {
+    if (ratio >= 0.6 && !S.lane2d) setTimeout(() => {
       if (sc && sc.vs === S) scvZPowerUp(S);
     }, 1600);
     else if (ratio < 0.4) setTimeout(() => {
@@ -27824,8 +27898,9 @@ onmessage = function(e){ var m = e.data, out = [];
     able.forEach((s) => {
       const w = (S.wpn[s.no] || {}).k || "fx", p = (w === "bazooka" ? 0.45 : w === "pistol" ? 0.6 : 1) / 190 * (S.dtf || 1);
       if (Math.random() < p) {
-        const mine = S.pov ? near.filter((z) => z.lane == s.no) : [];
-        const tz = mine.length && Math.random() < 0.8 ? mine[0] : near[Math.floor(Math.random() * Math.min(14, near.length))];
+        const mine = S.pov ? near.filter((z) => z.lane == s.no && z.fx < 1.02) : [];
+        if (S.lane2d && !mine.length) return;
+        const tz = S.lane2d ? mine[0] : mine.length && Math.random() < 0.8 ? mine[0] : near[Math.floor(Math.random() * Math.min(14, near.length))];
         scvZFire(S, s.no, tz, Math.random() < 0.25 ? "head" : "body", W, H, U, L, 0);
       }
     });
@@ -29391,8 +29466,37 @@ onmessage = function(e){ var m = e.data, out = [];
         c.stroke();
       });
     }
-    if (moving && tkxEvery(S, Math.max(1, Math.round(wave.every * 1.4 / Math.max(1, n / 24))))) scvSpawnZ(S, scvR(1, 1.12));
-    if (moving && brutal && tkxEvery(S, 36, "big")) scvSpawnZ(S, scvR(1, 1.1), "big");
+    S.hold = S.hold || {};
+    S.lnN = {};
+    S.zs.forEach((z) => {
+      if (!z.dead && z.lane != null) S.lnN[z.lane] = (S.lnN[z.lane] || 0) + 1;
+    });
+    if (game.phase === "q" || game.phase === "reveal" || game.phase === "pick") {
+      const L0 = sc.students;
+      S.rr = ((S.rr || 0) + 1) % Math.max(1, L0.length);
+      for (let k = 0; k < 2; k++) {
+        const li = (S.rr + k * Math.ceil(L0.length / 2)) % Math.max(1, L0.length), s0 = L0[li];
+        if (!s0 || S.out[s0.no] != null) continue;
+        const m0 = S.miss && S.miss[s0.no] || 0, tgt = Math.min(9, 2 + Math.round(m0 * 1.5) + (brutal ? 2 : 0) + (S.wt === "horda" ? 2 : 0));
+        if ((S.lnN[s0.no] || 0) < tgt && tkxEvery(S, 3, "ln" + li)) {
+          const n0 = S.zs.length;
+          scvSpawnZ(S, scvR(1, 1.15));
+          const z = S.zs.length > n0 ? S.zs[S.zs.length - 1] : null;
+          if (z) {
+            z.lane = s0.no;
+            z.ly = li;
+            const wv = SCV_WAVES[S.wt] || {};
+            if (z.kind !== "super") {
+              if (wv.big && Math.random() < wv.big) z.kind = "big";
+              z.hp = (z.kind === "big" ? 3 : 1) + Math.min(3, Math.floor(m0 / 2)) + (wv.hp || 0);
+              z.max = z.hp;
+              if (wv.hp) z.armor = 1;
+            }
+            S.lnN[s0.no] = (S.lnN[s0.no] || 0) + 1;
+          }
+        }
+      }
+    }
     const fast = S.surge > 0 ? 3 : 1;
     if (S.surge > 0) S.surge--;
     S.zs.forEach((z) => {
@@ -29400,7 +29504,9 @@ onmessage = function(e){ var m = e.data, out = [];
         z.dead += 1 / 60;
         return;
       }
-      if (moving) z.fx -= z.sp * 75e-5 * S.dtf * wave.mult * fast * (S.zapUntil > now && z.fx < 0.1 ? 0 : 1);
+      const hl = z.lane != null && S.hold[z.lane] != null ? S.hold[z.lane] : 0.5, stop = Math.max(0.02, hl) + z.ph * 13 % 1 * 0.06;
+      if (z.fx > stop) z.fx -= z.sp * 9e-4 * S.dtf * wave.mult * fast * (z.fx > 1 ? 2 : 1);
+      else if (z.fx < stop - 0.08) z.fx += 4e-3 * S.dtf;
       if (z.push) {
         z.fx += z.push;
         z.push *= 0.8;
@@ -29409,7 +29515,7 @@ onmessage = function(e){ var m = e.data, out = [];
       if (z.fx < 0.02) {
         z.fx = 0.02 + scvR(0, 0.01);
         z.atk = true;
-      } else z.atk = false;
+      } else z.atk = hl <= 0.03 && z.fx < 0.08;
     });
     const live = S.zs.filter((z) => !z.dead), atk = live.filter((z) => z.atk);
     if (atk.length && moving) {
@@ -29540,7 +29646,41 @@ onmessage = function(e){ var m = e.data, out = [];
         c.arc(xx, y - csz * 0.55, csz * 0.42, 0, 7);
         c.fill();
       }
-      if (qph && sc.answers[s.no] != null) {
+      {
+        const lp = S.lpu && S.lpu[s.no];
+        if (lp) {
+          const age = (now - lp.t0) / 1e3, live2 = lp.until ? now < lp.until : age < 3.5;
+          if (!live2 && age > 3.5) {
+            delete S.lpu[s.no];
+          } else {
+            const big = age < 1.2, px = xx + csz * 0.95, sz2 = big ? Math.max(18, csz * 0.7) * (1 + Math.sin(age * 12) * 0.1) : Math.max(12, csz * 0.38);
+            if (big) {
+              c.fillStyle = "rgba(255,210,26,.9)";
+              c.beginPath();
+              c.arc(px, y - csz * 0.55, sz2 * 0.75, 0, 7);
+              c.fill();
+              scvText(c, lp.name, px + sz2, y - csz * 0.5, Math.max(11, csz * 0.28), "#FFD21A", "left");
+            }
+            scvText(c, lp.ic, px, y - csz * 0.48, sz2, "#fff", "center", false);
+            if (lp.fx === "flame" && age < 1.6) {
+              for (let f = 0; f < 8; f++) {
+                c.fillStyle = ["rgba(255,90,20,.65)", "rgba(255,200,40,.6)"][f % 2];
+                c.beginPath();
+                c.arc(px + f / 8 * W * 0.45 * Math.min(1, age * 2), y - csz * 0.4 + Math.sin(f * 2 + age * 20) * csz * 0.15, csz * 0.3, 0, 7);
+                c.fill();
+              }
+            }
+            if (lp.until && now < lp.until && tkxEvery(S, 9, "tr" + s.no)) {
+              const z = S.zs.filter((z2) => !z2.dead && z2.lane == s.no && z2.fx < 1.02).sort((a, b) => a.fx - b.fx)[0];
+              if (z) {
+                const q = P(z.fx, z.ly);
+                S.shots.push({ x0: px, y0: y - csz * 0.5, x1: q.x, y1: q.y - q.sz * 0.6, z, t: 0, kind: "body" });
+              }
+            }
+          }
+        }
+      }
+      if (false) {
         const bx2 = xx + dir * csz * 0.05, by = y - csz * 1.18, r = Math.max(10, csz * 0.16);
         c.fillStyle = "#fff";
         c.strokeStyle = "#1A1530";
@@ -29617,6 +29757,27 @@ onmessage = function(e){ var m = e.data, out = [];
     scvText(c, `\u{1F9F1} BARRICADA ${Math.round(hp * 100)}%`, hx, hy0 + 33 * U, 11 * U, "#fff");
     scvText(c, `${wave.name.replace(/[¡!]/g, "").slice(0, 26)} \xB7 \u{1F9DF} ${live.length} \xB7 \u{1F480} ${S.kills}`, hx, hy0 + 12 * U, 12 * U, wave.col);
     {
+      const seg = 8, sw = bw2 / seg, py2 = hy0 + 52 * U;
+      let nextBig = -1;
+      c.fillStyle = "rgba(0,0,0,.65)";
+      scRR(c, hx - bw2 / 2 - 6, py2, bw2 + 12, 44 * U, 9);
+      c.fill();
+      for (let i = 0; i < seg; i++) {
+        const wt = SCV_WAVE_SEQ[(S.wave - 1 + i) % SCV_WAVE_SEQ.length], bigW = wt === "brutal" || wt === "grandes";
+        if (bigW && i > 0 && nextBig < 0) nextBig = i;
+        c.fillStyle = bigW ? "#FF4F6D" : wt === "horda" ? "#FF9F43" : wt === "fuertes" ? "#4DA8FF" : "#3FBF4F";
+        c.globalAlpha = i === 0 ? 1 : 0.75;
+        scRR(c, hx - bw2 / 2 + i * sw + 1, py2 + 22 * U, sw - 2, 14 * U, 4);
+        c.fill();
+        c.globalAlpha = 1;
+        if (bigW) scvText(c, "\u{1F480}", hx - bw2 / 2 + (i + 0.5) * sw, py2 + 30 * U, 10 * U, "#fff", "center", false);
+      }
+      c.strokeStyle = "#fff";
+      c.lineWidth = 2;
+      c.strokeRect(hx - bw2 / 2 + 1, py2 + 21 * U, sw - 2, 16 * U);
+      scvText(c, nextBig < 0 ? "\u{1F6A9} \xA1OLEADA GIGANTE AHORA!" : `\u26A0\uFE0F Oleada gigante en ${nextBig} pregunta${nextBig === 1 ? "" : "s"}`, hx, py2 + 11 * U, 11 * U, nextBig < 0 || nextBig === 1 ? "#FF4F6D" : "#FFD21A");
+    }
+    if (false) {
       const pu = SCV_PU[(S.puIdx || 0) % SCV_PU.length], pw = 104 * U, ph = 86 * U, px = hx - pw / 2, py = hy0 + 52 * U, pulse = 1 + Math.sin(t * 4) * 0.07;
       c.fillStyle = "rgba(26,21,48,.88)";
       scRR(c, px, py, pw, ph, 12);
@@ -29652,6 +29813,70 @@ onmessage = function(e){ var m = e.data, out = [];
   function scvPCol(x) {
     return Math.max(0, Math.min(14, Math.floor(x * 15)));
   }
+  function scvCarTop(c, x, y, w, truck, dir) {
+    const L = w * (truck ? 2.3 : 1.8), hw = w / 2, hl = L / 2;
+    c.save();
+    c.translate(x, y);
+    if (dir < 0) c.rotate(Math.PI);
+    c.fillStyle = "rgba(0,0,0,.25)";
+    scRR(c, -hw + 2, -hl + 3, w, L, w * 0.25);
+    c.fill();
+    c.fillStyle = "#1A1A1A";
+    [[-hw - w * 0.06, -hl * 0.62], [hw - w * 0.1, -hl * 0.62], [-hw - w * 0.06, hl * 0.45], [hw - w * 0.1, hl * 0.45]].forEach(([wx, wy]) => {
+      scRR(c, wx, wy, w * 0.16, L * 0.2, 2);
+      c.fill();
+    });
+    if (truck) {
+      c.fillStyle = "#F2F2F2";
+      c.strokeStyle = "#1A1530";
+      c.lineWidth = 1.5;
+      scRR(c, -hw, -hl + L * 0.32, w, L * 0.68, 3);
+      c.fill();
+      c.stroke();
+      c.strokeStyle = "rgba(0,0,0,.15)";
+      for (let i = 1; i < 4; i++) {
+        c.beginPath();
+        c.moveTo(-hw + 2, -hl + L * 0.32 + i * L * 0.17);
+        c.lineTo(hw - 2, -hl + L * 0.32 + i * L * 0.17);
+        c.stroke();
+      }
+      c.fillStyle = "#2F7BE0";
+      scRR(c, -hw, -hl, w, L * 0.3, w * 0.2);
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#BFE3FF";
+      scRR(c, -hw * 0.75, -hl + L * 0.04, w * 0.75, L * 0.1, 2);
+      c.fill();
+    } else {
+      const g = c.createLinearGradient(-hw, 0, hw, 0);
+      g.addColorStop(0, "#B81F1F");
+      g.addColorStop(0.5, "#F04B4B");
+      g.addColorStop(1, "#B81F1F");
+      c.fillStyle = g;
+      c.strokeStyle = "#1A1530";
+      c.lineWidth = 1.5;
+      scRR(c, -hw, -hl, w, L, w * 0.32);
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#BFE3FF";
+      scRR(c, -hw * 0.78, -hl + L * 0.2, w * 0.78, L * 0.16, 3);
+      c.fill();
+      scRR(c, -hw * 0.7, hl - L * 0.3, w * 0.7, L * 0.1, 3);
+      c.fill();
+      c.fillStyle = "#D63333";
+      scRR(c, -hw * 0.75, -hl + L * 0.38, w * 0.75, L * 0.3, 3);
+      c.fill();
+    }
+    c.fillStyle = "#FFF6A8";
+    c.beginPath();
+    c.arc(-hw * 0.6, -hl + 2, w * 0.09, 0, 7);
+    c.arc(hw * 0.6, -hl + 2, w * 0.09, 0, 7);
+    c.fill();
+    c.fillStyle = "#FF4F4F";
+    c.fillRect(-hw * 0.8, hl - 3, w * 0.2, 2.5);
+    c.fillRect(hw * 0.6, hl - 3, w * 0.2, 2.5);
+    c.restore();
+  }
   function scvPDraw2D(c, W, H, t, U, top, S) {
     if (game.phase === "pick") {
       const PX = 3, lw = Math.ceil(W / PX), lh = Math.ceil(H / PX);
@@ -29669,7 +29894,7 @@ onmessage = function(e){ var m = e.data, out = [];
       c.restore();
       return;
     }
-    const now = performance.now(), n = sc.students.length, NC = 15, cw = W / NC, gy0 = H - Math.min(H * 0.085, 74) - H * 0.12, cardB = scvCardB(H), yTop = cardB + Math.min(cw * 1, H * 0.12) * 2.05 + 6, gyT = gy0;
+    const now = performance.now(), n = sc.students.length, NC = 15, cw = W / NC, gy0 = H - Math.min(H * 0.085, 74) - H * 0.06, cardB = scvCardB(H), yTop = cardB + Math.min(cw * 0.62, H * 0.062) * 2.05 + 6, gyT = gy0;
     S.gyS = S.gyS == null ? gyT : S.gyS + (gyT - S.gyS) * 0.03;
     const gy = S.gyS, PP = (x, y) => W / 2 + (x - W / 2) * (1 + 0.5 * (y - gy) / Math.max(1, H - gy0));
     let g = c.createLinearGradient(0, 0, 0, gy);
@@ -29758,7 +29983,7 @@ onmessage = function(e){ var m = e.data, out = [];
     c.stroke();
     c.setLineDash([]);
     [0.5, 1.5].forEach((ci) => {
-      const x = ci * cw, h = H * 0.22;
+      const x = ci * cw, h = H * 0.1;
       c.fillStyle = "#7A5230";
       c.fillRect(x - 8 * U, gy - h * 0.5, 16 * U, h * 0.5);
       c.fillStyle = "#2E9A35";
@@ -29770,7 +29995,7 @@ onmessage = function(e){ var m = e.data, out = [];
       c.arc(x - cw * 0.15, gy - h * 0.8, cw * 0.38, 0, 7);
       c.fill();
     });
-    const px1 = 4 * cw + cw * 0.12, px2 = 5 * cw - cw * 0.12, wy = gy - H * 0.2;
+    const px1 = 4 * cw + cw * 0.12, px2 = 5 * cw - cw * 0.12, wy = gy - H * 0.09;
     c.fillStyle = "#6B5A4A";
     c.fillRect(px1 - 4 * U, wy, 8 * U, gy - wy);
     c.fillRect(px2 - 4 * U, wy, 8 * U, gy - wy);
@@ -29787,20 +30012,13 @@ onmessage = function(e){ var m = e.data, out = [];
     c.fillStyle = "#3E8A3A";
     [10.3, 10.7].forEach((ci) => {
       const x = ci * cw;
-      c.fillRect(x - 6 * U, gy - 50 * U, 12 * U, 50 * U);
-      c.fillRect(x - 18 * U, gy - 38 * U, 12 * U, 8 * U);
-      c.fillRect(x - 18 * U, gy - 50 * U, 6 * U, 18 * U);
+      c.fillRect(x - 3 * U, gy - 26 * U, 6 * U, 26 * U);
+      c.fillRect(x - 9 * U, gy - 19 * U, 6 * U, 4 * U);
+      c.fillRect(x - 9 * U, gy - 26 * U, 3 * U, 9 * U);
     });
     [[2, 1], [11, -1]].forEach(([c0, dir], k) => {
-      const span2 = 2 * cw, ph = (t * 0.25 + k * 0.5) % 1, y = gy + (H - gy) * 0.5, x = PP(c0 * cw + (dir > 0 ? ph : 1 - ph) * span2, y), w = cw * 0.62, truck = k === 1;
-      c.fillStyle = truck ? "#DDDDDD" : "#E23B3B";
-      c.strokeStyle = "#1A1530";
-      c.lineWidth = 2;
-      scRR(c, x - w / 2, y - w * 0.9, w, w * 1.8, 6);
-      c.fill();
-      c.stroke();
-      c.fillStyle = "#BFE3FF";
-      c.fillRect(x - w * 0.35, y + (dir > 0 ? w * 0.3 : -w * 0.6), w * 0.7, w * 0.3);
+      const span2 = 2 * cw, ph = (t * 0.25 + k * 0.5) % 1, y = gy + (H - gy) * 0.45, x = PP(c0 * cw + (dir > 0 ? ph : 1 - ph) * span2, y), w = cw * 0.3, truck = k === 1;
+      scvCarTop(c, x, y, w, truck, dir);
     });
     [["\u{1F333} \xC1RBOLES", 1], ["\u{1F697} CARRETERA", 3], ["\u26A1 CABLES", 4.5], ["\u{1F3AF} ZONA CORRECTA", 7.5], ["\u{1F335} NOPALES", 10.5], ["\u{1F69A} CAMIONES", 12], ["\u{1F4A6} LAGO", 14]].forEach(([L, ci]) => scvText(c, L, Math.max(55 * U, Math.min(W - 55 * U, PP(ci * cw, gy + 16 * U))), gy + 16 * U, 12 * U, ci === 7.5 ? "#FFD21A" : "#fff"));
     if (!S.landed) {
@@ -29817,9 +30035,9 @@ onmessage = function(e){ var m = e.data, out = [];
       const J = scvPJ(S, s);
       if (J.cx == null) J.cx = J.x;
       J.cx += (J.x - J.cx) * 0.04;
-      const size = Math.min(cw * 1, H * 0.12), x = J.cx * W + (i % 6 - 2.5) * cw * 0.5, L = S.landed && J.land, kind = L ? L[3] : null, k = L ? (now - J.landT) / 1e3 : 0;
+      const size = Math.min(cw * 0.62, H * 0.062), x = J.cx * W + (i % 6 - 2.5) * cw * 0.45, L = S.landed && J.land, kind = L ? L[3] : null, k = L ? (now - J.landT) / 1e3 : 0;
       if (!L) {
-        const y = Math.min(gy - size * 0.25, yTop + Math.floor(i / 5) % 3 * size * 0.75 + i % 2 * size * 0.2 + (1 - S.alt) * Math.max(0, gy0 - yTop - size * 2.6) * 0.5), rot = Math.sin(t * 1.6 + J.sw) * 0.12;
+        const rowsH = Math.floor(i / 5) % 3 * size * 0.6 + i % 2 * size * 0.18, y = Math.min(gy - size * 0.25, yTop + rowsH + (1 - S.alt) * Math.max(0, gy - size * 0.5 - yTop - size * 2)), rot = Math.sin(t * 1.6 + J.sw) * 0.12;
         c.save();
         c.translate(x, y);
         c.rotate(rot);
@@ -29833,7 +30051,7 @@ onmessage = function(e){ var m = e.data, out = [];
         c.quadraticCurveTo(0, -size * 1.42, -cr, -size * 1.25);
         c.fill();
         c.stroke();
-        scvText(c, `${s.no}`, 0, -size * 1.5, size * 0.42, "#FFD21A");
+        scvText(c, `${s.no}`, 0, -size * 1.5, Math.max(13, size * 0.5), "#FFD21A");
         c.strokeStyle = "rgba(26,21,48,.6)";
         c.lineWidth = 1;
         c.beginPath();
@@ -29857,7 +30075,7 @@ onmessage = function(e){ var m = e.data, out = [];
       }
       const yG = gy + 8 * U;
       if (kind === "tree") {
-        const yy = gy - H * 0.14 + Math.sin(t * 1.5 + i) * 3;
+        const yy = gy - H * 0.07 + Math.sin(t * 1.5 + i) * 3;
         c.fillStyle = "#6F7B58";
         c.beginPath();
         c.arc(x, yy - size * 1.2, size * 0.6, Math.PI, 0);
