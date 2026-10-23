@@ -24033,6 +24033,7 @@ onmessage = function(e){ var m = e.data, out = [];
       if (win) {
         s.streak++;
         s.pts += 1;
+        s.cor = (s.cor || 0) + 1;
         hits.push(s);
       } else {
         s.streak = 0;
@@ -24101,6 +24102,7 @@ onmessage = function(e){ var m = e.data, out = [];
       if (!(no >= 1 && no <= scMaxCards(sc.kind))) return;
       if (!scStu(no)) scLateJoin(no);
       if (scLockOn() && sc.answers[no] != null) return;
+      if (typeof scvDuelBlock === "function" && scvDuelBlock(no)) return;
       if (sc.answers[no] == null) {
         fresh++;
         scStu(no).ansT = performance.now();
@@ -24148,6 +24150,7 @@ onmessage = function(e){ var m = e.data, out = [];
         if (game.phase !== "q") return;
         if (!scStu(no)) scLateJoin(no);
         if (scLockOn() && sc.answers[no] != null) return;
+        if (typeof scvDuelBlock === "function" && scvDuelBlock(no)) return;
         const f = sc.answers[no] == null;
         sc.first = sc.first || {};
         if (sc.first[no] == null) sc.first[no] = a;
@@ -25869,13 +25872,14 @@ onmessage = function(e){ var m = e.data, out = [];
   function scRenderEnd() {
     const rows = sc.students.slice().sort((a, b) => b.pts - a.pts || a.no - b.no), tot = Math.max(1, sc.done || 0);
     const pod = rows.slice(0, 3);
-    $("#scPodium").innerHTML = [1, 0, 2].map((k) => pod[k] ? `<div class="scpod p${k + 1}"><div class="scmed">${["\u{1F947}", "\u{1F948}", "\u{1F949}"][k]}</div><b>${esc(scLabel(pod[k]))}</b><span>${pod[k].pts} / ${tot}</span><i></i></div>` : "").join("");
-    $("#scTable").innerHTML = `<tr><th>Lugar</th><th>Tarjeta</th><th>Aciertos</th><th>%</th></tr>` + rows.map((s, i) => `<tr><td>${i + 1}</td><td>${scLabel(s)}</td><td>${s.pts} / ${tot}</td><td>${Math.min(100, Math.round(s.pts / tot * 100))}%</td></tr>`).join("");
+    $("#scPodium").innerHTML = [1, 0, 2].map((k) => pod[k] ? `<div class="scpod p${k + 1}"><div class="scmed">${["\u{1F947}", "\u{1F948}", "\u{1F949}"][k]}</div><b>${esc(scLabel(pod[k]))}</b><span>${Math.min(pod[k].cor || 0, tot)} / ${tot} aciertos</span><i></i></div>` : "").join("");
+    const showP = rows.some((s) => s.pts !== (s.cor || 0));
+    $("#scTable").innerHTML = `<tr><th>Lugar</th><th>Tarjeta</th><th>Aciertos</th><th>%</th>${showP ? "<th>Puntos del juego</th>" : ""}</tr>` + rows.map((s, i) => `<tr><td>${i + 1}</td><td>${scLabel(s)}</td><td>${Math.min(s.cor || 0, tot)} / ${tot}</td><td>${Math.min(100, Math.round((s.cor || 0) / tot * 100))}%</td>${showP ? `<td>${s.pts}</td>` : ""}</tr>`).join("");
   }
   function scCSV() {
     const tot = Math.max(1, sc.done || 0), qs = game.order.slice(0, tot).map((i) => scNQ(i));
     const head = ["Tarjeta", "Aciertos", "Porcentaje"].concat(qs.map((q, i) => `P${i + 1} (correcta ${SC_L[scCorrect(q)]})`));
-    const lines = [head].concat(sc.students.map((s) => [scLabel(s), s.pts, Math.round(s.pts / tot * 100) + "%"].concat(qs.map((q, i) => s.ans[i] || "-"))));
+    const lines = [head].concat(sc.students.map((s) => [scLabel(s), Math.min(s.cor || 0, tot), Math.min(100, Math.round((s.cor || 0) / tot * 100)) + "%"].concat(qs.map((q, i) => s.ans[i] || "-"))));
     const csv = "\uFEFF" + lines.map((r) => r.map((x) => `"${String(x).replace(/"/g, '""')}"`).join(",")).join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
@@ -26538,7 +26542,17 @@ onmessage = function(e){ var m = e.data, out = [];
         } catch (e) {
         }
       }
-      scvBig(w.name, `${w.sub} \xB7 Power-up: ${pu[1]} ${pu[2]} (si aciertan 60%+)`, w.col, 2600);
+      const alive = sc.students.filter((s) => S.out[s.no] == null);
+      S.duel = null;
+      if (S.lane2d && S.wave >= 3 && S.wave % 4 === 3 && alive.length) {
+        const d = alive[Math.floor(Math.random() * alive.length)];
+        S.duel = { no: d.no, qi: sc.qi, t0: now, z: { kind: Math.random() < 0.5 ? "big" : "n", sh: Math.floor(Math.random() * 4), hb: 0, ph: Math.random() * 9, sp: 1, ly: 0.5, hp: 1, max: 1 } };
+        scvBig(`\u2694\uFE0F \xA1DUELO MANO A MANO! \xB7 ${scLabel(d)}`, `Solo ${scLabel(d)} contesta \xB7 si acierta: \u{1F525} lanzallamas para todos \xB7 si falla: todos a pistola`, "#FF4F6D", 3400);
+        try {
+          SFX.play("siren");
+        } catch (e) {
+        }
+      } else scvBig(w.name, S.lane2d ? w.sub : `${w.sub} \xB7 Power-up: ${pu[1]} ${pu[2]} (si aciertan 60%+)`, w.col, 2600);
     }
     if (S.v === "boss") {
       const L = ["\xBFYa estudiaron o qu\xE9?", "Esta s\xED est\xE1 f\xE1cil\u2026 para m\xED.", "\xA1Levanten la tarjeta, no la ceja!", "Les voy a poner falta\u2026", "\xA1El que falle hace mortero!"];
@@ -26573,7 +26587,7 @@ onmessage = function(e){ var m = e.data, out = [];
   function scvZCap() {
     if (sc && sc.vs && sc.vs.lane2d) {
       const wv = SCV_WAVES[sc.vs.wt] || {};
-      return Math.round(Math.min(140, Math.max(30, sc.students.length * 4 + 10)) * (wv.cap ? 1.15 : 1));
+      return Math.round(Math.min(210, Math.max(40, sc.students.length * 6 + 20)) * (wv.cap ? 1.15 : 1));
     }
     return Math.min(230, Math.max(70, sc.students.length * 7));
   }
@@ -27066,7 +27080,7 @@ onmessage = function(e){ var m = e.data, out = [];
       x0 = p.mx;
       y0 = p.my;
       x1 = q.x;
-      y1 = q.y - q.sz * m * (kind === "head" ? 0.98 : 0.62);
+      y1 = q.y - q.sz * m * (kind === "head" ? 0.9 : 0.55);
       (S.rec = S.rec || {})[no] = performance.now() + Math.max(0, -(delay || 0)) * 16.7;
     } else {
       x0 = p.x + p.size * 0.55;
@@ -27448,7 +27462,186 @@ onmessage = function(e){ var m = e.data, out = [];
     scvSnd("splat");
     scvBig("\u{1F434} \xA1LOS POTROS SE VOLVIERON ZOMBIS!", `${n} cadetes de 1er a\xF1o corren a morder`, "#9BE564", 2800);
   }
+  function scvDuelBlock(no) {
+    const S = sc && sc.vs;
+    return !!(S && S.duel && S.duel.qi === sc.qi && !S.duel.res && +no !== S.duel.no);
+  }
+  function scvZDuelResolve(S, win) {
+    const D = S.duel, ok = win.has(D.no), now = performance.now();
+    D.res = ok ? "win" : "lose";
+    D.rt = now;
+    setTimeout(() => {
+      if (!sc || sc.vs !== S) return;
+      const alive = sc.students.filter((s) => S.out[s.no] == null);
+      if (ok) {
+        alive.forEach((s) => {
+          (S.lpu = S.lpu || {})[s.no] = { k: "flame", ic: "\u{1F525}", name: "Lanzallamas", t0: performance.now(), fx: "flame" };
+        });
+        scvSnd("big");
+        scvBig("\u{1F525} \xA1LANZALLAMAS PARA TODOS!", `${scLabel(scStu(D.no)) || "#" + D.no} gan\xF3 el duelo`, "#FFB400", 2600);
+      } else {
+        alive.forEach((s) => {
+          const W0 = S.wpn[s.no] = S.wpn[s.no] || { k: "fx", cs: 0, ws: 0, until: 0 };
+          W0.k = "pistol";
+          W0.cs = 0;
+        });
+        scvBig("\u{1F52B} \xA1TODOS A PISTOLA!", `${scLabel(scStu(D.no)) || "#" + D.no} perdi\xF3 el duelo`, "#FF6B85", 2600);
+      }
+      D.end = true;
+    }, 3600);
+  }
+  function scvZDuelDraw(c, W, H, t, U, S) {
+    const D = S.duel, now = performance.now(), cb = scvCardB(H), vy = cb + (H - cb) * 0.3, s0 = scStu(D.no);
+    let g = c.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#12060A");
+    g.addColorStop(1, "#3A0D12");
+    c.fillStyle = g;
+    c.fillRect(0, 0, W, H);
+    const fl = 0.75 + Math.sin(now / 70) * 0.08 + (Math.random() < 0.03 ? -0.4 : 0);
+    c.fillStyle = `rgba(40,30,32,${fl})`;
+    c.beginPath();
+    c.moveTo(0, cb);
+    c.lineTo(W * 0.38, vy - H * 0.06);
+    c.lineTo(W * 0.38, vy + H * 0.05);
+    c.lineTo(0, H);
+    c.closePath();
+    c.fill();
+    c.beginPath();
+    c.moveTo(W, cb);
+    c.lineTo(W * 0.62, vy - H * 0.06);
+    c.lineTo(W * 0.62, vy + H * 0.05);
+    c.lineTo(W, H);
+    c.closePath();
+    c.fill();
+    c.strokeStyle = "rgba(0,0,0,.35)";
+    c.lineWidth = 1;
+    for (let i = 1; i < 9; i++) {
+      const k = i / 9;
+      c.beginPath();
+      c.moveTo(0, cb + (H - cb) * k * 0.98);
+      c.lineTo(W * 0.38, vy - H * 0.06 + H * 0.11 * k);
+      c.stroke();
+      c.beginPath();
+      c.moveTo(W, cb + (H - cb) * k * 0.98);
+      c.lineTo(W * 0.62, vy - H * 0.06 + H * 0.11 * k);
+      c.stroke();
+    }
+    c.fillStyle = "#2A2024";
+    c.beginPath();
+    c.moveTo(W * 0.38, vy + H * 0.05);
+    c.lineTo(W * 0.62, vy + H * 0.05);
+    c.lineTo(W, H);
+    c.lineTo(0, H);
+    c.closePath();
+    c.fill();
+    c.strokeStyle = "rgba(255,255,255,.07)";
+    for (let i = 0; i < 10; i++) {
+      const k = Math.pow(i / 10, 2), y = vy + H * 0.05 + (H - vy) * k;
+      c.beginPath();
+      c.moveTo(0, y);
+      c.lineTo(W, y);
+      c.stroke();
+    }
+    for (let i = -6; i <= 6; i++) {
+      c.beginPath();
+      c.moveTo(W / 2 + i * W * 0.02, vy + H * 0.05);
+      c.lineTo(W / 2 + i * W * 0.18, H);
+      c.stroke();
+    }
+    const tq = game.phase === "q" ? Math.min(1, (now - D.t0) / 17e3) : 1, rk = D.rt ? (now - D.rt) / 1e3 : 0;
+    let zx = W / 2 + Math.sin(now / 600) * W * 0.03, a = 0.25 + 0.6 * tq, zy = vy + H * 0.05 + (H - vy) * (0.15 + 0.7 * a), zs = Math.min(H * (0.28 + 0.62 * a), (zy - cb - 30 * U) * 0.92);
+    if (D.res === "win") {
+      const kb = Math.min(1, rk / 0.6);
+      zy += kb * H * 0.05;
+      zx += Math.sin(rk * 30) * (1 - kb) * 10;
+      if (rk > 0.9) {
+        c.save();
+        c.globalAlpha = Math.max(0, 1 - (rk - 0.9));
+        c.translate(zx, zy);
+        c.rotate(-Math.min(1.4, (rk - 0.9) * 2.5));
+        scvZDrawOne(c, D.z, 0, 0, zs, t, true);
+        c.restore();
+      } else scvZDrawOne(c, D.z, zx, zy, zs, t * 2, true);
+    } else if (D.res === "lose") {
+      const ln = Math.min(1, rk / 0.5);
+      scvZDrawOne(c, D.z, zx, zy + ln * H * 0.3, zs * (1 + ln * 0.9), t * 3, true);
+    } else scvZDrawOne(c, D.z, zx, zy, zs, t, true);
+    const bob = Math.sin(now / 260) * H * 0.01, pr = D.res === "win" ? Math.max(0, Math.sin(Math.min(1, rk / 0.35) * Math.PI)) : 0, pl = D.res === "win" ? Math.max(0, Math.sin(Math.min(1, Math.max(0, rk - 0.35) / 0.35) * Math.PI)) : 0;
+    const arm = (side, punch) => {
+      const bx2 = W / 2 + side * W * 0.27, by = H + H * 0.05, tx = W / 2 + side * W * (0.13 - punch * 0.1), ty = H * 0.8 - punch * H * 0.22 + bob;
+      c.save();
+      c.lineCap = "round";
+      c.strokeStyle = "#B8A47A";
+      c.lineWidth = H * 0.11 * (1 - punch * 0.25);
+      c.beginPath();
+      c.moveTo(bx2, by);
+      c.lineTo(tx, ty);
+      c.stroke();
+      c.strokeStyle = "rgba(90,80,50,.4)";
+      c.lineWidth = H * 0.02;
+      c.beginPath();
+      c.moveTo(bx2 - side * 10, by);
+      c.lineTo(tx - side * 6, ty + 6);
+      c.stroke();
+      const fr = H * 0.06 * (1 - punch * 0.2);
+      c.fillStyle = "#E0AC7E";
+      c.strokeStyle = "#1A1530";
+      c.lineWidth = 3;
+      c.beginPath();
+      c.arc(tx, ty, fr, 0, 7);
+      c.fill();
+      c.stroke();
+      c.lineWidth = 2;
+      for (let k = -1; k <= 1; k++) {
+        c.beginPath();
+        c.moveTo(tx - fr * 0.6, ty + k * fr * 0.35);
+        c.lineTo(tx + fr * 0.2, ty + k * fr * 0.35);
+        c.stroke();
+      }
+      c.restore();
+    };
+    arm(-1, pl);
+    arm(1, pr);
+    if (D.res === "win" && rk > 0.2 && rk < 1.2) scvText(c, rk < 0.7 ? "\u{1F4A5} \xA1PUM!" : "\u{1F4A5} \xA1K.O.!", W / 2, vy - H * 0.02, 54 * U, "#FFD21A");
+    if (D.res === "lose") {
+      c.fillStyle = `rgba(200,0,0,${Math.min(0.6, rk * 0.8)})`;
+      c.fillRect(0, 0, W, H);
+      if (rk > 0.4) scvText(c, "\u{1FA78} \xA1TE MORDI\xD3!", W / 2, H * 0.55, 60 * U, "#fff");
+    }
+    const hb = Math.pow(Math.max(0, Math.sin(now / 380)), 8);
+    const vg = c.createRadialGradient(W / 2, H * 0.55, H * 0.25, W / 2, H * 0.55, H * 0.9);
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(1, `rgba(120,0,0,${0.45 + hb * 0.3})`);
+    c.fillStyle = vg;
+    c.fillRect(0, 0, W, H);
+    if (game.phase === "q" && hb > 0.9 && !D.hbT) {
+      D.hbT = 1;
+      try {
+        beep(55, 0.12);
+      } catch (e) {
+      }
+    }
+    if (hb < 0.5) D.hbT = 0;
+    if (!D.gT || now > D.gT) {
+      scvGroan(0.45);
+      D.gT = now + scvR(1200, 2600);
+    }
+    const nm = s0 ? scLabel(s0) : "#" + D.no;
+    scvText(c, `\u2694\uFE0F DUELO: ${nm} vs ZOMBI`, W / 2, cb + 24 * U, 26 * U, "#FFD21A");
+    if (!D.res) scvText(c, `Solo ${nm} contesta`, W / 2, cb + 52 * U, 16 * U, "#fff");
+    if (s0) {
+      c.save();
+      c.translate(70 * U, cb + 70 * U);
+      scvAvSide(c, s0, 0, 40 * U, 60 * U, t, false);
+      c.restore();
+    }
+  }
   function scvZReveal(S, hits, miss, answered, joke, q) {
+    if (S.duel && S.duel.qi === sc.qi && !S.duel.res) {
+      const win0 = new Set((joke === "all" ? sc.students : joke === "none" ? [] : hits).map((s) => s.no));
+      scvZDuelResolve(S, win0);
+      return;
+    }
     const W = $("#scRace").clientWidth, H = $("#scRace").clientHeight, top = scRoadTop(H), U = scvU(W, H), L = scvZLayout(W, H, top, U), now = performance.now(), cor = q ? scCorrect(q) : -1;
     const win = new Set((joke === "all" ? sc.students : joke === "none" ? [] : hits).map((s) => s.no));
     const losers = sc.students.filter((s) => !win.has(s.no) && S.out[s.no] == null);
@@ -29491,6 +29684,15 @@ onmessage = function(e){ var m = e.data, out = [];
         c.lineTo(x, y);
         c.stroke();
         c.lineCap = "butt";
+        const hr = (sh.w === "pistol" ? 2.2 : 3) * U * wv;
+        c.fillStyle = "rgba(255,240,180,.55)";
+        c.beginPath();
+        c.arc(x, y, hr * 2.2, 0, 7);
+        c.fill();
+        c.fillStyle = "#FFFFFF";
+        c.beginPath();
+        c.arc(x, y, hr, 0, 7);
+        c.fill();
       }
       if (sh.t === 1) {
         if (rk) scvSnd("shot");
@@ -29530,11 +29732,23 @@ onmessage = function(e){ var m = e.data, out = [];
           });
         } else {
           for (let q = 0; q < 3; q++) S.fx.push({ x: sh.x1, y: sh.y1, vx: -Math.cos(ang) * scvR(1, 3) + scvR(-1, 1), vy: scvR(-2.5, 0.5), t: 10, col: q ? "#FFE08A" : "#FFFFFF" });
+          if (!sh.fake) for (let q = 0; q < 4; q++) S.fx.push({ x: sh.x1, y: sh.y1, vx: Math.cos(ang) * scvR(1.5, 4) + scvR(-0.8, 0.8), vy: scvR(-2, 1), t: 6, col: q % 2 ? "#8A1C1C" : "#C0392B" });
+          (S.hitR = S.hitR || []).push({ x: sh.x1, y: sh.y1, t: 0 });
           if (!sh.fake && sh.z && !sh.z.dead) scvZHit(S, sh.z, sh.kind === "head" ? 3 : 1, sh.kind === "head", sh.x1, sh.y1);
         }
       }
       return sh.t < dur + 2;
     });
+    (S.hitR || []).forEach((r) => {
+      r.t++;
+      c.strokeStyle = `rgba(255,255,255,${Math.max(0, 1 - r.t / 8)})`;
+      c.lineWidth = 2;
+      c.beginPath();
+      c.arc(r.x, r.y, (3 + r.t * 1.6) * U, 0, 7);
+      c.stroke();
+    });
+    S.hitR = (S.hitR || []).filter((r) => r.t < 8);
+    if (S.hitR.length > 80) S.hitR.splice(0, S.hitR.length - 80);
     if (S.shots.length > 360) S.shots.splice(0, S.shots.length - 360);
   }
   function scvZFx(c, S, U) {
@@ -29619,6 +29833,16 @@ onmessage = function(e){ var m = e.data, out = [];
     c.restore();
   }
   function scvZLDraw(c, W, H, t, U, top, S) {
+    if (S.duel && !S.duel.end && S.duel.qi === sc.qi && (game.phase === "q" || game.phase === "reveal")) {
+      try {
+        scvZDuelDraw(c, W, H, t, U, S);
+        scvZAudio(S, false, 5, 0);
+      } catch (e) {
+        console.log(e);
+        S.duel.end = true;
+      }
+      return;
+    }
     {
       const nw = performance.now();
       S.dtf = Math.min(3, Math.max(0.3, (nw - (S.lastNow || nw - 16.7)) / 16.7));
@@ -29701,7 +29925,7 @@ onmessage = function(e){ var m = e.data, out = [];
       for (let k = 0; k < 2; k++) {
         const li = (S.rr + k * Math.ceil(L0.length / 2)) % Math.max(1, L0.length), s0 = L0[li];
         if (!s0 || S.out[s0.no] != null) continue;
-        const m0 = S.miss && S.miss[s0.no] || 0, tgt = Math.min(9, 2 + Math.round(m0 * 1.5) + (brutal ? 2 : 0) + (S.wt === "horda" ? 2 : 0));
+        const m0 = S.miss && S.miss[s0.no] || 0, tgt = Math.min(11, 4 + Math.round(m0 * 1.5) + (brutal ? 3 : 0) + (S.wt === "horda" ? 3 : 0));
         if ((S.lnN[s0.no] || 0) < tgt && tkxEvery(S, 3, "ln" + li)) {
           const n0 = S.zs.length;
           scvSpawnZ(S, scvR(1, 1.15));
