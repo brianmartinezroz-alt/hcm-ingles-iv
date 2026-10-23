@@ -30478,8 +30478,9 @@ onmessage = function(e){ var m = e.data, out = [];
           c.beginPath();
           c.arc(-cr * 1.15, -size * 1.35, Math.max(4, size * 0.14), 0, 7);
           c.fill();
-          if (ac < 0.85 && J.tx != null) {
-            scvText(c, J.tx < 0.5 ? "\u2B05" : "\u27A1", J.tx < 0.5 ? -cr * 1.6 : cr * 1.6, -size * 0.9, Math.max(12, size * 0.4), colA, "center");
+          if (J.tx != null && Math.abs(J.x - 0.5) > 0.02) {
+            const toC = J.tx === 0.5, right = toC ? J.x < 0.5 : J.x >= 0.5;
+            scvText(c, right ? "\u27A1" : "\u2B05", right ? cr * 1.6 : -cr * 1.6, -size * 0.9, Math.max(12, size * 0.4), toC ? "#3FBF4F" : "#FF4F6D", "center");
           }
         }
         c.strokeStyle = "rgba(26,21,48,.6)";
@@ -31109,7 +31110,10 @@ onmessage = function(e){ var m = e.data, out = [];
     }
   }
   function scvPJ(S, s) {
-    if (!S.j[s.no]) S.j[s.no] = { x: 0.5 + scvR(-0.03, 0.03), vx: 0, sw: Math.random() * 9, land: null, cx: null };
+    if (!S.j[s.no]) {
+      const side = Object.keys(S.j).length % 2 ? 1 : -1;
+      S.j[s.no] = { x: 0.5 + side * scvR(0.4, 0.46), side, vx: 0, sw: Math.random() * 9, land: null, cx: null };
+    }
     return S.j[s.no];
   }
   const SCV_TARGET = 0.5;
@@ -31131,12 +31135,13 @@ onmessage = function(e){ var m = e.data, out = [];
       if (win.has(s.no)) S.pc[s.no] = (S.pc[s.no] || 0) + 1;
       const acc = (S.pc[s.no] || 0) / (qi + 1);
       J.acc = acc;
-      if (J.side == null) J.side = Math.random() < 0.5 ? -1 : 1;
-      const offC = acc >= 0.85 ? 0 : acc >= 0.7 ? 2.1 : acc >= 0.5 ? 3.4 + (0.7 - acc) * 6 : 5.2 + (0.5 - acc) * 4, tgtX = Math.max(0.03, Math.min(0.97, (7.5 + J.side * offC) / 15));
-      if (!(J.shield && !win.has(s.no))) J.tx = tgtX;
+      if (J.side == null) J.side = J.x < 0.5 ? -1 : 1;
+      const step = 0.44 / Math.max(1, Math.ceil(total * 0.85)), sideNow = J.x < 0.5 ? -1 : 1;
+      J.tx = win.has(s.no) ? 0.5 : 0.5 + sideNow * 0.46;
       if (win.has(s.no)) {
         const st = S.pst[s.no] = (S.pst[s.no] || 0) + 1;
-        J.x += (J.tx - J.x) * (st >= 3 ? 0.85 : 0.6) + scvR(-6e-3, 6e-3);
+        const d0 = Math.abs(J.x - 0.5), mv = Math.min(d0, step * (st >= 3 ? 1.25 : 1));
+        J.x += (J.x < 0.5 ? 1 : -1) * mv + scvR(-3e-3, 3e-3);
         if (st >= 4 && !J.shield && !J.shUsed) {
           J.shield = 1;
           ups.push("\u{1F6E1}\uFE0F");
@@ -31150,7 +31155,7 @@ onmessage = function(e){ var m = e.data, out = [];
         S.pst[s.no] = 0;
       } else {
         S.pst[s.no] = 0;
-        J.x += (J.tx - J.x) * (B.k === "snow" ? 0.85 : 0.65);
+        J.x += sideNow * step * (B.k === "snow" ? 0.5 : 0.25);
         J.spin = now;
         if (B.k === "storm" && !last) {
           J.zapT = now + 600 + Math.random() * 900;
