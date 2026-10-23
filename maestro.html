@@ -443,8 +443,12 @@ window.__HCM_SNAP = {LEC:[null,
 (function(){
 "use strict";
 
-var CLAVE   = 'hcm2026';               // la misma del panel
-var KEY_LS  = 'hcm_maestro_v1';
+/* Aquí ya NO vive ninguna clave. Antes había una escrita en este archivo,
+   y este archivo es público: cualquiera que viera el código fuente entraba.
+   Ahora la única puerta es la clave del servidor (Propiedades del script →
+   CLAVE_MAESTRO), que se revisa del lado del servidor y devuelve un pase
+   firmado. Aquí no hay nada que leer. */
+var KEY_LS  = 'hcm_maestro_v1';   // bandera vieja: solo se borra
 // De aquí se lee el material, para que nunca se desfase de la app.
 // Primero se intenta el index.html de al lado (cuando el panel vive junto a
 // la app); si no está —por ejemplo si se abre suelto— se cae a la copia
@@ -547,17 +551,31 @@ function pintarEntrada(msg){
     '<h2>Panel del docente</h2>' +
     '<p>Colegio Militar · Inglés IV<br>English For All · Speaking</p>' +
     '<div class="campo">' +
-      '<input type="password" id="cl" placeholder="Clave del maestro" style="flex:1" autocomplete="current-password">' +
+      '<input type="password" id="cl" placeholder="Clave del servidor" style="flex:1" autocomplete="current-password">' +
       '<button class="bt" id="ok">Entrar</button>' +
     '</div>' +
+    '<p class="es" style="margin-top:10px">La clave la revisa el servidor, no este archivo. ' +
+    'Es la de <b>Propiedades del script &rarr; CLAVE_MAESTRO</b>.</p>' +
     (msg ? '<p class="err">' + esc(msg) + '</p>' : '') +
     '</div>';
   var inp = document.getElementById('cl');
   function probar(){
-    if(inp.value === CLAVE){
-      try{ localStorage.setItem(KEY_LS, '1'); }catch(e){}
-      arrancar();
-    } else pintarEntrada('Clave incorrecta.');
+    var v = String(inp.value || '').trim();
+    if(!v) return;
+    var bt = document.getElementById('ok');
+    bt.textContent = 'Revisando…'; bt.disabled = true; inp.disabled = true;
+    // La clave no se compara aquí: se manda al servidor, que es el único que
+    // la conoce, y si es la buena devuelve un pase firmado.
+    (DATOS ? Promise.resolve(true) : cargarMaterial())
+      .then(function(){
+        if(!DATOS) throw new Error('La app no trae la liga del servidor de datos.');
+        return pedirHCM_({accion:'entrar', clave:v});
+      })
+      .then(function(d){
+        if(d && d.ok && d.pase){ guardarPaseHCM_(d.pase); arrancar(); }
+        else pintarEntrada((d && d.mensaje) || 'Esa no es la clave.');
+      })
+      .catch(function(e){ pintarEntrada(e && e.message ? e.message : 'Sin conexión con el servidor.'); });
   }
   document.getElementById('ok').onclick = probar;
   inp.onkeydown = function(e){ if(e.key === 'Enter') probar(); };
@@ -612,6 +630,8 @@ function pintar(){
 function ligarComunes(){
   document.getElementById('salir').onclick = function(){
     try{ localStorage.removeItem(KEY_LS); }catch(e){}
+    tirarPaseHCM_();              // se va el pase: sin él no se vuelve a entrar
+    panel = null; panelError = '';
     pintarEntrada();
   };
   RAIZ.querySelectorAll('.escuelas button').forEach(function(b){
@@ -881,12 +901,29 @@ function otrosDatosPerfil_(pf){
    tarjeta de ese cadete sale hasta arriba, marcada.                          */
 var VIVO_T = null, VIVO_VISTOS = {};
 
+/* ── el pase firmado: es la única llave del panel ──
+   Vive en localStorage para que no haya que teclear la clave en cada
+   pestaña, y se vence solo a las once horas: alcanza para una jornada
+   y no se queda abierto de un día para otro. */
+var PASE_LS = 'hcm_pase';
 function paseHCM_(){
   try{
-    var p = JSON.parse(sessionStorage.getItem('hcm_pase') || 'null');
+    var p = JSON.parse(localStorage.getItem(PASE_LS) || 'null');
     if(p && p.v && p.hasta > Date.now()) return p.v;
+    if(p) localStorage.removeItem(PASE_LS);
+  }catch(e){}
+  try{   // compatibilidad con la versión anterior, que lo guardaba por pestaña
+    var q = JSON.parse(sessionStorage.getItem(PASE_LS) || 'null');
+    if(q && q.v && q.hasta > Date.now()) return q.v;
   }catch(e){}
   return '';
+}
+function guardarPaseHCM_(v){
+  try{ localStorage.setItem(PASE_LS, JSON.stringify({v:v, hasta:Date.now() + 11 * 3600e3})); }catch(e){}
+}
+function tirarPaseHCM_(){
+  try{ localStorage.removeItem(PASE_LS); }catch(e){}
+  try{ sessionStorage.removeItem(PASE_LS); }catch(e){}
 }
 function pedirHCM_(cuerpo){
   return fetch(DATOS, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
@@ -1024,15 +1061,10 @@ function pintarGrupos(c){
   var GRUPOS6 = ['301','302','303','304','305','306'];
   var NIV = {bajo:'Básico', medio:'Intermedio', alto:'Avanzado'};
   var PAR = {P1:'Primer parcial', P2:'Segundo parcial', CF:'Curso completo'};
-  function pase(){
-    try{
-      var p = JSON.parse(sessionStorage.getItem('hcm_pase') || 'null');
-      if(p && p.v && p.hasta > Date.now()) return p.v;
-    }catch(e){}
-    return '';
-  }
-  function guardaPase(v){ try{ sessionStorage.setItem('hcm_pase', JSON.stringify({v:v, hasta:Date.now() + 11 * 3600e3})); }catch(e){} }
-  function tiraPase(){ try{ sessionStorage.removeItem('hcm_pase'); }catch(e){} }
+  // el mismo pase de la entrada; ya no hay una segunda clave
+  function pase(){ return paseHCM_(); }
+  function guardaPase(v){ guardarPaseHCM_(v); }
+  function tiraPase(){ tirarPaseHCM_(); }
   function pedir(cuerpo){
     return fetch(DATOS, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(cuerpo)})
       .then(function(r){ return r.ok ? r.json() : null; });
@@ -1060,8 +1092,8 @@ function pintarGrupos(c){
   if(!pase()){
     c.innerHTML = '<div class="entrada" style="margin:4vh auto">' +
       '<h2>Avance de los cadetes</h2>' +
-      '<p>Esta parte lee la hoja de calificaciones, así que pide la clave del servidor ' +
-      '(la de <b>Propiedades del script → CLAVE_MAESTRO</b>). No es la misma que la de este panel.</p>' +
+      '<p>El pase se venció. Vuelve a poner la clave del servidor ' +
+      '(la de <b>Propiedades del script → CLAVE_MAESTRO</b>), que es la misma con la que entraste.</p>' +
       '<div class="campo"><input type="password" id="clsrv" placeholder="Clave del servidor" style="flex:1" autocomplete="current-password">' +
       '<button class="bt" id="oksrv">Entrar</button></div>' +
       (panelError ? '<p class="err">' + esc(panelError) + '</p>' : '') + '</div>';
@@ -1304,9 +1336,10 @@ function arrancar(){
     });
 }
 
-var entrado = false;
-try{ entrado = localStorage.getItem(KEY_LS) === '1'; }catch(e){}
-entrado ? arrancar() : pintarEntrada();
+// Se entra solo con un pase vivo. La bandera vieja de localStorage ya no
+// abre nada: si quedó de la versión anterior, se borra.
+try{ if(localStorage.getItem(KEY_LS)) localStorage.removeItem(KEY_LS); }catch(e){}
+paseHCM_() ? arrancar() : pintarEntrada();
 })();
 </script>
 <!-- AVISO_VERSION_NUEVA: avisa cuando hay una versión publicada más nueva que la que está abierta -->
