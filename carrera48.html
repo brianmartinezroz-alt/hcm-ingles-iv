@@ -21269,7 +21269,7 @@ onmessage = function(e){ var m = e.data, out = [];
         const p = JSON.parse(localStorage.getItem("carrera48.scan") || "null");
         if (p) {
           cfg.scanN = cfg.scanN || p.n;
-          cfg.scanCards = cfg.scanCards || p.k;
+          cfg.scanCards = "tr";
           if (cfg.scanQn == null) cfg.scanQn = p.qn;
         }
       }
@@ -21284,7 +21284,7 @@ onmessage = function(e){ var m = e.data, out = [];
     }
     const ok = scQuestions(base.set).map((o) => o.i), ord = order.filter((i) => ok.includes(i));
     game = __spreadProps(__spreadValues({}, base), { mode: "scan", order: ord, qPtr: 0, phase: "lobby", over: false });
-    sc = { n: 0, kind: cfg.scanCards || "wg", qi: -1, pickv: {}, vpage: 0, cam: null, answers: {}, students: [], msg: "", secs: 0, pool: [], done: 0, pop: "big", popT: 0, toastT: 0 };
+    sc = { n: 0, kind: "tr", qi: -1, pickv: {}, vpage: 0, cam: null, answers: {}, students: [], msg: "", secs: 0, pool: [], done: 0, pop: "big", popT: 0, toastT: 0 };
   }
   function scBuildStudents() {
     sc.students = Array.from({ length: sc.n }, (_, k) => ({ no: k + 1, pts: 0, shown: 0, y: null, streak: 0, spin: 0, boost: 0, hue: k * 137.5 % 360, ans: [] }));
@@ -21337,7 +21337,7 @@ onmessage = function(e){ var m = e.data, out = [];
     $("#scPrintB").hidden = k !== "tr";
   }
   function scStart() {
-    sc.kind = $("#scKind").value;
+    sc.kind = "tr"; try { $("#scKind").value = "tr"; } catch (e) { }
     cfg.scanCards = sc.kind;
     if (!game.order.length) {
       alert("Este set no tiene preguntas de opci\xF3n m\xFAltiple.");
