@@ -26472,6 +26472,12 @@ onmessage = function(e){ var m = e.data, out = [];
         if (S.wave >= S.out[no] + 2) {
           delete S.out[no];
           S.para[no] = now;
+          if (S.hold) S.hold[no] = 0.25;
+          if (S.melee) S.melee[no] = 0;
+          if (S.wst) S.wst[no] = 0;
+          S.zs.forEach((z) => {
+            if (!z.dead && z.lane == no && z.fx < 0.25) z.push = 0.03;
+          });
         }
       });
       Object.keys(S.wpn).forEach((no) => {
@@ -27322,19 +27328,51 @@ onmessage = function(e){ var m = e.data, out = [];
     if (S.lane2d) {
       S.hold = S.hold || {};
       S.strk = S.strk || {};
+      S.wst = S.wst || {};
+      S.melee = S.melee || {};
       sc.students.forEach((s) => {
-        const h = S.hold[s.no] != null ? S.hold[s.no] : 0.5;
+        if (S.out[s.no] != null) return;
         if (win.has(s.no)) {
-          S.hold[s.no] = Math.min(0.55, h + 0.12);
+          S.hold[s.no] = 0.25;
+          S.wst[s.no] = 0;
+          S.melee[s.no] = 0;
+          S.zs.forEach((z) => {
+            if (!z.dead && z.lane == s.no && z.fx < 0.25) z.push = 0.025;
+          });
           S.strk[s.no] = (S.strk[s.no] || 0) + 1;
           if (S.strk[s.no] % 2 === 0) setTimeout(() => {
             if (sc && sc.vs === S) scvZLanePU(S, s.no);
           }, 1400 + Math.random() * 800);
         } else {
-          S.hold[s.no] = Math.max(0, h - 0.13);
           S.strk[s.no] = 0;
+          S.wst[s.no] = (S.wst[s.no] || 0) + 1;
+          S.hold[s.no] = 0;
+          if (S.wst[s.no] === 1) {
+            S.melee[s.no] = performance.now();
+          } else {
+            S.melee[s.no] = 0;
+            S.wst[s.no] = 0;
+            const no = s.no;
+            setTimeout(() => {
+              if (!sc || sc.vs !== S) return;
+              const z = { kind: Math.random() < 0.3 ? "cad" : "n", sh: Math.floor(Math.random() * 4), hb: 1, ph: Math.random() * 9, sp: 2, ly: 0.5 };
+              (S.grab = S.grab || []).push({ no, t0: performance.now(), z });
+            }, 1300 + Math.random() * 600);
+            S.dead2 = (S.dead2 || []).concat([s.no]);
+          }
         }
       });
+      if ((S.dead2 || []).length) {
+        const L2 = S.dead2.slice();
+        S.dead2 = [];
+        setTimeout(() => {
+          if (sc && sc.vs === S) scvBig(`\u{1F480} \xA1SE COMIERON A ${L2.length}!`, `${L2.length > 8 ? L2.length + " cadetes" : "#" + L2.join(", #")} fallaron 2 seguidas \xB7 regresan en 1 turno`, "#FF6B85", 2600);
+        }, 2900);
+      }
+      const mel = sc.students.filter((s) => S.melee[s.no]).map((s) => s.no);
+      if (mel.length) setTimeout(() => {
+        if (sc && sc.vs === S) scvFloat(W * 0.5, H * 0.55, mel.length > 6 ? `\u{1F44A} \xA1${mel.length} cadetes a cuerpo a cuerpo!` : `\u{1F44A} \xA1Cuerpo a cuerpo! #${mel.join(", #")}`, "#FFB400", 22, 90);
+      }, 1700);
     }
     sc.students.forEach((s) => {
       const W0 = S.wpn[s.no] = S.wpn[s.no] || { k: "fx", cs: 0, ws: 0, until: 0 };
@@ -27359,10 +27397,11 @@ onmessage = function(e){ var m = e.data, out = [];
     });
     if ((S.newB || []).length) scvBig("\u{1F680} \xA1BAZUCA POR 2 RONDAS!", "Racha de 3 aciertos: #" + S.newB.join(", #"), "#FFD21A", 2200);
     S.newB = [];
-    if ((S.newP || []).length) setTimeout(() => {
+    if ((S.newP || []).length && !S.lane2d) setTimeout(() => {
       if (sc && sc.vs === S) scvFloat(W * 0.5, L.gnd + 70 * U, `\u{1F52B} ${S.newP.length} bajan a pistola`, "#FF6B85", 18, 80);
       S.newP = [];
     }, 600);
+    if (S.lane2d) S.newP = [];
     const near = S.zs.filter((z) => !z.dead).sort((a, b) => a.fx - b.fx);
     let k = 0;
     sc.students.forEach((s) => {
@@ -27376,7 +27415,7 @@ onmessage = function(e){ var m = e.data, out = [];
       }
     });
     S.surge = Math.min(240, losers.length * 6);
-    let capMax = Math.max(1, Math.round(sc.students.length * 0.2)), caught = [];
+    let capMax = S.lane2d ? 0 : Math.max(1, Math.round(sc.students.length * 0.2)), caught = [];
     losers.slice().sort(() => Math.random() - 0.5).forEach((s, i) => {
       const ws = (S.wpn[s.no] || {}).ws || 1, p = S.pos[s.no];
       if (!p || caught.length >= capMax) return;
@@ -27898,7 +27937,7 @@ onmessage = function(e){ var m = e.data, out = [];
       const w = (S.wpn[s.no] || {}).k || "fx", p = (w === "bazooka" ? 0.45 : w === "pistol" ? 0.6 : 1) / 190 * (S.dtf || 1);
       if (Math.random() < p) {
         const mine = S.pov ? near.filter((z) => z.lane == s.no && z.fx < 1.02) : [];
-        if (S.lane2d && !mine.length) return;
+        if (S.lane2d && (!mine.length || S.melee && S.melee[s.no])) return;
         const tz = S.lane2d ? mine[0] : mine.length && Math.random() < 0.8 ? mine[0] : near[Math.floor(Math.random() * Math.min(14, near.length))];
         scvZFire(S, s.no, tz, Math.random() < 0.25 ? "head" : "body", W, H, U, L, 0);
       }
@@ -29546,7 +29585,7 @@ onmessage = function(e){ var m = e.data, out = [];
         z.dead += 1 / 60;
         return;
       }
-      const hl = z.lane != null && S.hold[z.lane] != null ? S.hold[z.lane] : 0.5, stop = Math.max(0.02, hl) + z.ph * 13 % 1 * 0.06;
+      const hl = z.lane != null && S.hold[z.lane] != null ? S.hold[z.lane] : 0.25, stop = Math.max(0.02, hl) + z.ph * 13 % 1 * 0.06;
       if (z.fx > stop) z.fx -= z.sp * 9e-4 * S.dtf * wave.mult * fast * (z.fx > 1 ? 2 : 1);
       else if (z.fx < stop - 0.08) z.fx += 4e-3 * S.dtf;
       if (z.push) {
@@ -29664,7 +29703,24 @@ onmessage = function(e){ var m = e.data, out = [];
         }
       }
       const hurtK = S.hurt2 && S.hurt2[s.no] ? Math.max(0, 1 - (now - S.hurt2[s.no]) / 400) : 0, rec = S.rec && S.rec[s.no] ? Math.max(0, 1 - Math.abs(now - S.rec[s.no]) / 140) : 0;
-      const xx = x - dir * rec * 4 * U + (hurtK ? scvR(-4, 4) * hurtK : 0);
+      const mel = S.melee && S.melee[s.no] && S.out[s.no] == null, mk = mel ? Math.sin(now / 90 + li) : 0, xx = x - dir * rec * 4 * U + (hurtK ? scvR(-4, 4) * hurtK : 0) + (mel ? csz * 0.35 + mk * csz * 0.12 : 0);
+      if (mel) {
+        const ff = Math.floor(now / 180 + li) % 2;
+        scvText(c, ff ? "\u{1F44A}" : "\u{1F9B6}", xx + csz * 0.75, y - csz * 0.6 + mk * csz * 0.1, Math.max(12, csz * 0.45), "#fff", "center", false);
+        if (ff && Math.floor(now / 90) % 4 === 0) {
+          c.fillStyle = "rgba(255,230,120,.9)";
+          c.beginPath();
+          c.arc(xx + csz * 1, y - csz * 0.6, csz * 0.18, 0, 7);
+          c.fill();
+        }
+        if (tkxEvery(S, 40, "mel" + s.no)) {
+          const z = S.zs.filter((z2) => !z2.dead && z2.lane == s.no && z2.fx < 0.15).sort((a, b) => a.fx - b.fx)[0];
+          if (z && Math.random() < 0.5) scvZHit(S, z, 1, false);
+          else {
+            (S.hurt2 = S.hurt2 || {})[s.no] = now;
+          }
+        }
+      }
       scvAvSide(c, s, xx, y, csz, t * 0.3 + li, mir);
       c.save();
       if (mir) {
@@ -29809,7 +29865,7 @@ onmessage = function(e){ var m = e.data, out = [];
     scRR(c, hx - bw2 / 2, hy0 + 24 * U, bw2 * hp, 16 * U, 6);
     c.fill();
     scvText(c, `\u{1F9F1} BARRICADA ${Math.round(hp * 100)}%`, hx, hy0 + 33 * U, 11 * U, "#fff");
-    scvText(c, `${wave.name.replace(/[¡!]/g, "").slice(0, 26)} \xB7 \u{1F9DF} ${live.length} \xB7 \u{1F480} ${S.kills}`, hx, hy0 + 12 * U, 12 * U, wave.col);
+    scvText(c, `${wave.name.replace(/[¡!]/g, "").slice(0, 30)}`, hx, hy0 + 12 * U, 12 * U, wave.col);
     {
       const seg = 8, sw = bw2 / seg, py2 = hy0 + 52 * U;
       let nextBig = -1;
@@ -30070,9 +30126,16 @@ onmessage = function(e){ var m = e.data, out = [];
       c.fillRect(x - 9 * U, gy - 19 * U, 6 * U, 4 * U);
       c.fillRect(x - 9 * U, gy - 26 * U, 3 * U, 9 * U);
     });
-    [[2, 1], [11, -1]].forEach(([c0, dir], k) => {
-      const span2 = 2 * cw, ph = (t * 0.25 + k * 0.5) % 1, y = gy + (H - gy) * 0.45, x = PP(c0 * cw + (dir > 0 ? ph : 1 - ph) * span2, y), w = cw * 0.3, truck = k === 1;
-      scvCarTop(c, x, y, w, truck, dir);
+    [[2.5, 0], [3.5, 0], [11.5, 1], [12.5, 1]].forEach(([lc, truck], k) => {
+      for (let v = 0; v < 3; v++) {
+        const ph = (t * (truck ? 0.07 : 0.1) + v / 3 + k * 0.17) % 1, y = H - ph * (H - gy), dpt = (y - gy) / Math.max(1, H - gy), x = PP(lc * cw, y), w = cw * 0.42 * (0.3 + 0.7 * dpt), a = Math.min(1, ph * 5, (1 - ph) * 4);
+        if (y > gy + 4) {
+          c.save();
+          c.globalAlpha = a;
+          scvCarTop(c, x, y, w, !!truck, 1);
+          c.restore();
+        }
+      }
     });
     [["\u{1F333} \xC1RBOLES", 1], ["\u{1F697} CARRETERA", 3], ["\u26A1 CABLES", 4.5], ["\u{1F3AF} ZONA CORRECTA", 7.5], ["\u{1F335} NOPALES", 10.5], ["\u{1F69A} CAMIONES", 12], ["\u{1F4A6} LAGO", 14]].forEach(([L, ci]) => scvText(c, L, Math.max(55 * U, Math.min(W - 55 * U, PP(ci * cw, gy + 16 * U))), gy + 16 * U, 12 * U, ci === 7.5 ? "#FFD21A" : "#fff"));
     if (!S.landed) {
