@@ -23041,6 +23041,17 @@ onmessage = function(e){ var m = e.data, out = [];
     setTimeout(() => beep(780, 0.1), 90);
   }
   const SC_READ = 15, SC_ANS = 15;
+  try {
+    if (/[?&]debug/.test(location.search)) window.__scCor = () => {
+      try {
+        const q = scQ(), o = scOpts(q), c = scCorrect(q);
+        return c;
+      } catch (e) {
+        return -1;
+      }
+    };
+  } catch (e) {
+  }
   function scLockOn() {
     return !!(sc && !window.SC48 && typeof scvOn === "function" && scvOn() && (sc.v === "zpov" || sc.v === "para"));
   }
@@ -27278,6 +27289,21 @@ onmessage = function(e){ var m = e.data, out = [];
     if (k === "turret") S.turretUntil = now + 22e3;
     if (k === "reinf") scvZReinforce(S);
   }
+  function scvZHeli(S) {
+    S.heli = { t0: performance.now() };
+    scvSnd("siren");
+    scvBig("\u{1F681} \xA1APOYO A\xC9REO!", "Todo el grupo contest\xF3 bien: el helic\xF3ptero bombardea todas las l\xEDneas", "#FFD21A", 2600);
+    for (let i = 0; i < 10; i++) setTimeout(() => {
+      if (!sc || sc.vs !== S || !S.proj) return;
+      const nn = Math.max(1, sc.students.length), li = Math.floor(Math.random() * nn), fx = scvR(0.15, 0.8), q = S.proj(fx, li);
+      scvSnd("boom");
+      (S.booms = S.booms || []).push({ x: q.x, y: q.y - q.sz * 0.3, t: 0, big: 1, r: q.sz * 1.3 });
+      S.flash = 0.2;
+      S.zs.forEach((z) => {
+        if (!z.dead && z.fx < 1.02 && Math.abs(z.fx - fx) < 0.2 && Math.abs((z.ly || 0) - li) <= 3) scvZHit(S, z, 4, false);
+      });
+    }, 900 + i * 260);
+  }
   const SCV_LPU = [["flame", "\u{1F525}", "Lanzallamas"], ["grenade", "\u{1F4A3}", "Granada"], ["wall", "\u{1F9F1}", "Barricada"], ["turret", "\u{1F916}", "Torreta"]];
   function scvZLanePU(S, no) {
     const pu = SCV_LPU[Math.floor(Math.random() * SCV_LPU.length)], now = performance.now();
@@ -27340,6 +27366,12 @@ onmessage = function(e){ var m = e.data, out = [];
             if (!z.dead && z.lane == s.no && z.fx < 0.25) z.push = 0.025;
           });
           S.strk[s.no] = (S.strk[s.no] || 0) + 1;
+          if (S.strk[s.no] === 5 || S.strk[s.no] === 9) {
+            (S.rambo = S.rambo || {})[s.no] = performance.now() + 14e3;
+            setTimeout(() => {
+              if (sc && sc.vs === S) scvFloat(W * 0.3, H * 0.5, `\u{1F4AA} #${s.no} \xA1MODO RAMBO!`, "#FFD21A", 26, 100);
+            }, 1500);
+          }
           if (S.strk[s.no] % 2 === 0) setTimeout(() => {
             if (sc && sc.vs === S) scvZLanePU(S, s.no);
           }, 1400 + Math.random() * 800);
@@ -27444,6 +27476,9 @@ onmessage = function(e){ var m = e.data, out = [];
     if (ratio >= 0.6 && !S.lane2d) setTimeout(() => {
       if (sc && sc.vs === S) scvZPowerUp(S);
     }, 1600);
+    if (S.lane2d && ratio >= 0.8) setTimeout(() => {
+      if (sc && sc.vs === S) scvZHeli(S);
+    }, 1800);
     else if (ratio < 0.4) setTimeout(() => {
       if (sc && sc.vs === S) scvZPotros(S);
     }, 1600);
@@ -29312,7 +29347,7 @@ onmessage = function(e){ var m = e.data, out = [];
       if (sh.t < 0) return true;
       const rk = sh.kind === "rocket", dur = rk ? 18 : 6, k = Math.min(1, sh.t / dur), x = sh.x0 + (sh.x1 - sh.x0) * k, y = sh.y0 + (sh.y1 - sh.y0) * k, ang = Math.atan2(sh.y1 - sh.y0, sh.x1 - sh.x0), wv = S.pov && !S.lane2d ? 2.2 - k * 1.6 : 1;
       if (rk) {
-        for (let q = 0; q < 2; q++) S.fx.push({ x: x - Math.cos(ang) * 14 * U, y: y - Math.sin(ang) * 14 * U, vx: scvR(-0.6, 0.6), vy: scvR(-0.8, 0.1), t: 12, col: "rgba(210,210,220,.55)", smoke: 1 });
+        if (sh.t % 2 === 0) S.fx.push({ x: x - Math.cos(ang) * 14 * U, y: y - Math.sin(ang) * 14 * U, vx: scvR(-0.4, 0.4), vy: scvR(-0.6, 0.1), t: 20, col: "rgba(210,210,220,.45)", smoke: 1 });
         c.save();
         c.translate(x, y);
         const sc0 = Math.max(0.55, (S.lane2d ? 1 : 1.3) * U);
@@ -29415,7 +29450,7 @@ onmessage = function(e){ var m = e.data, out = [];
         c.restore();
       } else {
         c.beginPath();
-        c.arc(p.x, p.y, (p.smoke ? 10 : 4) * U, 0, 7);
+        c.arc(p.x, p.y, (p.smoke ? S.lane2d ? 4 + p.t * 0.15 : 10 : S.lane2d ? 2.5 : 4) * U, 0, 7);
         c.fill();
       }
       c.globalAlpha = 1;
@@ -29674,6 +29709,10 @@ onmessage = function(e){ var m = e.data, out = [];
     sc.students.forEach((s, li) => {
       const R = scvZLRow(G, li), mir = false, x = G.xL + csz * 0.3 + li % 2 * csz * 0.6, dir = 1;
       let y = R.y;
+      {
+        const sk = S.strk && S.strk[s.no] || 0;
+        if (sk >= 2 && S.out[s.no] == null) scvText(c, `\u{1F525}${sk}`, G.xL - 2, y - Math.min(G.lh * 0.3, 8), Math.max(9, Math.min(G.lh * 0.7, 18 * U)), "#FF9F43", "right");
+      }
       scvText(c, `${s.no}`, W * 0.02, y - Math.min(G.lh * 0.3, 8), Math.max(12, Math.min(G.lh * 0.95, 30 * U)), S.out[s.no] != null ? "#FF6B85" : "#FFD21A", "center");
       const grabbed = (S.grab || []).some((G2) => G2.no === s.no && G2.done);
       if (S.out[s.no] != null || grabbed) {
@@ -29732,6 +29771,20 @@ onmessage = function(e){ var m = e.data, out = [];
       c.restore();
       const mx = xx + dir * csz * 0.62, my = y - csz * 0.66;
       S.pos[s.no] = { x: xx, y, size: csz, mx, my, ly: li };
+      if (S.rambo && S.rambo[s.no] > now) {
+        c.strokeStyle = `rgba(255,210,26,${0.5 + Math.sin(now / 80) * 0.3})`;
+        c.lineWidth = 3;
+        c.beginPath();
+        c.arc(xx, y - csz * 0.5, csz * 0.6, 0, 7);
+        c.stroke();
+        if (tkxEvery(S, 3, "rb" + s.no)) {
+          const z = S.zs.filter((z2) => !z2.dead && z2.lane == s.no && z2.fx < 1.02).sort((a, b) => a.fx - b.fx)[0];
+          if (z) {
+            const q = P(z.fx, z.ly);
+            S.shots.push({ x0: mx, y0: my, x1: q.x, y1: q.y - q.sz * 0.6 + scvR(-4, 4), z, t: 0, kind: "body", w: "fx" });
+          }
+        }
+      }
       if (rec > 0.5) {
         c.fillStyle = "rgba(255,230,120,.95)";
         c.beginPath();
@@ -29852,6 +29905,33 @@ onmessage = function(e){ var m = e.data, out = [];
           }
         });
         if (k < 1.5) scvText(c, R2.say, W * 0.4, G.yT + 30 * U, 20 * U, "#FFD21A");
+      }
+    }
+    if (S.heli) {
+      const k = (now - S.heli.t0) / 4200;
+      if (k > 1) S.heli = null;
+      else {
+        const hx2 = -120 + k * (W + 240), hy2 = G.yT + 20 * U + Math.sin(k * 20) * 6;
+        c.save();
+        c.translate(hx2, hy2);
+        c.fillStyle = "#3E4A2E";
+        c.strokeStyle = "#1A1530";
+        c.lineWidth = 2;
+        scRR(c, -45 * U, -14 * U, 90 * U, 28 * U, 14 * U);
+        c.fill();
+        c.stroke();
+        c.fillRect(-95 * U, -5 * U, 55 * U, 8 * U);
+        c.fillStyle = "#BFE3FF";
+        scRR(c, 18 * U, -10 * U, 22 * U, 14 * U, 5 * U);
+        c.fill();
+        c.strokeStyle = "rgba(30,30,30,.7)";
+        c.lineWidth = 4;
+        const ra = now / 30;
+        c.beginPath();
+        c.moveTo(-Math.cos(ra) * 80 * U, -20 * U);
+        c.lineTo(Math.cos(ra) * 80 * U, -20 * U);
+        c.stroke();
+        c.restore();
       }
     }
     scvZShots(c, S, W, H, U, null);
@@ -30155,11 +30235,30 @@ onmessage = function(e){ var m = e.data, out = [];
       const size = Math.min(cw * 0.62, H * 0.062), x = J.cx * W + (i % 6 - 2.5) * cw * 0.45, L = S.landed && J.land, kind = L ? L[3] : null, k = L ? (now - J.landT) / 1e3 : 0;
       if (!L) {
         const rowsH = Math.floor(i / 5) % 3 * size * 0.6 + i % 2 * size * 0.18, y = Math.min(gy - size * 0.25, yTop + rowsH + (1 - S.alt) * Math.max(0, gy - size * 0.5 - yTop - size * 2)), rot = Math.sin(t * 1.6 + J.sw) * 0.12;
+        const stk = S.pst && S.pst[s.no] || 0;
+        if (stk >= 5) {
+          for (let q = 0; q < 5; q++) {
+            c.fillStyle = `hsla(${(q * 70 + t * 120) % 360},90%,60%,${0.5 - q * 0.08})`;
+            c.beginPath();
+            c.arc(x + Math.sin(t * 3 + q) * 4, y - size * 1.2 - (q + 1) * size * 0.35, size * (0.2 + q * 0.05), 0, 7);
+            c.fill();
+          }
+        }
+        if (J.shield) {
+          c.strokeStyle = `rgba(120,200,255,${0.6 + Math.sin(t * 6) * 0.25})`;
+          c.lineWidth = 3;
+          c.beginPath();
+          c.arc(x, y - size * 0.9, size * 1.15, 0, 7);
+          c.stroke();
+        }
+        if (J.shT && now - J.shT < 1500) {
+          scvText(c, "\u{1F6E1}\uFE0F\u{1F4A5} \xA1El escudo lo salv\xF3!", x, y - size * 2.3, 12 * U, "#9BE5FF");
+        }
         c.save();
         c.translate(x, y);
         c.rotate(rot);
         const cr = size * 0.7;
-        c.fillStyle = "#6F7B58";
+        c.fillStyle = stk >= 2 ? "#E9B825" : "#6F7B58";
         c.strokeStyle = "#1A1530";
         c.lineWidth = 2;
         c.beginPath();
@@ -30168,7 +30267,8 @@ onmessage = function(e){ var m = e.data, out = [];
         c.quadraticCurveTo(0, -size * 1.42, -cr, -size * 1.25);
         c.fill();
         c.stroke();
-        scvText(c, `${s.no}`, 0, -size * 1.5, Math.max(13, size * 0.5), "#FFD21A");
+        scvText(c, `${s.no}`, 0, -size * 1.5, Math.max(13, size * 0.5), stk >= 2 ? "#FFFFFF" : "#FFD21A");
+        if (stk >= 2) scvText(c, `\u{1F525}${stk}`, cr * 1.15, -size * 1.35, Math.max(10, size * 0.32), "#FF9F43", "left");
         c.strokeStyle = "rgba(26,21,48,.6)";
         c.lineWidth = 1;
         c.beginPath();
@@ -30806,14 +30906,30 @@ onmessage = function(e){ var m = e.data, out = [];
     S.gust = 1;
     scvSnd("whoosh");
     let zaps = 0, lost = 0;
+    S.pst = S.pst || {};
+    const ups = [];
     sc.students.forEach((s) => {
       const J = scvPJ(S, s);
       if (J.skipQ === qi) {
         lost++;
         return;
       }
-      if (win.has(s.no)) J.x += (SCV_TARGET - J.x) * 0.5 + scvR(-8e-3, 8e-3);
-      else {
+      if (win.has(s.no)) {
+        const st = S.pst[s.no] = (S.pst[s.no] || 0) + 1;
+        J.x += (SCV_TARGET - J.x) * (st >= 3 ? 0.8 : 0.5) + scvR(-8e-3, 8e-3);
+        if (st >= 4 && !J.shield && !J.shUsed) {
+          J.shield = 1;
+          ups.push("\u{1F6E1}\uFE0F");
+        } else if (st === 2) ups.push("\u{1F7E1}");
+        else if (st === 3) ups.push("\u{1F4E1}");
+        else if (st === 5) ups.push("\u{1F308}");
+      } else if (J.shield) {
+        J.shield = 0;
+        J.shUsed = 1;
+        J.shT = now;
+        S.pst[s.no] = 0;
+      } else {
+        S.pst[s.no] = 0;
         const d = (s.ans[qi] ? scvR(0.05, 0.08) : scvR(0.07, 0.11)) * (B.k === "snow" ? 1.7 : 1), dir = Math.abs(J.x - SCV_TARGET) < 0.012 ? Math.random() < 0.5 ? -1 : 1 : Math.sign(J.x - SCV_TARGET);
         J.x += dir * d;
         J.spin = now;
@@ -30829,14 +30945,22 @@ onmessage = function(e){ var m = e.data, out = [];
     if (B.k === "wind" || B.k !== "storm" && Math.random() < 0.25) {
       const dx = (Math.random() < 0.5 ? -1 : 1) * scvR(0.04, 0.07);
       sc.students.forEach((s) => {
+        if ((S.pst[s.no] || 0) >= 2) return;
         scvPJ(S, s).x += dx;
       });
       S.gust = 1.6;
       windTxt = dx < 0 ? "\u2B05\uFE0F \xA1El viento empuja a TODOS a la izquierda!" : "\u27A1\uFE0F \xA1El viento empuja a TODOS a la derecha!";
     }
     if (B.k === "desert") sc.students.forEach((s) => {
+      if ((S.pst[s.no] || 0) >= 2) return;
       scvPJ(S, s).x += scvR(-0.03, 0.03);
     });
+    if (ups.length && !last) setTimeout(() => {
+      if (sc && sc.vs === S) scvFloat(sc.vs.W ? sc.vs.W * 0.5 : 600, 300, "\u{1F525} " + [["\u{1F7E1}", "paraca\xEDdas dorado"], ["\u{1F4E1}", "GPS"], ["\u{1F6E1}\uFE0F", "escudo"], ["\u{1F308}", "puntos \xD72"]].map(([e, n]) => {
+        const k = ups.filter((u) => u === e).length;
+        return k ? `${e} ${k} ${n}` : "";
+      }).filter(Boolean).join(" \xB7 "), "#FFD21A", 20, 110);
+    }, 2400);
     sc.students.forEach((s) => {
       const J = scvPJ(S, s);
       J.x = Math.max(0.03, Math.min(0.97, J.x));
@@ -30899,6 +31023,10 @@ onmessage = function(e){ var m = e.data, out = [];
       J.landT = performance.now() + (r[3] === "car" ? 500 + Math.random() * 1800 : 0);
       if (r[3] === "car") cars++;
       if (r[3] === "cable") zaps++;
+      const dbl = r[2] > 0 && (S.pst && S.pst[s.no] || 0) >= 5;
+      if (dbl) {
+        J.land = r = [r[0], r[1] + " \xD72 \u{1F308}", r[2] * 2, r[3]];
+      }
       s.pts += r[2];
       s.shown = s.pts;
       if (!best || d < best.d) best = { s, d };
