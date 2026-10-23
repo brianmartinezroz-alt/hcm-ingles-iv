@@ -20942,7 +20942,7 @@ onmessage = function(e){ var m = e.data, out = [];
   const RT = { role: null, code: null, peer: null, conns: [], es: null, bc: null, mq: [], onMsg: null, lastIn: -1e9, pend: {}, timer: null, lastRelay: 0, seen: {}, seenQ: [], seq: 0, id: Math.random().toString(36).slice(2, 8) };
   const RT_BROKERS = [{ url: "wss://public.cloud.shiftr.io", user: "public", pass: "public" }, { url: "wss://broker.hivemq.com:8884/mqtt" }];
   function rtTopic(side) {
-    return "tilerush-" + RT.code + "-" + side;
+    return "carrera48-" + RT.code + "-" + side;
   }
   function rtOpenConns() {
     return RT.conns.filter((c) => c.open);
@@ -21124,7 +21124,7 @@ onmessage = function(e){ var m = e.data, out = [];
       };
     } catch (e) {
     }
-    if (window.WebSocket && window.TextEncoder && !/nomq/.test(qs)) RT.mq = RT_BROKERS.map((br) => mqOpen(br, "tilerush/" + code + "/" + other));
+    if (window.WebSocket && window.TextEncoder && !/nomq/.test(qs)) RT.mq = RT_BROKERS.map((br) => mqOpen(br, "carrera48/" + code + "/" + other));
     if (!/nontfy/.test(qs)) try {
       RT.es = new EventSource("https://ntfy.sh/" + rtTopic(other) + "/sse");
       RT.es.onmessage = (e) => {
@@ -21152,7 +21152,7 @@ onmessage = function(e){ var m = e.data, out = [];
       const mk = () => {
         try {
           if (role === "screen") {
-            RT.peer = new Peer("tilerush-" + code, { debug: 0 });
+            RT.peer = new Peer("carrera48-" + code, { debug: 0 });
             RT.peer.on("connection", hook);
             RT.peer.on("error", (e) => {
               if (e && e.type === "unavailable-id") setTimeout(() => {
@@ -21175,7 +21175,7 @@ onmessage = function(e){ var m = e.data, out = [];
             const dial = () => {
               if (rtOpenConns().length || !RT.peer || RT.peer.destroyed) return;
               try {
-                hook(RT.peer.connect("tilerush-" + code, { reliable: true }));
+                hook(RT.peer.connect("carrera48-" + code, { reliable: true }));
               } catch (x) {
               }
             };
@@ -21215,7 +21215,7 @@ onmessage = function(e){ var m = e.data, out = [];
     });
     RT.mq.forEach((q) => {
       try {
-        q.send("tilerush/" + RT.code + "/" + mine, s);
+        q.send("carrera48/" + RT.code + "/" + mine, s);
       } catch (e) {
       }
     });
@@ -24148,7 +24148,7 @@ onmessage = function(e){ var m = e.data, out = [];
     }
   });
   function scAppUrl() {
-    return location.href.split("#")[0].split("?")[0].replace(/[^\/]*$/, "") + "control.html?c=" + scLinkCode();
+    return location.href.split("#")[0].split("?")[0].replace(/[^\/]*$/, "") + "control48.html?c=" + scLinkCode();
   }
   function scOpenLink() {
     scEnsureLink();
@@ -24348,7 +24348,7 @@ onmessage = function(e){ var m = e.data, out = [];
   }
   try {
     const _rm = new URLSearchParams(location.search).get("remote");
-    if (_rm) location.replace(location.href.split("?")[0].replace(/[^\/]*$/, "") + "control.html");
+    if (_rm) location.replace(location.href.split("?")[0].replace(/[^\/]*$/, "") + "control48.html");
   } catch (e) {
   }
 })();
