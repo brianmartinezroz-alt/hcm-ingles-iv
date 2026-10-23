@@ -5208,7 +5208,7 @@ function camTick() {
 const RT = { role: null, code: null, peer: null, conns: [], es: null, bc: null, mq: [], onMsg: null, lastIn: -1e9, pend: {}, timer: null, lastRelay: 0, seen: {}, seenQ: [], seq: 0, id: Math.random().toString(36).slice(2, 8) };
 const RT_BROKERS = [{ url: "wss://public.cloud.shiftr.io", user: "public", pass: "public" }, { url: "wss://broker.hivemq.com:8884/mqtt" }];
 function rtTopic(side) {
-  return "carrera48-" + RT.code + "-" + side;
+  return "tilerush-" + RT.code + "-" + side;
 }
 function rtOpenConns() {
   return RT.conns.filter((c) => c.open);
@@ -5390,7 +5390,7 @@ function rtStart(role, code, onMsg2) {
     };
   } catch (e) {
   }
-  if (window.WebSocket && window.TextEncoder && !/nomq/.test(qs)) RT.mq = RT_BROKERS.map((br) => mqOpen(br, "carrera48/" + code + "/" + other));
+  if (window.WebSocket && window.TextEncoder && !/nomq/.test(qs)) RT.mq = RT_BROKERS.map((br) => mqOpen(br, "tilerush/" + code + "/" + other));
   if (!/nontfy/.test(qs)) try {
     RT.es = new EventSource("https://ntfy.sh/" + rtTopic(other) + "/sse");
     RT.es.onmessage = (e) => {
@@ -5418,7 +5418,7 @@ function rtStart(role, code, onMsg2) {
     const mk = () => {
       try {
         if (role === "screen") {
-          RT.peer = new Peer("carrera48-" + code, { debug: 0 });
+          RT.peer = new Peer("tilerush-" + code, { debug: 0 });
           RT.peer.on("connection", hook);
           RT.peer.on("error", (e) => {
             if (e && e.type === "unavailable-id") setTimeout(() => {
@@ -5441,7 +5441,7 @@ function rtStart(role, code, onMsg2) {
           const dial = () => {
             if (rtOpenConns().length || !RT.peer || RT.peer.destroyed) return;
             try {
-              hook(RT.peer.connect("carrera48-" + code, { reliable: true }));
+              hook(RT.peer.connect("tilerush-" + code, { reliable: true }));
             } catch (x) {
             }
           };
@@ -5481,7 +5481,7 @@ function rtSend(m, key) {
   });
   RT.mq.forEach((q) => {
     try {
-      q.send("carrera48/" + RT.code + "/" + mine, s);
+      q.send("tilerush/" + RT.code + "/" + mine, s);
     } catch (e) {
     }
   });
