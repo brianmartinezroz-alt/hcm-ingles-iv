@@ -13,8 +13,8 @@
      un sinónimo aquí y listo.
    · Mientras la voz está activa, los botones secundarios se esconden
      (pantalla limpia). Al apagarla, todo vuelve a aparecer.
-   · Idioma por nivel: Pre-A1 y A1 en español y despacio; A2 y B1 en
-     español con comandos en inglés; B2 en adelante todo en inglés.
+   · Idioma por nivel: Pre-A1 y A1 en español y despacio; desde A2 todo
+     en inglés (A2 sencillo y más pausado).
    ═══════════════════════════════════════════════════════════════════ */
 (function(){
 'use strict';
@@ -89,7 +89,7 @@ function nN(){ var i=NIVELES.indexOf(nivel()); return i<0?1:i; }
 function modo(){            // cómo habla la esfera
   var n=nN();
   if(n<=1) return {lang:'es-MX', escucha:'es-MX', vel:0.9,  ingles:false};
-  if(n<=3) return {lang:'es-MX', escucha:'es-MX', vel:1.0,  ingles:false};
+  if(n===2) return {lang:'en-US', escucha:'en-US', vel:0.9,  ingles:true};    // A2: ya en ingles, sencillo y pausado
   return        {lang:'en-US', escucha:'en-US', vel:1.0,  ingles:true};
 }
 
