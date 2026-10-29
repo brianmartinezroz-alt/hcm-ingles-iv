@@ -325,15 +325,31 @@ body.caminata .respaldo,body.caminata .saltar,body.caminata .marca,body.caminata
 .camNota b{font-weight:600;color:var(--amarillo)} .camNota.fuera{opacity:0}
 .camSalir{position:absolute;top:calc(16px + env(safe-area-inset-top,0px));right:16px;background:none;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.5);border-radius:999px;padding:6px 12px;font:500 12px Inter,sans-serif}
 body.portada .camBtn{display:none}
-body.en-mision .camBtn{right:auto;left:64px}
+
+/* micrófono: botón para grabar / terminar */
+.grabar{position:fixed;left:50%;bottom:calc(8px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:6;display:none;align-items:center;gap:9px;
+  border:0;border-radius:999px;padding:9px 18px;font:600 14px Inter,sans-serif;cursor:pointer;white-space:nowrap;box-shadow:0 10px 26px rgba(120,80,20,.22)}
+.grabar.espera{display:inline-flex;background:var(--amarillo);color:#2a1a08}
+.grabar.graba{display:inline-flex;background:#2B1E14;color:#fbf3e4}
+.grabar i{width:10px;height:10px;border-radius:50%;background:currentColor}
+.grabar.graba i{background:#e5484d;box-shadow:0 0 0 0 rgba(229,72,77,.6);animation:grabaPulso 1.2s infinite}
+@keyframes grabaPulso{70%{box-shadow:0 0 0 9px rgba(229,72,77,0)}100%{box-shadow:0 0 0 0 rgba(229,72,77,0)}}
+.micModo{position:fixed;top:calc(13px + env(safe-area-inset-top,0px));left:62px;z-index:6;border:1px solid rgba(176,122,18,.22);background:rgba(255,253,247,.8);color:var(--crema2);font:500 12px Inter,sans-serif;padding:6px 11px;border-radius:999px;cursor:pointer}
+body.portada .micModo,body.caminata .micModo,body.caminata .grabar,body.portada .grabar{display:none}
+.lienzo{padding-bottom:calc(214px + env(safe-area-inset-bottom,0px))}
+.efa{bottom:calc(46px + env(safe-area-inset-bottom,0px))} .respaldo{bottom:calc(98px + env(safe-area-inset-bottom,0px))}
+body.mic-on .estado{visibility:hidden}
+.oye mark{background:rgba(229,72,77,.14);color:inherit;border-bottom:2px solid #e5484d;border-radius:3px;padding:0 2px}
 @media (prefers-reduced-motion:reduce){.fondo i,.orbe,.orbe::before,.orbe::after{animation:none!important}.lienzo,.w,.chip{transition:opacity .3s!important;transform:none!important;filter:none!important}}
 </style>
 </head>
 <body>
 <div class="fondo"><i></i><i></i><i></i></div><div class="grano"></div>
 <div class="marca">EFA</div>
+<button class="grabar off" id="grabar" type="button"></button>
+<button class="micModo" id="micModo" type="button"></button>
 <button class="saltar" id="saltar">Saltar</button>
-<button class="camBtn" id="bCam" type="button" aria-label="Modo caminata">🎧 Caminar</button>
+<button class="camBtn" id="bCam" type="button" aria-label="Modo caminata">🎧</button>
 <div class="camVelo" id="caminata"><div class="camNota" id="camNota"><b>Modo caminata</b><br>EFA sigue platicando contigo por los audífonos.<br>Toca dos veces para salir.</div><button class="camSalir" id="camSalir" type="button">Salir</button></div>
 <button class="vidrio chico on" id="teacher" type="button">🙋 Teacher</button>
 <div id="escena"></div>
@@ -476,7 +492,7 @@ function hablar(texto,el,op){
   if(el&&el.classList.contains('dice')&&!el.classList.contains('chica')) { var n=String(texto).length; el.classList.toggle('media',n>110&&n<=180); el.classList.toggle('larga',n>180); }
   var spans=el?palabrear(el,texto):[];
   return new Promise(function(listo){
-    var hecho=false; function fin(){ if(hecho)return; hecho=true; spans.forEach(function(s){ s.classList.add('on'); }); listo(); }
+    var hecho=false; function fin(){ if(hecho)return; hecho=true; FIN_HABLA=Date.now(); spans.forEach(function(s){ s.classList.add('on'); }); listo(); }
     var guardia=setTimeout(fin,2500+texto.length*90/vel);
     Promise.race([vozGoogle(texto,idioma,op.sexo),esperar(4000).then(function(){ return null; })]).then(function(url){
       if(t!==TURNO) return fin();
@@ -502,33 +518,73 @@ function hablar(texto,el,op){
 }
 
 /* ── escuchar: respuesta abierta, se ve en vivo ── */
-var recActual=null;
-function escuchar(el,lang){
+var recActual=null, micAccion=null, FIN_HABLA=0;
+var ANDROID=/Android/i.test(navigator.userAgent||'');
+var MIC_MODO=(function(){ try{ return localStorage.getItem('efa2_mic')||'auto'; }catch(e){ return 'auto'; } })();
+function pararEscucha(){ if(escuchar._cerrar) escuchar._cerrar(); }
+function micBoton(e){ var b=$('grabar'); if(!b) return; b.className='grabar '+(e||'off'); document.body.classList.toggle('mic-on',!!e&&e!=='off');
+  b.innerHTML=e==='espera'?'<i></i>'+esc(G('Toca para hablar','Tap to speak')):(e==='graba'?'<i></i>'+esc(G('Ya terminé','I\'m done')):''); }
+function pintarModo(){ var m=$('micModo'); if(m) m.textContent=MIC_MODO==='boton'?G('🎙️ Con botón','🎙️ Button'):G('🎙️ Automático','🎙️ Auto'); }
+/* ── escuchar ──
+   · Espera medio segundo después de que EFA calla: así no se oye a sí misma.
+   · Automático: deja hablar. Solo da la respuesta por terminada después de
+     ~3 s de silencio DESPUÉS de haber hablado (más si dijo muy poquito).
+     Nunca corta a media frase y nunca le habla encima.
+   · Con botón: graba solo cuando el alumno toca, y termina cuando vuelve a tocar.
+   · En los dos modos el botón "Ya terminé" (o tocar la burbuja) entrega al momento.
+   · En Android se escucha por tramos (el modo continuo de Chrome duplica palabras)
+     y se van juntando; si el navegador corta, lo que iba diciendo no se pierde.
+   · Si no oyó nada, no repite instrucciones: solo lo dice en pantalla y sigue escuchando. */
+function escuchar(el,lang,op){
+  op=op||{};
   return new Promise(function(listo){
-    var t=TURNO;
-    el.classList.add('on'); el.innerHTML='';
-    $('tx').value=''; var porTeclado=function(texto){ cerrar(); listo(texto); };
-    escuchar._teclado=porTeclado; escuchar._lang=lang;
-    if(MUTE||!R){ estado('mute','Escríbelo abajo'); $('teclado').classList.add('on'); return; }
-    estado('escucha',window.ING&&ING()?'Listening':'Te escucho');
-    var r=new R(); recActual=r; r.lang=lang||'es-MX'; r.interimResults=true; r.continuous=true; r.maxAlternatives=1;
-    var final='', silencio=null, terminado=false;
-    function cerrar(){ terminado=true; clearTimeout(silencio); try{ r.onend=null; r.abort(); }catch(e){} recActual=null; }
-    r.onresult=function(ev){ BURBUJA.golpe(.4);
-      var tmp=''; for(var i=ev.resultIndex;i<ev.results.length;i++){ if(ev.results[i].isFinal) final+=ev.results[i][0].transcript+' '; else tmp+=ev.results[i][0].transcript; }
-      el.innerHTML=esc(final)+'<span class="tmp">'+esc(tmp)+'</span>';
-      clearTimeout(silencio);
-      // 1.8 s callado después de hablar = terminó (aguanta pausas para pensar)
-      silencio=setTimeout(function(){ if(final.trim()||tmp.trim()){ var x=(final+tmp).trim(); cerrar(); el.textContent=x; listo(x); } },1800);
-    };
-    r.onerror=function(e){ if(document.hidden) return;   // al salir de la app el navegador corta: no es que no haya permiso
-      if(e.error==='not-allowed'||e.error==='service-not-allowed'||e.error==='audio-capture'){ cerrar(); MUTE=true; $('bMic').classList.add('off'); estado('mute','Escríbelo abajo'); $('teclado').classList.add('on'); } };
-    r.onend=function(){ if(terminado||t!==TURNO) return;
-      if(document.hidden){ alVolver(function(){ if(!terminado&&t===TURNO){ try{ r.start(); }catch(e){} } }); return; }   // regresa y sigue la plática
-      try{ r.start(); }catch(e){} };   // iOS corta solo: se vuelve a prender
-    try{ r.start(); }catch(e){}
+    var t=TURNO, partes=[], tmp='', silencio=null, terminado=false, r=null, grabando=false, vueltas=0;
+    el.classList.add('on'); el.innerHTML=''; $('tx').value='';
+    function texto(){ return (partes.join(' ')+' '+tmp).replace(/\s+/g,' ').trim(); }
+    function pinta(){ el.innerHTML=esc(partes.join(' '))+(tmp?' <span class="tmp">'+esc(tmp)+'</span>':''); }
+    function cerrar(){ if(terminado) return; terminado=true; grabando=false; clearTimeout(silencio); micAccion=null; escuchar._cerrar=null; micBoton('off');
+      try{ if(r){ r.onend=null; r.onresult=null; r.abort(); } }catch(e){} r=null; recActual=null; }
+    escuchar._cerrar=cerrar;
+    escuchar._teclado=function(x){ cerrar(); listo(x); }; escuchar._lang=lang;
+    if(MUTE||!R){ estado('mute',G('Escríbelo abajo','Type it below')); $('teclado').classList.add('on'); return; }
+    var modo=CAM?'auto':MIC_MODO, paciencia=op.paciencia||3200;
+    function entregar(){ if(terminado) return; var x=texto();
+      if(!x){ tmp=''; partes=[]; el.innerHTML='<span class="tmp">'+esc(G('No te oí. Habla cuando quieras.','I didn\'t hear you. Speak when you\'re ready.'))+'</span>';
+        if(modo==='boton') esperarToque(); else if(!grabando) arrancar(); return; }
+      cerrar(); el.textContent=x; listo(x); }
+    function armarSilencio(){ clearTimeout(silencio); if(modo==='boton') return;
+      var w=texto().split(' ').filter(Boolean).length;
+      silencio=setTimeout(entregar, w<3?paciencia+1300:paciencia); }
+    function arrancar(){
+      if(terminado||t!==TURNO) return;
+      grabando=true; micBoton('graba'); estado('escucha',G('Te escucho…','Listening…'));
+      r=new R(); recActual=r; r.lang=lang||'es-MX'; r.interimResults=true; r.continuous=!ANDROID; r.maxAlternatives=1;
+      var esta=r;
+      r.onresult=function(ev){ if(esta!==r) return; BURBUJA.golpe(.4); var nuevo='';
+        for(var i=ev.resultIndex;i<ev.results.length;i++){ var tr=ev.results[i][0].transcript;
+          if(ev.results[i].isFinal){ tr=tr.trim(); if(tr&&partes[partes.length-1]!==tr) partes.push(tr); } else nuevo+=tr; }
+        tmp=nuevo.trim(); pinta(); armarSilencio(); };
+      r.onerror=function(e){ if(document.hidden) return;
+        if(e.error==='not-allowed'||e.error==='service-not-allowed'||e.error==='audio-capture'){ cerrar(); MUTE=true; $('bMic').classList.add('off'); estado('mute',G('Escríbelo abajo','Type it below')); $('teclado').classList.add('on'); } };
+      r.onend=function(){ if(esta!==r||terminado||t!==TURNO||!grabando) return;
+        if(tmp){ partes.push(tmp); tmp=''; pinta(); }
+        if(document.hidden){ alVolver(function(){ if(!terminado&&t===TURNO) arrancar(); }); return; }
+        if(++vueltas>80){ grabando=false; esperarToque(); return; }      // el navegador ya no quiere: que el alumno toque
+        setTimeout(function(){ if(!terminado&&grabando&&esta===r&&t===TURNO){ try{ r.start(); }catch(e){ arrancar(); } } },150); };
+      try{ r.start(); }catch(e){}
+    }
+    function esperarToque(){ micBoton('espera'); estado('escucha',G('Toca para hablar','Tap to speak')); }
+    micAccion=function(){ if(terminado) return;
+      if(!grabando){ arrancar(); return; }
+      grabando=false; clearTimeout(silencio); micBoton('off'); estado('piensa','');
+      var rr=r, ya=false, listoYa=function(){ if(ya) return; ya=true; if(tmp){ partes.push(tmp); tmp=''; } r=null; recActual=null; entregar(); };
+      if(rr){ rr.onend=listoYa; try{ rr.stop(); }catch(e){ listoYa(); } setTimeout(listoYa,1400); } else listoYa(); };
+    if(modo==='boton') esperarToque();
+    else setTimeout(arrancar, Math.max(0,550-(Date.now()-FIN_HABLA)));
   });
 }
+function marcar(el,palabra){ if(!el||!palabra) return; var w=String(palabra).trim(); if(!w) return;   // el error queda subrayado en lo que dijo
+  var i=el.textContent.toLowerCase().indexOf(w.toLowerCase()); if(i<0) return; var t=el.textContent; el.innerHTML=esc(t.slice(0,i))+'<mark>'+esc(t.slice(i,i+w.length))+'</mark>'+esc(t.slice(i+w.length)); }
 function esc(s){ return String(s).replace(/[&<>]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
 
 /* ── lienzos ── */
@@ -587,7 +643,7 @@ async function inicio(){
     await hablar(saludo()+'. Soy EFA, tu asistente de inglés del Colegio. Antes de empezar, necesito tres datos.', a.querySelector('#d'));
     await alta();
   }
-  $('bCam').textContent=G('🎧 Caminar','🎧 Walk'); $('camSalir').textContent=G('Salir','Exit'); $('saltar').textContent=G('Saltar','Skip');
+   $('camSalir').textContent=G('Salir','Exit'); $('saltar').textContent=G('Saltar','Skip'); pintarModo();
   perfil.nivel=nivelReal(); perfil.trabajo=G('cadete del Heroico Colegio Militar','a cadet at the Heroico Colegio Militar');
   await ruta();
   await clase();
@@ -680,15 +736,16 @@ async function pizarronHCM(R, models){
 /* opción múltiple genérica: se toca o se dice; "otra vez"/🔁 repite el audio */
 async function preguntaOpciones(l,textos,correcta,repetir){
   var ops=textos.map(function(t,i){ return {t:t,k:new RegExp('^(la |el |option |opcion )?'+'abcd'.charAt(i)+'$|^'+escRe(sinAcentos(t).replace(/[^a-z0-9ñ\s]/g,' ').replace(/\s+/g,' ').trim())+'$')}; });
-  var vueltas=0;
-  for(var intento=0;intento<3&&vueltas<10;vueltas++){
+  var vueltas=0, yaAvise=false;
+  for(var intento=0;intento<3&&vueltas<12;vueltas++){
     var rr=await Promise.race([elegir(l,ops,OYE(),{}), ayudaTocada(l)]);
     if(rr.ayuda==='rep'||(!rr.opcion&&!rr.ayuda&&RE_REP.test(sinAcentos(rr.texto||'')))){ if(repetir) await repetir(); continue; }
     var b=[].slice.call(l.querySelectorAll('#fl .vidrio')).find(function(x){ return x.textContent===rr.opcion; });
     if(rr.opcion===textos[correcta]){ if(b){ b.classList.remove('brilla'); b.classList.add('bien'); } return true; }
     intento++;
     if(rr.opcion){ if(b){ b.classList.remove('brilla'); b.classList.add('mal'); } await hablar(G('Casi. Inténtalo otra vez.','Almost. Try again.'), null, GL()); if(b) b.classList.remove('mal'); }
-    else await hablar(G('No la escuché entre las opciones. ¿Cuál es?','I didn\'t hear one of the options. Which one is it?'), null, GL());
+    else if(!yaAvise){ yaAvise=true; await hablar(G('No la escuché entre las opciones. Tócala o dímela otra vez.','I didn\'t hear one of the options. Tap it or say it again.'), null, GL()); }
+    else intento--;
   }
   return false;
 }
@@ -741,6 +798,7 @@ async function exTransf(it){
   await hablar(pide+G(' Dila en voz alta.',' Say it out loud.'), l.querySelector('#ap'), GL());
   var x=await escuchar(l.querySelector('#oye'),'en-US');
   var p=parecidoFrase(x,it.meta), fb=p>=.85?null:await revisar(x,it.meta);
+  marcar(l.querySelector('#oye'),fb&&!fb.bien&&fb.clave);
   var bien=p>=.85||(fb&&fb.bien);
   await retro(l,(bien?'<b>'+G('¡Muy bien!','Very good!')+'</b> ':'')+(fb&&fb.que?esc(fb.que)+'<br>':'')+'<b>'+G('Modelo:','Model:')+'</b> '+esc(it.meta),
     bien?G('¡Muy bien!','Very good!'):(fb&&fb.que?fb.que:G('Así se dice:','You can say it like this:')), it.meta);
@@ -751,8 +809,9 @@ async function exAsk(it){
   await hablar(it.q, l.querySelector('#d'), {lang:'en',vel:.95});
   if(!ING()&&it.es){ l.querySelector('#es').textContent=it.es; l.querySelector('#es').classList.add('on'); }
   l.querySelector('#ap').classList.add('on');
-  var x=await escuchar(l.querySelector('#oye'),'en-US');
+  var x=await escuchar(l.querySelector('#oye'),'en-US',{paciencia:3600});
   var fb=await revisar(x,it.meta);
+  marcar(l.querySelector('#oye'),fb&&!fb.bien&&fb.clave);
   await retro(l,(fb&&fb.que?((fb.bien?'<b>'+G('¡Bien dicho!','Well said!')+'</b> ':'')+esc(fb.que)+(fb.como?'<br><b>Tip:</b> '+esc(fb.como):'')):'')+'<br><b>'+G('Una respuesta modelo:','A model answer:')+'</b> '+esc(it.meta),
     fb&&fb.que?fb.que:G('Una respuesta modelo:','A model answer:'), it.meta);
 }
@@ -815,11 +874,11 @@ function elegir(l,ops,lang,op){
     function brillar(b,ev){ var rz=document.createElement('span'); rz.className='rizo'; var R=b.getBoundingClientRect();
       rz.style.left=((ev&&ev.clientX?ev.clientX:R.left+R.width/2)-R.left)+'px'; rz.style.top=((ev&&ev.clientY?ev.clientY:R.top+R.height/2)-R.top)+'px';
       b.appendChild(rz); b.classList.add('brilla'); cont.classList.add('elegido'); }
-    function fin(r,espera){ if(ya) return; ya=true; if(recActual) try{ recActual.onend=null; recActual.abort(); }catch(e){} setTimeout(function(){ listo(r); },espera||0); }
+    function fin(r,espera){ if(ya) return; ya=true; pararEscucha(); setTimeout(function(){ listo(r); },espera||0); }
     btns.forEach(function(b,i){ b.onclick=function(ev){ if(ya) return; brillar(b,ev); var o=todas[i];
       if(l.querySelector('#oye')) l.querySelector('#oye').textContent='';
       fin(o.otro?{otro:true}:{texto:o.t,opcion:o.t},750); }; });
-    (CAM&&!op.callar?hablar(G('Opciones: ','Options: ')+ops.map(function(o){ return o.t; }).join(', ')+'.',null,/^en/.test(lang||'')?{lang:'en',vel:.95}:{}):Promise.resolve()).then(function(){ return ya?'':escuchar(l.querySelector('#oye'),lang); }).then(function(x){
+    (CAM&&!op.callar?hablar(G('Opciones: ','Options: ')+ops.map(function(o){ return o.t; }).join(', ')+'.',null,/^en/.test(lang||'')?{lang:'en',vel:.95}:{}):Promise.resolve()).then(function(){ return ya?'':escuchar(l.querySelector('#oye'),lang,{paciencia:2300}); }).then(function(x){
       if(ya) return; var i=coincide(x,todas);
       if(i>=0){ brillar(btns[i]); fin({texto:x,opcion:todas[i].t},750); }
       else fin({texto:x,opcion:null});
@@ -828,13 +887,13 @@ function elegir(l,ops,lang,op){
 }
 function ayudaTocada(l){
   return new Promise(function(listo){ [].slice.call(l.querySelectorAll('#bt button')).forEach(function(b){
-    b.onclick=function(){ if(recActual) try{ recActual.onend=null; recActual.abort(); }catch(e){} listo({ayuda:b.dataset.a}); }; }); });
+    b.onclick=function(){ pararEscucha(); listo({ayuda:b.dataset.a}); }; }); });
 }
 function escucharConBotones(l,lang){
   return new Promise(function(listo){
     var bt=[].slice.call(l.querySelectorAll('#bt button')), ya=false;
     function una(v){ if(ya) return; ya=true; bt.forEach(function(b){ b.onclick=null; }); listo(v); }
-    bt.forEach(function(b){ b.onclick=function(){ if(recActual) try{ recActual.onend=null; recActual.abort(); }catch(e){} una('\u0001'+b.dataset.a); }; });
+    bt.forEach(function(b){ b.onclick=function(){ pararEscucha(); una('\u0001'+b.dataset.a); }; });
     escuchar(l.querySelector('#oye'),lang).then(una);
   });
 }
@@ -894,7 +953,7 @@ function guionLocal(M,turnos,extra){
   return '[SCENE] Perfect, thank you! [EFA] Very good! You finished the mission. Do you want to try again?';
 }
 function teacherTocado(){
-  return new Promise(function(listo){ $('teacher').onclick=function(){ if(recActual) try{ recActual.onend=null; recActual.abort(); }catch(e){} listo({teacher:true}); }; });
+  return new Promise(function(listo){ $('teacher').onclick=function(){ pararEscucha(); listo({teacher:true}); }; });
 }
 async function decirParte(M,p,dijoAntes){
   modoPantalla(p.quien);
@@ -934,7 +993,7 @@ async function mision(M){
       dijo=r.opcion===FIN?'Terminar':r.texto;   // o una pregunta libre: "¿cuáles fueron mis errores?"
       extra=r.opcion===FIN?{fin:true}:{};
     } else {
-      var rr=await Promise.race([escuchar(lz.querySelector('#oye'),'en-US').then(function(t){ return {t:t}; }),teacherTocado()]);
+      var rr=await Promise.race([escuchar(lz.querySelector('#oye'),'en-US',{paciencia:3600}).then(function(t){ return {t:t}; }),teacherTocado()]);
       if(rr.teacher){ dijo='(pressed Teacher)'; extra={ayuda:true}; }
       else { dijo=rr.t; extra=/\bteacher\b|no entiendo|ayuda|c[oó]mo se dice|qu[eé] significa/i.test(dijo)?{ayuda:true}:{}; }
     }
@@ -992,10 +1051,16 @@ function caminata(on){
 }
 
 /* ── controles de respaldo ── */
-$('orbe').onclick=function(){ if(!arrancado) return arrancar(); if(!AUD.paused){ AUD.pause(); AUD.onended&&AUD.onended(); } try{ speechSynthesis.cancel(); }catch(e){} };
+$('orbe').onclick=function(){ if(!arrancado) return arrancar();
+  var hablando=!AUD.paused||(window.speechSynthesis&&speechSynthesis.speaking);
+  if(hablando){ if(!AUD.paused){ AUD.pause(); AUD.onended&&AUD.onended(); } try{ speechSynthesis.cancel(); }catch(e){} return; }
+  if(micAccion) micAccion(); };
+$('grabar').onclick=function(){ if(micAccion) micAccion(); };
+$('micModo').onclick=function(){ MIC_MODO=MIC_MODO==='boton'?'auto':'boton'; try{ localStorage.setItem('efa2_mic',MIC_MODO); }catch(e){} pintarModo();
+  if(micAccion&&escuchar._teclado&&actual&&actual.querySelector('.oye')){ var f=escuchar._teclado, lg=escuchar._lang; pararEscucha(); escuchar(actual.querySelector('.oye'),lg).then(f); } };
 $('bMic').onclick=function(){
   MUTE=!MUTE; this.classList.toggle('off',MUTE);
-  if(MUTE){ if(recActual) try{ recActual.abort(); }catch(e){} estado('mute','Micrófono apagado'); $('teclado').classList.add('on'); $('tx').focus(); }
+  if(MUTE){ pararEscucha(); estado('mute','Micrófono apagado'); $('teclado').classList.add('on'); $('tx').focus(); }
   else { $('teclado').classList.remove('on'); estado('escucha','Te escucho'); if(escuchar._teclado&&actual&&actual.querySelector('.oye')){ var f=escuchar._teclado; escuchar(actual.querySelector('.oye'),escuchar._lang).then(f); } }
 };
 $('bTec').onclick=function(){ $('teclado').classList.toggle('on'); if($('teclado').classList.contains('on')) $('tx').focus(); };
@@ -1007,7 +1072,7 @@ $('camSalir').onclick=function(e){ e.stopPropagation(); caminata(false); };
 
 /* en iPhone el sonido arranca solo después de un toque */
 var arrancado=false;
-function arrancar(){ if(arrancado) return; arrancado=true; try{ AUD.play().catch(function(){}); AUD.pause(); }catch(e){} BURBUJA.conectar(AUD); BURBUJA.despertar(); despierto(); inicio(); }
+function arrancar(){ if(arrancado) return; arrancado=true; try{ AUD.play().catch(function(){}); AUD.pause(); }catch(e){} BURBUJA.conectar(AUD); BURBUJA.despertar(); despierto(); pintarModo(); inicio(); }
 // la portada: el pasaporte de siempre, que se abre como libro
 (function(){
   var st=document.createElement('style'); st.textContent=MUNDO.css; document.head.appendChild(st);
