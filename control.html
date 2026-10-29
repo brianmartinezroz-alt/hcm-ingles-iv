@@ -5756,13 +5756,14 @@ function render() {
   else if (s.phase === "q" && RM.readEnd > performance.now()) body = `<div class="cx-card cx-read">\u{1F4D6} Tiempo de lectura<br><b id="cxReadN">${Math.ceil((RM.readEnd - performance.now()) / 1e3)}</b><span class="rmsmall">Los cadetes leen la pregunta. Al terminar podr\xE1s escanear.</span></div>
       <button class="cb go big" data-c="readskip">\u23E9 Ya pueden contestar</button>
       <button class="cb end" data-c="end">\u{1F3C1} Terminar carrera</button>`;
-  else if (s.phase === "q") body = `<button class="cb scan huge" data-c="scan">\u{1F4F7} Escanear</button>
+  else if (s.phase === "q") body = `${s.audio ? `<div class="cx-card" style="text-align:center;padding:8px"><b>\u{1F50A} Audio de la pregunta</b><div class="cx-grid" style="grid-template-columns:2fr 1fr 1fr;margin-top:6px"><button class="cb go big" data-c="audio">\u{1F50A} Repetir</button><button class="cb big" data-c="slow">\u{1F422} Lento</button><button class="cb big" data-c="astop">\u23F9 Parar</button></div></div>` : ""}<button class="cb scan huge" data-c="scan">\u{1F4F7} Escanear</button>
       <button class="cb chk big" data-c="reveal">\u2714 Checar respuestas</button>
-      <div class="cx-grid">${s.audio ? `<button class="cb" data-c="audio">\u{1F50A} Audio</button>` : ""}<button class="cb" data-c="more">${RM.more ? "\u2715 Cerrar" : "\u22EF M\xE1s"}</button></div>
-      ${RM.more ? `<div class="cx-grid">${s.audio ? `<button class="cb" data-c="slow">\u{1F422} Lento</button><button class="cb" data-c="txt">\u{1F4DD} Texto</button>` : ""}<button class="cb" data-c="skip">\u23ED Saltar</button><button class="cb" data-c="mix">\u{1F500} Mezclar</button><button class="cb" data-c="list">\u{1F4CB} Elegir</button><button class="cb" data-c="pop">\u{1FA9F} Pregunta</button></div>` : ""}
+      <div class="cx-grid"><button class="cb" data-c="more">${RM.more ? "\u2715 Cerrar" : "\u22EF M\xE1s"}</button></div>
+      ${RM.more ? `<div class="cx-grid">${s.audio ? `<button class="cb" data-c="txt">\u{1F4DD} Texto</button>` : ""}<button class="cb" data-c="skip">\u23ED Saltar</button><button class="cb" data-c="mix">\u{1F500} Mezclar</button><button class="cb" data-c="list">\u{1F4CB} Elegir</button><button class="cb" data-c="pop">\u{1FA9F} Pregunta</button></div>` : ""}
       <button class="cb end" data-c="end">\u{1F3C1} Terminar carrera</button>`;
   else if (s.phase === "reveal") body = `<button class="cb go huge" data-c="next">${s.qi + 1 >= s.total ? "\u{1F3C6} Resultados" : "\u25B6 Siguiente"}</button>
-      <div class="cx-grid">${s.audio ? `<button class="cb" data-c="audio">\u{1F50A} Audio</button>` : ""}<button class="cb" data-c="more">${RM.more ? "\u2715 Cerrar" : "\u22EF M\xE1s"}</button></div>
+      ${s.audio ? `<div class="cx-card" style="text-align:center;padding:8px"><b>\u{1F50A} Audio de la pregunta</b><div class="cx-grid" style="grid-template-columns:2fr 1fr 1fr;margin-top:6px"><button class="cb go big" data-c="audio">\u{1F50A} Repetir</button><button class="cb big" data-c="slow">\u{1F422} Lento</button><button class="cb big" data-c="astop">\u23F9 Parar</button></div></div>` : ""}
+      <div class="cx-grid"><button class="cb" data-c="more">${RM.more ? "\u2715 Cerrar" : "\u22EF M\xE1s"}</button></div>
       ${RM.more ? `<div class="cx-grid">${s.audio ? `<button class="cb" data-c="txt">\u{1F4DD} Texto</button>` : ""}<button class="cb" data-c="pop">\u{1FA9F} Pregunta</button><button class="cb" data-c="mix">\u{1F500} Mezclar</button><button class="cb" data-c="list">\u{1F4CB} Elegir</button></div>` : ""}
       <button class="cb end" data-c="end">\u{1F3C1} Terminar carrera</button>`;
   $("#app").innerHTML = `<div class="cx-head"><span id="cxConn" class="cx-conn">\u25CB</span><span><button id="cxQRh" class="cx-codebtn">\u{1F4F7} QR</button> <button id="cxCode" class="cx-codebtn">\u{1F522} ${esc(RM.code)}</button></span></div>
@@ -5820,6 +5821,7 @@ function render() {
     if (c === "scan") scan();
     else if (c === "audio") cmd("audio", { r: 1 });
     else if (c === "slow") cmd("audio", { r: 0.75 });
+    else if (c === "astop") cmd("audstop");
     else if (c === "list") rtSend({ t: "list" });
     else if (c === "end") {
       if (confirm("\xBFTerminar la carrera y ver resultados?")) cmd("end");
