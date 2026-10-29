@@ -16028,7 +16028,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
         step = 0;
         nextT = ctx.currentTime + 0.1;
         if (!timer) timer = setInterval(tick, 30);
-        if (ctx.state === "suspended") ctx.resume().catch(() => {
+        if (ctx.state === "suspended" && !window.__gmute) ctx.resume().catch(() => {
         });
         ramp();
       },
@@ -16047,7 +16047,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
           localStorage.setItem("tilerush.music", enabled ? "on" : "off");
         } catch (e) {
         }
-        if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {
+        if (ctx && ctx.state === "suspended" && !window.__gmute) ctx.resume().catch(() => {
         });
         ramp();
         return enabled;
@@ -16056,7 +16056,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
         return enabled;
       },
       wake() {
-        if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {
+        if (ctx && ctx.state === "suspended" && !window.__gmute) ctx.resume().catch(() => {
         });
       }
     };
@@ -23858,13 +23858,21 @@ onmessage = function(e){ var m = e.data, out = [];
   try { window.__gmute = localStorage.getItem("tilerush.gmute") === "1"; } catch (e) {}
   function scGameMute(on) {
     window.__gmute = on == null ? !window.__gmute : !!on;
+    scMuteGate();
     try { localStorage.setItem("tilerush.gmute", window.__gmute ? "1" : "0"); } catch (e) {}
     scDuck(!!(scAudioEl && !scAudioEl.paused && !scAudioEl.ended));
     try { scToast(window.__gmute ? "\u{1F507} Sonido del juego apagado (solo se oyen los audios)" : "\u{1F50A} Sonido del juego prendido"); } catch (e) {}
     try { scRenderDock(); } catch (e) {}
     try { scSync(true); } catch (e) {}
   }
-  setTimeout(() => { if (window.__gmute) try { scDuck(false); } catch (e) {} }, 1500);
+  function scMuteGate() {
+    try {
+      if (!audioCtx) return;
+      if (window.__gmute && audioCtx.state === "running") audioCtx.suspend();
+      else if (!window.__gmute && audioCtx.state === "suspended") audioCtx.resume();
+    } catch (e) {}
+  }
+  setInterval(() => { if (window.__gmute) scMuteGate(); }, 250);
   let scDuckT = 0;
   function scDuck(on) {
     clearTimeout(scDuckT);
@@ -28139,6 +28147,7 @@ onmessage = function(e){ var m = e.data, out = [];
   function scvAC() {
     try {
       audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (window.__gmute) { if (audioCtx.state === "running") audioCtx.suspend(); return null; }
       if (audioCtx.state === "suspended") audioCtx.resume();
       return audioCtx.state === "running" ? audioCtx : null;
     } catch (e) {
