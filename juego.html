@@ -5636,7 +5636,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
   }
   let audioCtx = null;
   function beep(freq = 660, dur = 0.15) {
-    if (window.__gmute) return;
+    if (window.__gmute || window.__amute) return;
     try {
       audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
       const o = audioCtx.createOscillator(), g = audioCtx.createGain();
@@ -16028,7 +16028,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
         step = 0;
         nextT = ctx.currentTime + 0.1;
         if (!timer) timer = setInterval(tick, 30);
-        if (ctx.state === "suspended" && !window.__gmute) ctx.resume().catch(() => {
+        if (ctx.state === "suspended" && !window.__amute) ctx.resume().catch(() => {
         });
         ramp();
       },
@@ -16047,7 +16047,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
           localStorage.setItem("tilerush.music", enabled ? "on" : "off");
         } catch (e) {
         }
-        if (ctx && ctx.state === "suspended" && !window.__gmute) ctx.resume().catch(() => {
+        if (ctx && ctx.state === "suspended" && !window.__amute) ctx.resume().catch(() => {
         });
         ramp();
         return enabled;
@@ -16056,7 +16056,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
         return enabled;
       },
       wake() {
-        if (ctx && ctx.state === "suspended" && !window.__gmute) ctx.resume().catch(() => {
+        if (ctx && ctx.state === "suspended" && !window.__amute) ctx.resume().catch(() => {
         });
       }
     };
@@ -23032,6 +23032,7 @@ onmessage = function(e){ var m = e.data, out = [];
       let aud0 = false;
       try { const q0 = scQ(); aud0 = !!(q0 && (q0.tts || q0.audio)); } catch (e) {}
       sc.audNoTime = aud0;
+      try { scMuteGate(); } catch (e) {}
       sc.secs = aud0 ? 0 : SC_READ;
       sc.reading = !aud0;
       sc.readEnd = aud0 ? 0 : performance.now() + SC_READ * 1e3;
@@ -23865,14 +23866,22 @@ onmessage = function(e){ var m = e.data, out = [];
     try { scRenderDock(); } catch (e) {}
     try { scSync(true); } catch (e) {}
   }
+  try { const vt = document.createElement("div"); vt.textContent = "v 30-oct"; vt.style.cssText = "position:fixed;left:4px;bottom:2px;font:700 11px sans-serif;color:rgba(0,0,0,.45);z-index:99999;pointer-events:none"; (document.body ? Promise.resolve() : new Promise((r) => addEventListener("DOMContentLoaded", r))).then(() => document.body.appendChild(vt)); } catch (e) {}
+  function scMutedNow() {
+    try { return !!(window.__gmute || (sc && !window.SC48 && game && game.mode === "scan" && view === "play" && game.phase === "q" && sc.audNoTime)); } catch (e) { return !!window.__gmute; }
+  }
+  let scWasMuted = false;
   function scMuteGate() {
     try {
+      const m = scMutedNow();
+      window.__amute = m;
       if (!audioCtx) return;
-      if (window.__gmute && audioCtx.state === "running") audioCtx.suspend();
-      else if (!window.__gmute && audioCtx.state === "suspended") audioCtx.resume();
+      if (m && audioCtx.state === "running") audioCtx.suspend();
+      else if (!m && scWasMuted && audioCtx.state === "suspended") audioCtx.resume();
+      scWasMuted = m;
     } catch (e) {}
   }
-  setInterval(() => { if (window.__gmute) scMuteGate(); }, 250);
+  setInterval(scMuteGate, 200);
   let scDuckT = 0;
   function scDuck(on) {
     clearTimeout(scDuckT);
@@ -24061,6 +24070,7 @@ onmessage = function(e){ var m = e.data, out = [];
     }
     const q = scQ(), cor = scCorrect(q);
     game.phase = "reveal";
+    try { scMuteGate(); } catch (e) {}
     clearInterval(scTimerId);
     sc.done = sc.qi + 1;
     let hits = [], miss = [];
@@ -28147,7 +28157,7 @@ onmessage = function(e){ var m = e.data, out = [];
   function scvAC() {
     try {
       audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-      if (window.__gmute) { if (audioCtx.state === "running") audioCtx.suspend(); return null; }
+      if (window.__amute || scMutedNow()) { if (audioCtx.state === "running") audioCtx.suspend(); return null; }
       if (audioCtx.state === "suspended") audioCtx.resume();
       return audioCtx.state === "running" ? audioCtx : null;
     } catch (e) {
