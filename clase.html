@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#FBF3DE">
 <script src="efa2-mundo.js"></script>
+<script src="pronunciacion.js"></script>
 <script src="clase-datos.js"></script>
 <title>HCM · Clase por voz</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -340,6 +341,13 @@ body.portada .micModo,body.caminata .micModo,body.caminata .grabar,body.portada 
 .efa{bottom:calc(46px + env(safe-area-inset-bottom,0px))} .respaldo{bottom:calc(98px + env(safe-area-inset-bottom,0px))}
 body.mic-on .estado{visibility:hidden}
 .oye mark{background:rgba(229,72,77,.14);color:inherit;border-bottom:2px solid #e5484d;border-radius:3px;padding:0 2px}
+/* pronunciación: cada palabra con su color */
+.dice.pron{font-size:clamp(26px,7vw,32px);line-height:1.3}
+.dice.pron .pron-palabra{padding:0 3px;border-radius:7px}
+.pron-bien{color:#2E7D4F} .pron-medio{color:#9a650c;background:rgba(242,193,78,.24)}
+.pron-mal{color:#B23A48;background:rgba(178,58,72,.10)} .pron-falta{color:rgba(43,30,20,.35);text-decoration:line-through}
+.pron-extra{color:rgba(43,30,20,.45);font-style:italic}
+.pron-consejos{margin:8px 0 0;padding-left:18px} .pron-consejos li{margin:4px 0}
 @media (prefers-reduced-motion:reduce){.fondo i,.orbe,.orbe::before,.orbe::after{animation:none!important}.lienzo,.w,.chip{transition:opacity .3s!important;transform:none!important;filter:none!important}}
 </style>
 </head>
@@ -480,9 +488,9 @@ function sincronizar(spans,dur,obtenerT){
 
 /* ── la voz de EFA: primero la voz de Google (mujer), si no, la del celular ── */
 var AUD=new Audio(); AUD.preload='auto';
-function vozGoogle(texto,idioma,sexo){
+function vozGoogle(texto,idioma,sexo,paquete){
   return fetch(VOZ_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body:JSON.stringify({texto:texto,idioma:idioma||'es',paquete:'audio-us',sexo:sexo||'f'})})
+    body:JSON.stringify({texto:texto,idioma:idioma||'es',paquete:paquete||'audio-us',sexo:sexo||'f'})})
     .then(function(r){ return r.ok?r.json():null; }).then(function(d){ return d&&d.ok&&d.audio?'data:audio/mpeg;base64,'+d.audio:null; })
     .catch(function(){ return null; });
 }
@@ -494,7 +502,7 @@ function hablar(texto,el,op){
   return new Promise(function(listo){
     var hecho=false; function fin(){ if(hecho)return; hecho=true; FIN_HABLA=Date.now(); spans.forEach(function(s){ s.classList.add('on'); }); listo(); }
     var guardia=setTimeout(fin,2500+texto.length*90/vel);
-    Promise.race([vozGoogle(texto,idioma,op.sexo),esperar(4000).then(function(){ return null; })]).then(function(url){
+    Promise.race([vozGoogle(texto,idioma,op.sexo,op.paquete),esperar(4000).then(function(){ return null; })]).then(function(url){
       if(t!==TURNO) return fin();
       if(url){
         AUD.src=url; AUD.playbackRate=vel; AUD.defaultPlaybackRate=vel;
@@ -818,9 +826,10 @@ async function exAsk(it){
 async function exModel(it){
   var frase=it.en;
   var l=lienzo('<div class="etiqueta">'+etq('Pronunciación','Pronunciation')+'</div><p class="apoyo w on">'+G('Escúchala y dila tú:','Listen and say it:')+'</p><p class="dice" id="d"></p>'+(!ING()&&it.es?'<p class="apoyo w on">'+esc(it.es)+'</p>':'')+'<div class="oye" id="oye"></div>'+
-    '<div class="anillo" id="an" style="opacity:0;transition:opacity .6s"><svg viewBox="0 0 76 76"><circle class="fondoA" cx="38" cy="38" r="32"/><circle class="valor" id="val" cx="38" cy="38" r="32"/></svg><div><b id="pct">0%</b><div class="apoyo" style="margin:0" id="pt"></div></div></div>');
+    '<div class="anillo" id="an" style="opacity:0;transition:opacity .6s"><svg viewBox="0 0 76 76"><circle class="fondoA" cx="38" cy="38" r="32"/><circle class="valor" id="val" cx="38" cy="38" r="32"/></svg><div><b id="pct">0%</b><div class="apoyo" style="margin:0" id="pt"></div></div></div>'+'<div class="retro" id="re"></div>');
   await esperar(500);
-  await hablar(frase, l.querySelector('#d'), {lang:'en', vel:.9});
+  await hablar(frase, l.querySelector('#d'), {lang:'en', vel:.9, paquete:'audio-'+acentoPron()});
+  if(await practicarPron(l,frase,'modelo')) return;
   var x=await escuchar(l.querySelector('#oye'),'en-US');
   var p=Math.round(parecidoFrase(x,frase)*100);
   l.querySelector('#an').style.opacity=1;
@@ -896,6 +905,86 @@ function escucharConBotones(l,lang){
     bt.forEach(function(b){ b.onclick=function(){ pararEscucha(); una('\u0001'+b.dataset.a); }; });
     escuchar(l.querySelector('#oye'),lang).then(una);
   });
+}
+
+/* ═══════════════ pronunciación de verdad (Azure + Claude) ═══════════════
+   Califica cada palabra y cada sonido, la fluidez y la entonación.
+   Mientras graba no usa el reconocimiento del navegador (peleaban por el
+   micrófono). Si no hay PRON_ENDPOINT, o el servidor falla, el ejercicio
+   sigue como antes: nunca se cae. Regla de los dos errores: si a la
+   segunda todavía hay que repetir, se anota para reforzar.            */
+var PRON_ENDPOINT='';   // ← la URL /exec de Pronunciacion.gs
+var APP_PRON='HCM clase';
+if(window.EFAPron&&PRON_ENDPOINT&&!EFAPron.cfg.endpoint) EFAPron.configurar({endpoint:PRON_ENDPOINT});
+function acentoPron(){ return 'us'; }
+function grabarWav(l){
+  return new Promise(function(listo){
+    var oye=l.querySelector('#oye'), modo=CAM?'auto':MIC_MODO, g=null, terminado=false;
+    oye.classList.add('on'); oye.innerHTML='';
+    function soltar(){ micAccion=null; escuchar._cerrar=null; escuchar._teclado=null; micBoton('off'); }
+    function cerrar(){ if(terminado) return; terminado=true; soltar(); if(g) g.cancelar(); }
+    escuchar._cerrar=cerrar;
+    function esperarToque(){ micBoton('espera'); estado('escucha',G('Toca para hablar','Tap to speak')); }
+    function empezar(){
+      if(terminado) return;
+      g=EFAPron.grabar({auto:modo==='auto', onNivel:function(v){ if(v>.02) BURBUJA.golpe(Math.min(.6,v*8)); }, alTerminar:function(a){
+        if(terminado) return;
+        if(!a){ g=null; oye.innerHTML='<span class="tmp">'+esc(G('No te oí. Dila otra vez.','I didn\'t hear you. Say it again.'))+'</span>';
+          if(modo==='boton') esperarToque(); else empezar(); return; }
+        terminado=true; soltar(); listo(a); }});
+      micBoton('graba'); estado('escucha',G('Te escucho…','Listening…'));
+      oye.innerHTML='<span class="tmp">'+esc(G('Te escucho…','Listening…'))+'</span>';
+      g.iniciar().catch(function(){ if(terminado) return; terminado=true; soltar(); listo(null); });
+    }
+    micAccion=function(){ if(terminado) return; if(!g) empezar(); else g.detener(); };
+    if(modo==='boton') esperarToque();
+    else setTimeout(empezar, Math.max(0,550-(Date.now()-FIN_HABLA)));
+  });
+}
+function anillo(l,p,txt){
+  var an=l.querySelector('#an'); if(!an) return; an.style.opacity=1;
+  setTimeout(function(){ l.querySelector('#val').style.strokeDashoffset=201*(1-p/100); },100);
+  var n=0, iv=setInterval(function(){ n=Math.min(p,n+3); l.querySelector('#pct').textContent=n+'%'; if(n>=p) clearInterval(iv); },25);
+  l.querySelector('#pt').textContent=txt;
+}
+function guardarPron(frase,R,F,intento){
+  try{
+    var h=JSON.parse(localStorage.getItem('efa2_pron')||'[]');
+    h.push({fecha:new Date().toISOString(),app:APP_PRON,frase:frase,general:R.general,intento:intento,palabras:(R.problemas||[]).map(function(x){ return x.palabra; })});
+    localStorage.setItem('efa2_pron',JSON.stringify(h.slice(-200)));
+    if(F.repetir&&intento>=2){   // dos veces lo mismo: a reforzar
+      var rf=JSON.parse(localStorage.getItem('efa2_pron_refuerzo')||'[]');
+      (R.problemas||[]).forEach(function(x){ rf.push({palabra:x.palabra,sonidos:(x.sonidosDebiles||[]).map(function(y){ return y.sonido; }),frase:frase,fecha:new Date().toISOString()}); });
+      localStorage.setItem('efa2_pron_refuerzo',JSON.stringify(rf.slice(-100)));
+    }
+  }catch(e){}
+}
+async function practicarPron(l,frase,ejercicio){
+  if(!(window.EFAPron&&EFAPron.listo())) return null;
+  var ac=acentoPron(), res=null, d=l.querySelector('#d'), re=l.querySelector('#re');
+  for(var intento=1;intento<=2;intento++){
+    var a=await grabarWav(l);
+    if(!a) return res;                       // sin micrófono: sigue el camino de siempre
+    l.querySelector('#oye').innerHTML='<span class="tmp">'+esc(G('Revisando tu pronunciación…','Checking your pronunciation…'))+'</span>';
+    estado('piensa',G('Revisando…','Checking…'));
+    try{ res=await EFAPron.evaluar({audio:a.base64,texto:frase,nivel:nivelReal(),acento:ac,alumno:perfil.nombre||'',ejercicio:ejercicio,intento:intento,app:APP_PRON}); }
+    catch(e){ estado('calla',''); if(!res) return null; break; }
+    estado('calla','');
+    var R=res.resumen||{}, F=res.feedback||{}, p=Math.max(0,Math.min(100,R.general||0));
+    if(R.palabras&&R.palabras.length){ d.innerHTML=EFAPron.fraseHTML(R); d.classList.add('pron'); }
+    l.querySelector('#oye').textContent=R.oido||'';
+    anillo(l,p,p>=80?G('Se entiende muy bien','Very clear'):(p>=60?G('Ya casi','Almost there'):G('Vamos a pulirla','Let\'s polish it')));
+    if(re){ var c=EFAPron.consejosHTML(F); re.innerHTML=esc(F.mensaje||'')+(c?'<ul class="pron-consejos">'+c+'</ul>':''); re.classList.add('on'); }
+    if(F.mensaje) await hablar(F.mensaje, null, GL());
+    guardarPron(frase,R,F,intento);
+    if(!F.repetir||intento===2) break;
+    await hablar(G('Escúchala otra vez y repítela.','Listen again and say it one more time.'), null, GL());
+    if(re) re.classList.remove('on');
+    d.classList.remove('pron'); d.textContent=frase;
+    await hablar(frase, null, {lang:'en',vel:.85,paquete:'audio-'+ac});
+  }
+  await esperar(600);
+  return res;
 }
 function parecidoFrase(a,b){
   var A=sinAcentos(a).replace(/[^a-z\s]/g,' ').split(/\s+/).filter(Boolean), B=sinAcentos(b).replace(/[^a-z\s]/g,' ').split(/\s+/).filter(Boolean);
