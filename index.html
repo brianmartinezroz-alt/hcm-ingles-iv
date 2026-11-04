@@ -2,7 +2,6 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script src="asistente.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Inglés · HCM</title>
 <link rel="manifest" href="manifest.json">
@@ -1602,7 +1601,7 @@ if('serviceWorker' in navigator){
 <script>
 (function(){
 "use strict";
-var VERSION="v147 · 22 oct · asistente de voz: la lección se maneja hablando";
+var VERSION="v146 · 25 sep · la sesión ya no truena si el micrófono contesta tarde";
 
 /* ═══════════ almacenamiento ═══════════ */
 var KEY='efa_tutor_v2',mem={};
@@ -11134,7 +11133,7 @@ function paso(){
       b.onclick=function(){
         var w=b.dataset.w, bien=normal(w)===normal(x.mala);
         b.classList.add(bien?'ok':'no');
-        attempts.push({tipo:'cazar',meta:x.mala+' -> '+x.buena,oido:w,pct:bien?100:0});
+        attempts.push({tipo:'cazar',meta:(x.frase||'')+' \u2192 '+x.mala+' = '+x.buena,oido:w,pct:bien?100:0});
         registrarEnMemoria(x.frase||'',bien?100:0);
         var r=document.getElementById('res');
         if(r)r.innerHTML = bien
@@ -11150,7 +11149,7 @@ function paso(){
       b.onclick=function(){
         var o=(x.ops||[])[+b.dataset.i], bien=normal(o)===normal(x.bien);
         b.classList.add(bien?'ok':'no');
-        attempts.push({tipo:'hueco',meta:x.bien,oido:o,pct:bien?100:0});
+        attempts.push({tipo:'hueco',meta:(x.antes||'')+'___'+(x.despues||'')+' \u2192 '+x.bien,oido:o,pct:bien?100:0});
         registrarEnMemoria((x.antes||'')+x.bien+(x.despues||''),bien?100:0);
         APP.querySelectorAll('#huecops .opt').forEach(function(z){z.disabled=true;});
         if(bien)say((x.antes||'')+' '+x.bien+' '+(x.despues||''),'en-US');
@@ -14323,20 +14322,24 @@ function hcmTutorial(){
 
   var FASES_PPP=[
     {n:1,fase:'Presentación',area:'',         ico:'📘',et:'te presento el tema'},
-    {n:2,fase:'Práctica',    area:'Speaking', ico:'🎙️',et:'lo dices tú'},
-    {n:3,fase:'Práctica',    area:'Grammar',  ico:'🔧',et:'la forma correcta'},
-    {n:4,fase:'Práctica',    area:'Listening',ico:'🎧',et:'lo oyes'},
-    {n:5,fase:'Producción',  area:'',         ico:'🚀',et:'ahora úsalo tú'}
+    {n:2,fase:'Práctica',    area:'Grammar',  ico:'🔧',et:'la forma correcta'},
+    {n:3,fase:'Práctica',    area:'Listening',ico:'🎧',et:'lo oyes'},
+    {n:4,fase:'Práctica',    area:'Reading',  ico:'📖',et:'lo lees'},
+    {n:5,fase:'Práctica',    area:'Speaking', ico:'🎙️',et:'ahora lo dices'},
+    {n:6,fase:'Producción',  area:'',         ico:'🚀',et:'ahora úsalo tú'}
   ];
+  /* Brian lo quiere así: primero la forma y el oído, tantito de lectura,
+     y hablar hasta el final. La producción cierra siempre. */
   var BLOQUE_DE={
     regla:1,
-    model:2, ask:2, palabra:2, phrasal:2, idiom:2, leer:2, ritmo:2, trabalenguas:2,
-    hueco:3, ordenar:3, transf:3, drill:3, cazar:3,
-    idea:4, detalle:4, dosc:4, segm:4, acento:4, dicto:4, pares:4, num:4, sit:4, deletreo:4,
-    free:5, roleplay:5, recuento:5, charla:5
+    hueco:2, ordenar:2, transf:2, drill:2, cazar:2, opcion:2,
+    idea:3, detalle:3, dosc:3, segm:3, acento:3, dicto:3, pares:3, num:3, deletreo:3,
+    leer:4, palabra:4, phrasal:4, idiom:4,
+    model:5, ask:5, ritmo:5, trabalenguas:5, sit:5,
+    free:6, roleplay:6, recuento:6, charla:6
   };
   /* cupos por minutos: [presentación, speaking, grammar, listening, producción] */
-  var CUPO_PPP={5:[1,1,1,1,1],10:[1,2,1,1,1],15:[1,2,2,2,1],20:[1,3,2,2,1],30:[1,4,3,3,1]};
+  var CUPO_PPP={5:[1,1,1,0,1,1],10:[1,2,1,1,1,1],15:[1,2,2,1,2,1],20:[1,3,3,1,2,1],30:[1,4,4,2,3,1]};
   function cupoPPP(){
     var m=(typeof HCM_MIN!=='undefined')?HCM_MIN:20;
     if(!m) return null;                 // "sin reloj": va la lección completa
@@ -14387,7 +14390,7 @@ function hcmTutorial(){
     var base=PROD_PPP[n];
     if(!base && typeof esEvaluacionHCM==='function' && esEvaluacionHCM(n)) base=PROD_EXAMEN;
     if(!base) base=PROD_EXAMEN;
-    return {k:'free',ctx:base.ctx,q:base.q,es:base.es,_ppp:5,_prod:true};
+    return {k:'free',ctx:base.ctx,q:base.q,es:base.es,_ppp:6,_prod:true};
   }
   /* la tarjeta del tema: la regla de la lección. Si la sesión es de
      repaso de bloque, se toma la regla de la primera lección del bloque. */
@@ -14415,14 +14418,14 @@ function hcmTutorial(){
        al final de la leccion, o sea despues de la produccion y sin bloque.
        Se pide aqui, antes de clasificar, para que caiga en Speaking. */
     try{ if(typeof agregarBoca==='function') agregarBoca(S,(n||1)); }catch(e){}
-    var caj=[[],[],[],[],[]];
+    var caj=[[],[],[],[],[],[]];
     S.items.forEach(function(x){
       var b=BLOQUE_DE[x.k]||3; x._ppp=b; caj[b-1].push(x);
     });
     if(!caj[0].length){ var t=temaPPP(n); if(t) caj[0].push(t); }
-    if(!caj[4].length){ caj[4].push(prodPPP(n)); }
+    if(!caj[5].length){ caj[5].push(prodPPP(n)); }
     var cupo=cupoPPP(), fuera=[], out=[];
-    for(var i=0;i<5;i++){
+    for(var i=0;i<6;i++){
       var g=caj[i];
       if(cupo && g.length>cupo[i]){ fuera=fuera.concat(g.slice(cupo[i])); g=g.slice(0,cupo[i]); }
       out=out.concat(g);
@@ -14454,7 +14457,7 @@ function hcmTutorial(){
   /* ── lo que se le dice al cadete de cada bloque ── */
   function faseDe(b){ return FASES_PPP[(b||1)-1]||FASES_PPP[0]; }
   function cuentaPPP(items){
-    var c=[0,0,0,0,0];
+    var c=[0,0,0,0,0,0];
     (items||[]).forEach(function(x){ c[(x._ppp||3)-1]++; });
     return c;
   }
@@ -14623,6 +14626,1030 @@ function hcmTutorial(){
   try{ window.__hcmPPP={armar:pppArmar,portada:portadaPPP,fases:FASES_PPP}; }catch(e){}
 })();
 
+/* ═══════════ TEMAS_HCM ═══════════════════════════════════════════════
+   Brian pidió que la pantalla principal fuera la de los temas: una lista
+   de lecciones, se toca una y se despliega qué ejercicios trae, se toca
+   un ejercicio y la actividad empieza ahí mismo.
+   Antes el mapa solo decía el título de la lección y entrar era a ciegas:
+   el cadete no sabía qué le tocaba hasta que ya estaba adentro, y el
+   maestro no podía decirle "hazme el de grammar de la 3".
+   ═════════════════════════════════════════════════════════════════════ */
+(function(){
+  if(typeof armarSesionHCM!=='function' || typeof mostrarMapa!=='function') return;
+
+  var FASES=[
+    {ico:'📘',tit:'Presentación',et:'te presento el tema'},
+    {ico:'🔧',tit:'Práctica · Grammar',et:'la forma correcta'},
+    {ico:'🎧',tit:'Práctica · Listening',et:'lo oyes'},
+    {ico:'📖',tit:'Práctica · Reading',et:'lo lees'},
+    {ico:'🎙️',tit:'Práctica · Speaking',et:'ahora lo dices'},
+    {ico:'🚀',tit:'Producción',et:'ahora úsalo tú'}
+  ];
+  var NOM={
+    regla:'La regla', model:'Repite', ask:'Te preguntan', palabra:'Palabra nueva',
+    phrasal:'Phrasal verb', idiom:'Expresión', leer:'Lee en voz alta', ritmo:'Ritmo',
+    trabalenguas:'Trabalenguas', hueco:'Llena el hueco', ordenar:'Ordena la frase',
+    transf:'Cambia la frase', drill:'Drill', cazar:'Caza el error',
+    opcion:'Escoge la correcta',
+    idea:'Idea general', detalle:'Detalle', dosc:'¿Cuál oíste?', segm:'Arma lo que oíste',
+    acento:'Acentos', dicto:'Dictado', pares:'Pares de sonido', num:'Números y horas',
+    sit:'Situación', deletreo:'Deletreo', free:'Tú solo', roleplay:'Conversación',
+    recuento:'Cuéntalo tú', charla:'Charla'
+  };
+  /* los que se califican solos: bien o mal, sin micrófono de por medio */
+  var CALIF={hueco:1, opcion:1, ordenar:1, cazar:1, idea:1, detalle:1, dosc:1, segm:1,
+             num:1, pares:1, deletreo:1, idiom:1, dicto:1};
+
+  function corto(t,n){
+    t=String(t||'').replace(/\s+/g,' ').trim();
+    n=n||62;
+    return t.length>n ? t.slice(0,n-1)+'…' : t;
+  }
+  /* qué se le enseña al cadete de cada ejercicio sin destripárselo */
+  function muestra(x){
+    switch(x.k){
+      case 'regla':   return x.titulo||x.regla||'';
+      case 'hueco':   return (x.antes||'')+' ____ '+(x.despues||'');
+      case 'cazar':   return x.frase||'';
+      case 'opcion':  return x.q||'';
+      case 'ordenar': return x.es||corto((x.piezas||[]).join(' '));
+      case 'transf':  return x.origen||'';
+      case 'segm':    return x.es||'Lo oyes y lo armas con las piezas';
+      case 'pares':   return (x.a||'')+' / '+(x.b||'');
+      case 'num':     return 'Oyes un número y escoges cuál era';
+      case 'deletreo':return x.pide||'Escribe la palabra que oyes';
+      case 'dicto':   return 'Escribe lo que oigas';
+      case 'acento':  return 'Oyes el mismo texto en varios acentos';
+      case 'idea': case 'detalle': case 'dosc':
+                      return corto(x.audio||x.en||'');
+      case 'ask': case 'free': case 'roleplay': case 'recuento': case 'charla': case 'sit':
+                      return corto(x.q||x.ctx||x.en||'');
+      default:        return corto(x.en||x.q||x.bien||x.audio||'');
+    }
+  }
+
+  /* la lección completa, sin el recorte por minutos: aquí se enseña todo
+     lo que trae, aunque luego el cadete escoja hacerla en 15 minutos */
+  var CACHE={};
+  function sesionDe(n){
+    if(CACHE[n]) return CACHE[n];
+    var guarda=(typeof HCM_MIN!=='undefined')?HCM_MIN:20, S=null;
+    try{ HCM_MIN=0; S=armarSesionHCM(n); } catch(e){ S=null; }
+    finally{ HCM_MIN=guarda; }
+    if(S) CACHE[n]=S;
+    return S;
+  }
+
+  /* ── abrir un solo ejercicio ──
+     se arma la lección entera y se entra directo en el que tocó: así,
+     si le gusta, sigue con los que vienen detrás sin volver al menú. */
+  function abrirEjercicio(n,i){
+    var S=sesionDe(n); if(!S||!S.items||!S.items[i]) return;
+    try{ hcmSincronizarPerfil(); }catch(e){}
+    MAT=[S]; sIdx=0; it=i; attempts=[]; intentosDe={}; vistos={};
+    t0=Date.now();
+    try{ var D2=hcmLoad(), P2=D2.perfil||{};
+         P2.parada_actual=n; P2.viendo=n; D2.perfil=P2; hcmSave(D2);
+         if(typeof P!=='undefined'&&P) P.parada_actual=n; }catch(e){}
+    try{ hcmGuardarAvance(n,[],0); }catch(e){}
+    try{ HCM_MIN=0; }catch(e){}          // un ejercicio suelto no lleva reloj
+    try{ soltarMapa(); }catch(e){}
+    try{ paso(); }catch(e){ console.error('temas',e); try{ mostrarMapa(); }catch(x){} }
+  }
+
+  /* ── la lista de ejercicios de una lección, por fases ── */
+  function listaDe(n){
+    var S=sesionDe(n);
+    if(!S||!S.items||!S.items.length)
+      return '<p class="tm-vacio">Esta lección todavía no tiene material cargado.</p>';
+    var porFase=[[],[],[],[],[],[]];
+    S.items.forEach(function(x,i){ porFase[((x._ppp||3)-1)].push({x:x,i:i}); });
+    var h='';
+    porFase.forEach(function(g,fi){
+      if(!g.length) return;
+      var f=FASES[fi];
+      h+='<div class="tm-fase"><span class="tm-f-ic">'+f.ico+'</span>'+
+         '<div class="tm-f-tx"><b>'+f.tit+'</b><span>'+f.et+'</span></div></div>';
+      g.forEach(function(o){
+        var x=o.x;
+        h+='<button class="tm-ej" data-n="'+n+'" data-i="'+o.i+'">'+
+             '<span class="tm-ej-num">'+(o.i+1)+'</span>'+
+             '<span class="tm-ej-tx">'+
+               '<b>'+esc(NOM[x.k]||x.k||'Ejercicio')+
+                 (CALIF[x.k]?'<i class="tm-cal">se califica</i>':'')+'</b>'+
+               '<span>'+esc(muestra(x))+'</span>'+
+             '</span>'+
+             '<span class="tm-ej-go">▶</span>'+
+           '</button>';
+      });
+    });
+    h+='<button class="tm-todo" data-todo="'+n+'">Hacer la lección completa · '+
+       S.items.length+' ejercicios</button>';
+    return h;
+  }
+
+  /* ── la pantalla ── */
+  var ABIERTA=null;
+  function mostrarTemas(){
+    try{ document.getElementById('topbar').style.display=''; }catch(e){}
+    try{ document.getElementById('barrabaja').style.display=''; }catch(e){}
+    try{ document.querySelectorAll('.tabb').forEach(function(b){
+           b.classList.toggle('on',b.dataset.t==='mapa'); }); }catch(e){}
+    var D=hcmLoad(), Pf=D.perfil||{};
+    var nom=(Pf.nombre||'Cadete').split(' ')[0];
+    var carril=Pf.carril||'medio';
+    var h=hcmHechas(), hechas=hcmCuantasHechas(), sug=hcmSugerida();
+    var pct=Math.round((hechas/PARADAS_HCM)*100);
+    var chips={bajo:'🟡 Básico',medio:'🟠 Intermedio',alto:'🔴 Avanzado'};
+
+    var rows='';
+    for(var i=1;i<=PARADAS_HCM;i++){
+      var lec=LECCIONES_HCM[i]; if(!lec) continue;
+      var esEx=!!lec.examen;
+      var cls='tm-card', eti='Lección '+i+' · '+lec.fecha, ic=String(i);
+      if(esEx){ cls+=' examen'; eti=lec.fecha; ic='⚑'; }
+      else if(h[i]){ cls+=' hecha'; ic='✓'; }
+      else if(i===sug){ cls+=' toca'; }
+      rows+='<div class="'+cls+'" data-n="'+i+'">'+
+        '<button class="tm-cab" data-ab="'+i+'">'+
+          '<span class="tm-ic">'+ic+'</span>'+
+          '<span class="tm-tx">'+
+            '<span class="tm-eti">'+esc(eti)+(i===sug&&!esEx?' · te toca':'')+'</span>'+
+            '<b>'+esc(lec.titulo)+'</b>'+
+            '<span class="tm-sub">'+esc(lec.sub)+'</span>'+
+          '</span>'+
+          '<span class="tm-fl">▾</span>'+
+        '</button>'+
+        '<div class="tm-cuerpo" id="tmc'+i+'"></div>'+
+      '</div>';
+    }
+
+    document.getElementById('app').innerHTML=
+      '<div class="hcm-mapa"><div class="hcm-mapa-cab">'+
+      '<div class="hcm-saludo">Bienvenido, cadete.</div>'+
+      '<div class="hcm-nombre">'+esc(nom)+'</div>'+
+      '<button class="hcm-chip-bt" id="hcm-bt-carril">'+
+        '<span class="hcm-carril-chip '+carril+'">'+(chips[carril]||carril)+' ›</span></button>'+
+      '<div class="hcm-prog-fila">'+
+      '<div class="hcm-prog-bar"><div class="hcm-prog-fill" style="width:'+pct+'%"></div></div>'+
+      '<div class="hcm-prog-txt">'+hechas+' de '+PARADAS_HCM+'</div></div>'+
+      '<p class="hcm-plan">Toca un tema para ver sus ejercicios. Toca un ejercicio y empiezas ahí. · '+
+        '<button class="hcm-chip-bt" id="hcm-bt-tutorial" style="text-decoration:underline">ver el tutorial</button></p>'+
+      '</div><div class="tm-lista">'+rows+'</div></div>';
+
+    document.querySelectorAll('.tm-cab').forEach(function(b){
+      b.onclick=function(){ alternar(+b.dataset.ab); };
+    });
+    var bc=document.getElementById('hcm-bt-carril'); if(bc)bc.onclick=hcmElegirCarril;
+    var bt=document.getElementById('hcm-bt-tutorial');
+    if(bt)bt.onclick=function(){ try{hcmGuardarPerfil('tutorHCM',false);}catch(e){} hcmTutorial(); };
+    try{ if(!Pf.tutorHCM) setTimeout(hcmTutorial,700); }catch(e){}
+
+    /* se vuelve a abrir la que estaba abierta, o la que le toca */
+    var abrir = (ABIERTA && LECCIONES_HCM[ABIERTA]) ? ABIERTA : sug;
+    if(abrir) setTimeout(function(){ alternar(abrir,true); },120);
+  }
+
+  function alternar(n,sinScroll){
+    var card=document.querySelector('.tm-card[data-n="'+n+'"]');
+    var caja=document.getElementById('tmc'+n);
+    if(!card||!caja) return;
+    if(card.classList.contains('ab')){
+      card.classList.remove('ab'); caja.innerHTML=''; ABIERTA=null; return;
+    }
+    document.querySelectorAll('.tm-card.ab').forEach(function(c){
+      c.classList.remove('ab');
+      var z=c.querySelector('.tm-cuerpo'); if(z) z.innerHTML='';
+    });
+    card.classList.add('ab'); ABIERTA=n;
+    var L=LECCIONES_HCM[n];
+    if(L&&L.examen&&!(typeof esEvaluacionHCM==='function'&&esEvaluacionHCM(n))){
+      caja.innerHTML='<p class="tm-vacio">La evaluación la aplica tu maestro en clase el '+
+        esc(L.fecha)+'. Mientras, repasa las lecciones de este bloque.</p>';
+      return;
+    }
+    caja.innerHTML='<p class="tm-vacio">Abriendo los ejercicios…</p>';
+    setTimeout(function(){
+      try{ caja.innerHTML=listaDe(n); }
+      catch(e){ console.error('temas',e); caja.innerHTML='<p class="tm-vacio">No pude abrir esta lección.</p>'; }
+      caja.querySelectorAll('.tm-ej').forEach(function(b){
+        b.onclick=function(){ abrirEjercicio(+b.dataset.n,+b.dataset.i); };
+      });
+      var t=caja.querySelector('[data-todo]');
+      if(t) t.onclick=function(){
+        var nn=+t.dataset.todo;
+        if(typeof hcmElegirSesion==='function') hcmElegirSesion(nn);
+        else irAParadaHCM(nn);
+      };
+      if(!sinScroll) try{ card.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){}
+    },30);
+  }
+
+  mostrarMapa=mostrarTemas;
+
+  /* ── el vestido ── */
+  try{
+    var st=document.createElement('style');
+    st.textContent=
+    '.tm-lista{padding:0 14px 90px}'+
+    '.tm-lista *,.tm-cuerpo *{box-sizing:border-box}'+
+    '.tm-card,.tm-cab,.tm-ej,.tm-todo,.tm-cuerpo{box-sizing:border-box;max-width:100%}'+
+    '.tm-card{background:var(--tarjeta,#fffdf7);border:1px solid var(--tenue,#e4ded0);'+
+      'border-radius:16px;margin-bottom:10px;overflow:hidden;transition:border-color .15s}'+
+    '.tm-card.toca{border-color:var(--oro,#b99a4b);box-shadow:0 2px 10px rgba(185,154,75,.14)}'+
+    '.tm-card.ab{border-color:var(--oro,#b99a4b)}'+
+    '.tm-card.hecha .tm-ic{background:var(--verde,#3f7d52);color:#fff;border-color:transparent}'+
+    '.tm-card.examen .tm-ic{background:#7a2b2b;color:#fff;border-color:transparent}'+
+    '.tm-cab{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;'+
+      'padding:13px 13px;text-align:left;cursor:pointer;font:inherit;color:inherit}'+
+    '.tm-ic{flex:0 0 32px;height:32px;border-radius:10px;border:1px solid var(--tenue,#e4ded0);'+
+      'display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}'+
+    '.tm-tx{flex:1;min-width:0;display:block}'+
+    '.tm-eti{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;'+
+      'opacity:.62;margin-bottom:2px}'+
+    '.tm-tx b{display:block;font-size:16px;line-height:1.28}'+
+    '.tm-sub{display:block;font-size:12.5px;opacity:.66;margin-top:2px}'+
+    '.tm-fl{flex:0 0 auto;opacity:.5;transition:transform .18s}'+
+    '.tm-card.ab .tm-fl{transform:rotate(180deg)}'+
+    '.tm-cuerpo:empty{display:none}'+
+    '.tm-cuerpo{padding:0 11px 11px}'+
+    '.tm-vacio{font-size:13px;opacity:.7;padding:4px 4px 8px;margin:0}'+
+    '.tm-fase{display:flex;align-items:center;gap:8px;margin:12px 2px 6px}'+
+    '.tm-f-ic{font-size:16px}'+
+    '.tm-f-tx b{display:block;font-size:12.5px;letter-spacing:.03em}'+
+    '.tm-f-tx span{display:block;font-size:11.5px;opacity:.6}'+
+    '.tm-ej{display:flex;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;'+
+      'color:inherit;background:var(--fondo,#faf7ef);border:1px solid var(--tenue,#e4ded0);'+
+      'border-radius:12px;padding:9px 10px;margin-bottom:6px;cursor:pointer}'+
+    '.tm-ej:active{transform:scale(.995)}'+
+    '.tm-ej-num{flex:0 0 22px;height:22px;border-radius:7px;background:rgba(0,0,0,.055);'+
+      'display:flex;align-items:center;justify-content:center;font-size:11px;opacity:.7}'+
+    '.tm-ej-tx{flex:1;min-width:0}'+
+    '.tm-ej-tx b{display:block;font-size:13px;font-weight:650}'+
+    '.tm-ej-tx>span{display:block;font-size:12.5px;opacity:.68;margin-top:1px;'+
+      'overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+    '.tm-cal{font-style:normal;font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;'+
+      'margin-left:6px;padding:1px 5px;border-radius:5px;background:var(--verde-suave,#e2efe5);'+
+      'color:var(--verde,#3f7d52);vertical-align:1px}'+
+    '.tm-ej-go{flex:0 0 auto;font-size:11px;opacity:.45}'+
+    '.tm-todo{width:100%;margin-top:8px;padding:12px;border-radius:12px;border:0;cursor:pointer;'+
+      'background:var(--tinta,#221f1a);color:var(--claro,#f7f3e8);font:inherit;font-weight:650;font-size:14px}';
+    document.head.appendChild(st);
+  }catch(e){}
+
+  try{ window.__hcmTemas={pantalla:mostrarTemas,abrir:abrirEjercicio,lista:listaDe}; }catch(e){}
+})();
+
+/* ═══════════ BANCO_HCM ═══════════════════════════════════════════════
+   El material traía casi puro ejercicio de hablar: Brian veía que el
+   cadete entró y cuánto habló, pero no si le atinó. Aquí entra el banco
+   de ejercicios que SÍ se califican solos y que salen del libro
+   (NALC 2nd ed., vol. 3): opción múltiple, llenar el hueco, escoger la
+   forma correcta, cazar el error y ordenar la frase.
+   Numeración: la de la app (del 9 en adelante va uno arriba del libro).
+   ═══════════════════════════════════════════════════════════════════ */
+(function(){
+  if(typeof MATERIAL_HCM==='undefined') return;
+
+  function H(antes,despues,es,ops,bien){
+    return {k:'hueco',antes:antes,despues:despues,es:es,ops:ops,bien:bien};
+  }
+  function O(q,es,ops,bien){
+    return {k:'opcion',q:q,es:es,ops:ops,bien:bien};
+  }
+  function C(frase,mala,buena,es){
+    return {k:'cazar',frase:frase,mala:mala,buena:buena,es:es};
+  }
+  function R(piezas,es){ return {k:'ordenar',piezas:piezas,es:es}; }
+
+  var BANCO={
+  1:[ H("I ","the captain tomorrow at nine.","Veo al capitán mañana a las nueve.",["am meeting","meet","will meeting"],"am meeting"),
+      H("She ","to the bank next Friday.","Ella va al banco el viernes.",["is going","goes","go"],"is going"),
+      H("I'd like to ","a deposit, please.","Quisiera hacer un depósito.",["make","making","made"],"make"),
+      O("¿Cuál habla de un plan YA acordado para mañana?","Las tres se oyen bien; solo una es la del libro.",
+        ["I'm seeing the colonel tomorrow.","I see the colonel tomorrow.","I will seeing the colonel tomorrow."],
+        "I'm seeing the colonel tomorrow."),
+      O("Llegas a la ventanilla. ¿Qué dices?","Pedir algo en el banco.",
+        ["I'd like to open an account.","I like open an account.","I am liking to open an account."],
+        "I'd like to open an account."),
+      C("I am wanting to make a deposit.","wanting","want","Want no se usa en progresivo."),
+      C("He is work at the bank tomorrow.","work","working","Falta el -ing."),
+      R(["I'm","meeting","the","captain","tomorrow"],"Mañana veo al capitán.") ],
+
+  2:[ H("I like this bread ","it smells fresh.","Me gusta este pan porque huele fresco.",["because","because of","so"],"because"),
+      H("The soup ","salty this morning.","La sopa sabe salada.",["tastes","tastes like","is tasting"],"tastes"),
+      H("He didn't eat it ","it looked bad.","No se lo comió porque se veía mal.",["because","because of","for"],"because"),
+      O("¿Cuál está bien escrita?","Verbo copulativo + adjetivo.",
+        ["The cake tastes good.","The cake tastes well.","The cake is taste good."],"The cake tastes good."),
+      O("¿Cuál usa 'because of' correctamente?","'Because of' pide sustantivo.",
+        ["We stayed home because of the rain.","We stayed home because of it rained.","We stayed home because the rain."],
+        "We stayed home because of the rain."),
+      C("The meat smells badly today.","badly","bad","Smell es copulativo: va con adjetivo."),
+      C("I like it because of it is fresh.","of","(nada)","Con oración va 'because' solo."),
+      R(["The","cake","is","delicious","because","it","has","fresh","butter"],"El pastel está delicioso porque tiene mantequilla fresca.") ],
+
+  3:[ H("He ","on the phone when he hit the car.","Hablaba por teléfono cuando chocó.",["was talking","talked","was talk"],"was talking"),
+      H("They were driving when the truck ","them.","Iban manejando cuando el camión les pegó.",["hit","was hitting","hits"],"hit"),
+      H("What ","when the accident happened?","¿Qué hacías cuando pasó el accidente?",["were you doing","did you do","you were doing"],"were you doing"),
+      O("¿Cuál frase es la del libro?","Acción larga + when + acción corta.",
+        ["I was doing my homework when he called.","I did my homework when he was calling.","I was do my homework when he called."],
+        "I was doing my homework when he called."),
+      O("¿Cuál va en pasado progresivo?","La acción larga, la que se estaba haciendo.",
+        ["The soldiers were waiting outside.","The soldiers waited outside.","The soldiers are waiting outside."],
+        "The soldiers were waiting outside."),
+      C("He was hit the car while he talked.","hit","hitting","Después de was va el verbo en -ing."),
+      C("She were driving to the base.","were","was","She lleva was."),
+      R(["He","was","talking","when","he","hit","the","car"],"Hablaba cuando chocó el carro.") ],
+
+  4:[ H("He told me ","in the car.","Me dijo que me quedara en el carro.",["to stay","stay","staying"],"to stay"),
+      H("You ","obey the traffic laws.","Debes obedecer las leyes de tránsito.",["must","must to","musts"],"must"),
+      H("This sign is ","that one.","Este letrero es igual a aquel.",["the same as","the same of","same than"],"the same as"),
+      O("¿Cuál reporta bien una orden?","ask / tell + persona + to + verbo.",
+        ["The officer told us to wait.","The officer told to us to wait.","The officer told us wait."],
+        "The officer told us to wait."),
+      O("¿Cuál dice que está prohibido?","must not = prohibido.",
+        ["You must not park here.","You don't must park here.","You must no park here."],"You must not park here."),
+      C("He asked to me to show my license.","to","(nada)","Ask va directo a la persona: asked me."),
+      C("Drivers must to stop at the red light.","to","(nada)","Después de must va el verbo pelón."),
+      R(["He","asked","me","to","show","my","license"],"Me pidió que enseñara mi licencia.") ],
+
+  5:[ H("Ted ","repair the car this afternoon.","Ted puede reparar el carro.",["can","can to","cans"],"can"),
+      H("I ","drive a truck, but I can't fix one.","Puedo manejar un camión, pero no repararlo.",["can","could to","am can"],"can"),
+      H("She'd like to ","money from her account.","Quiere retirar dinero de su cuenta.",["withdraw","withdrawing","withdrew"],"withdraw"),
+      O("¿Cuál está bien?","can + verbo, sin to y sin -s.",
+        ["He can repair the engine.","He cans repair the engine.","He can to repair the engine."],
+        "He can repair the engine."),
+      O("Repaso: ¿cuál frase es del banco?","De la lección 1.",
+        ["I need to make a deposit.","I need make a deposit.","I need to making a deposit."],
+        "I need to make a deposit."),
+      C("Ted can to change the tire.","to","(nada)","Can no lleva to."),
+      C("They cans help us today.","cans","can","Can nunca lleva -s."),
+      R(["Ted","can","repair","the","car"],"Ted puede reparar el carro.") ],
+
+  6:[ H("You ","ask Lieutenant Clark for help.","Deberías pedirle ayuda al teniente Clark.",["should","should to","shoulds"],"should"),
+      H("He drives very ",".","Maneja con mucho cuidado.",["carefully","careful","care"],"carefully"),
+      H("Why ","you talk to the sergeant?","¿Por qué no hablas con el sargento?",["don't","doesn't","not"],"don't"),
+      O("¿Cuál es un consejo?","should + verbo.",
+        ["You should study tonight.","You should to study tonight.","You shoulding study tonight."],
+        "You should study tonight."),
+      O("¿Cuál lleva adverbio?","El modo se dice con -ly.",
+        ["She answered politely.","She answered polite.","She answered politeness."],"She answered politely."),
+      C("He speaks English very good.","good","well","Modifica al verbo: va adverbio."),
+      C("You should to see a doctor.","to","(nada)","Should no lleva to."),
+      R(["You","should","ask","him","for","help"],"Deberías pedirle ayuda.") ],
+
+  7:[ H("He realized ","the tank was empty.","Se dio cuenta de que el tanque estaba vacío.",["that","what","which"],"that"),
+      H("I think ","he is late again.","Creo que llegó tarde otra vez.",["that","to","of"],"that"),
+      H("She ","me that the road was closed.","Me dijo que el camino estaba cerrado.",["told","said","say"],"told"),
+      O("¿Cuál está bien?","verbo + (that) + sujeto + verbo.",
+        ["He knew that the gate was open.","He knew the gate to be open.","He knew that the gate open."],
+        "He knew that the gate was open."),
+      O("¿Cuál usa 'said' correctamente?","said no lleva persona directa.",
+        ["He said that he was tired.","He said me that he was tired.","He said to that he was tired."],
+        "He said that he was tired."),
+      C("He said me that the tank was empty.","said","told","Con persona va told."),
+      C("I believe that he to be right.","to","(quítalo)","Después de that va sujeto + verbo."),
+      R(["He","realized","that","the","tank","was","empty"],"Se dio cuenta de que el tanque estaba vacío.") ],
+
+  8:[ H("I apologize for ","your window.","Me disculpo por romper tu ventana.",["breaking","break","to break"],"breaking"),
+      H("I'm sorry ","the noise last night.","Perdón por el ruido de anoche.",["about","for to","of"],"about"),
+      H("He apologized for ","late.","Se disculpó por llegar tarde.",["being","be","to be"],"being"),
+      O("¿Cuál es la fórmula del libro?","apologize for + gerundio.",
+        ["I apologize for losing the keys.","I apologize for lose the keys.","I apologize to lose the keys."],
+        "I apologize for losing the keys."),
+      O("¿Cuál acepta una disculpa?","Respuesta normal.",
+        ["That's all right. Don't worry about it.","That's all right. Don't worry for it.","That's all right. No worry it."],
+        "That's all right. Don't worry about it."),
+      C("I apologize for break your window.","break","breaking","Después de for va -ing."),
+      C("I apologize you for the mistake.","you","(quítalo)","Uno se disculpa to alguien, no 'apologize you'."),
+      R(["I","apologize","for","breaking","your","window"],"Me disculpo por romper tu ventana.") ],
+
+  10:[ H("Can you tell me ","use this machine?","¿Me dices cómo usar esta máquina?",["how to","how","to how"],"how to"),
+      H("He taught me ","change a tire.","Me enseñó a cambiar una llanta.",["how to","how","for"],"how to"),
+      H("I forgot ","turn it off.","Se me olvidó cómo apagarlo.",["how to","how","that"],"how to"),
+      O("¿Cuál está bien?","how + to + verbo.",
+        ["Show me how to use it.","Show me how use it.","Show me how to using it."],"Show me how to use it."),
+      O("¿Cuál NO lleva 'how'?","'how' no va antes de un sustantivo solo.",
+        ["Tell me the price of the machine.","Tell me how the price of the machine.","Tell me how price the machine."],
+        "Tell me the price of the machine."),
+      C("I don't know how use the copier.","how","how to","Falta el to."),
+      C("Teach me how to driving a truck.","driving","drive","Después de to va el verbo pelón."),
+      R(["Can","you","tell","me","how","to","use","it"],"¿Me puedes decir cómo usarlo?") ],
+
+  11:[ H("Sue exercises ","she goes to work.","Sue hace ejercicio antes de ir al trabajo.",["before","after","until"],"before"),
+      H("Wait here ","I come back.","Espera aquí hasta que regrese.",["until","while","before"],"until"),
+      H("You ","be at the gate at six.","Se supone que debes estar en la puerta a las seis.",["are supposed to","are supposed","supposed to"],"are supposed to"),
+      O("¿Cuál está bien?","Después de before/after va presente, no futuro.",
+        ["Before I go home, I'll call you.","Before I will go home, I'll call you.","Before I going home, I'll call you."],
+        "Before I go home, I'll call you."),
+      O("¿Cuál usa 'be supposed to' bien?","be supposed to + verbo.",
+        ["He's supposed to report at eight.","He's supposed to reporting at eight.","He supposed to report at eight."],
+        "He's supposed to report at eight."),
+      C("After he will finish, he goes home.","will","(quítalo)","Después de after no va futuro."),
+      C("We're supposed to going now.","going","go","Después de to va el verbo pelón."),
+      R(["Sue","exercises","before","she","goes","to","work"],"Sue hace ejercicio antes de ir al trabajo.") ],
+
+  12:[ H("I like ","in the mall on Saturdays.","Me gusta ir de compras al centro comercial.",["shopping","to shopping","shop"],"shopping"),
+      H("The bank is ","the post office.","El banco está enfrente del correo.",["across from","across of","across to"],"across from"),
+      H("He finished ","at seven.","Terminó de trabajar a las siete.",["working","to work","work"],"working"),
+      O("¿Cuál está bien?","enjoy/finish/mind + gerundio.",
+        ["I enjoy walking in the park.","I enjoy to walk in the park.","I enjoy walk in the park."],
+        "I enjoy walking in the park."),
+      O("¿Cuál dice 'enfrente de'?","Preposición de lugar.",
+        ["The car is in front of the house.","The car is in the front of the house.","The car is front the house."],
+        "The car is in front of the house."),
+      C("She doesn't mind to wait.","to wait","waiting","Mind pide gerundio."),
+      C("The store is next the bank.","next","next to","Falta el to."),
+      R(["I","like","shopping","in","the","mall"],"Me gusta ir de compras al centro comercial.") ],
+
+  13:[ H("I'm glad ","you.","Mucho gusto en conocerte.",["to meet","meeting","meet"],"to meet"),
+      H("He's ready ","the test.","Está listo para el examen.",["to take","taking","take"],"to take"),
+      H("Let me ","you to my friend.","Déjame presentarte a mi amigo.",["introduce","to introduce","introducing"],"introduce"),
+      O("¿Cuál está bien?","adjetivo + to + verbo.",
+        ["We're happy to be here.","We're happy being here.","We're happy be here."],"We're happy to be here."),
+      O("¿Cómo presentas a alguien?","Fórmula del libro.",
+        ["Let me introduce you to Sergeant Lee.","Let me to introduce you to Sergeant Lee.","Let me introducing you to Sergeant Lee."],
+        "Let me introduce you to Sergeant Lee."),
+      C("I'm pleased meeting you.","meeting","to meet","Con pleased va el to-infinitivo."),
+      C("He's afraid to flying.","to flying","to fly","Después de to va el verbo pelón."),
+      R(["I'm","glad","to","meet","you"],"Mucho gusto en conocerte.") ],
+
+  14:[ H("The bus ","at six tomorrow morning.","El camión sale a las seis.",["leaves","is leaving","will leaves"],"leaves"),
+      H("The train from Dallas ","early.","El tren de Dallas llega temprano.",["arrives","arriving","arrive"],"arrives"),
+      H("Can you ","a flat tire?","¿Sabes cambiar una llanta ponchada?",["change","changing","to change"],"change"),
+      O("¿Cuál es un horario?","Presente simple con valor de futuro.",
+        ["The movie starts at eight.","The movie is start at eight.","The movie start at eight."],
+        "The movie starts at eight."),
+      O("¿Cuál está bien para un horario oficial?","No es un plan personal.",
+        ["Our flight leaves at noon.","Our flight is leaving at noon tomorrow if we want.","Our flight leave at noon."],
+        "Our flight leaves at noon."),
+      C("The bus leave at six tomorrow.","leave","leaves","Tercera persona lleva -s."),
+      C("The class is begin at seven.","is","(quítalo)","Va 'begins'."),
+      R(["The","bus","leaves","at","six","tomorrow","morning"],"El camión sale mañana a las seis.") ],
+
+  15:[ H("","you open the door, please?","¿Podría abrir la puerta, por favor?",["Would","Will to","Do"],"Would"),
+      H("","you pass me the wrench?","¿Me pasas la llave?",["Can","Can to","Are"],"Can"),
+      H("He told me ","at the gate.","Me dijo que esperara en la puerta.",["to wait","wait","waiting"],"to wait"),
+      O("¿Cuál es la petición más formal?","Para hablarle a un superior.",
+        ["Would you introduce your family?","Can you introduce your family?","Introduce your family."],
+        "Would you introduce your family?"),
+      O("¿Cuál reporta bien la orden 'Wait here'?","Reported speech con told.",
+        ["He told me to wait there.","He told to me to wait there.","He told me wait there."],
+        "He told me to wait there."),
+      C("Would you to open the window?","to","(quítalo)","Después de would va el verbo pelón."),
+      C("Could you helping me, please?","helping","help","Después de could va el verbo pelón."),
+      R(["Would","you","introduce","your","family"],"¿Presentarías a tu familia?") ],
+
+  16:[ H("I'm ","drive a truck.","Puedo manejar un camión.",["able to","able","able of"],"able to"),
+      H("He wasn't ","finish the report.","No pudo terminar el reporte.",["able to","able","able for"],"able to"),
+      H("What kind of ","can you do?","¿Qué tipo de trabajo puedes hacer?",["work","works","working"],"work"),
+      O("¿Cuál está bien?","be able to + verbo.",
+        ["My son is able to read the newspaper.","My son is able read the newspaper.","My son can able to read the newspaper."],
+        "My son is able to read the newspaper."),
+      O("¿Cuál habla del futuro?","will be able to.",
+        ["I'll be able to start on Monday.","I'll can start on Monday.","I will able to start on Monday."],
+        "I'll be able to start on Monday."),
+      C("She is able fix the radio.","able","able to","Falta el to."),
+      C("I can able to drive at night.","can","(quítalo)","Can y be able to no van juntos."),
+      R(["I'm","able","to","drive","a","truck"],"Puedo manejar un camión.") ],
+
+  17:[ H("How ","is it from El Paso to Houston?","¿Qué tan lejos está?",["far","long","much"],"far"),
+      H("How ","does it take to get there?","¿Cuánto tarda en llegar?",["long","far","many"],"long"),
+      H("","'s cold and windy today.","Hace frío y viento hoy.",["It","Is","That"],"It"),
+      O("¿Cuál pregunta por la DISTANCIA?","How far = distancia.",
+        ["How far is it to the base?","How long is it to the base?","How much is it to the base?"],
+        "How far is it to the base?"),
+      O("¿Cuál está bien?","it impersonal para el clima.",
+        ["It's twenty degrees outside.","Is twenty degrees outside.","There's twenty degrees outside."],
+        "It's twenty degrees outside."),
+      C("How long is it from here to Dallas?","long","far","Para distancia va How far."),
+      C("Is six o'clock already.","Is","It's","El it no se quita."),
+      R(["How","far","is","it","from","El","Paso","to","Houston"],"¿Qué tan lejos está de El Paso a Houston?") ]
+  };
+
+  /* se agrega al material, sin tocar lo que ya había */
+  for(var n in BANCO){
+    if(!MATERIAL_HCM[n]) MATERIAL_HCM[n]=[];
+    BANCO[n].forEach(function(x){ MATERIAL_HCM[n].push(x); });
+  }
+
+  /* los carriles filtran por tipo: si el tipo nuevo no está en la lista,
+     el ejercicio nunca se le muestra a nadie. Aquí se abren los que sí
+     debe ver cada carril. */
+  try{
+    var ABRE={
+      bajo :['opcion','cazar','leer','free'],
+      medio:['opcion','cazar','leer','free','roleplay'],
+      alto :['opcion','cazar','leer','hueco','ordenar']
+    };
+    for(var c in ABRE){
+      if(!CARRILES_HCM[c]) continue;
+      ABRE[c].forEach(function(t){
+        if(CARRILES_HCM[c].tipos.indexOf(t)<0) CARRILES_HCM[c].tipos.push(t);
+      });
+    }
+  }catch(e){}
+
+  /* ── el ejercicio nuevo: escoger la opción correcta ── */
+  var base=paso;
+  paso=function(){
+    var r=base.apply(this,arguments);
+    try{ pintarOpcion(); }catch(e){ console.error('banco',e); }
+    return r;
+  };
+
+  function pintarOpcion(){
+    if(!MAT||sIdx==null||!MAT[sIdx]) return;
+    var S=MAT[sIdx]; if(!S.items||it<0||it>=S.items.length) return;
+    var x=S.items[it]; if(!x||x.k!=='opcion') return;
+    var card=document.querySelector('.qcard'); if(!card) return;
+
+    var bien=x.bien || ((x.ops||[])[x.correcta||0]) || '';
+    card.innerHTML =
+      '<div class="qlbl">Escoge la opción correcta</div>'+
+      '<div class="qtxt" style="font-size:19px">'+esc(x.q||'')+'</div>'+
+      (x.es?'<div class="qsub">'+esc(x.es)+'</div>':'')+
+      '<div class="opts" id="opcops">'+
+        (x.ops||[]).map(function(o,i){
+          return '<button class="opt" data-i="'+i+'">'+esc(o)+'</button>';
+        }).join('')+
+      '</div>'+
+      '<div id="res"></div>'+
+      '<button class="btn ghost" id="skip" style="margin-top:8px">Saltar esta</button>';
+
+    card.querySelectorAll('#opcops .opt').forEach(function(b){
+      b.onclick=function(){
+        var o=(x.ops||[])[+b.dataset.i];
+        var ok=String(o).trim()===String(bien).trim();
+        b.classList.add(ok?'ok':'no');
+        /* el panel necesita ver el reactivo completo, no solo la respuesta */
+        attempts.push({tipo:'opcion', meta:(x.q||'')+' → '+bien, oido:o, pct:ok?100:0});
+        try{ registrarEnMemoria(bien,ok?100:0); }catch(e){}
+        card.querySelectorAll('#opcops .opt').forEach(function(z){z.disabled=true;});
+        if(ok) try{ say(bien,'en-US'); }catch(e){}
+        /* la misma explicación que los demás: si falló, puede reintentar */
+        try{
+          explicarRespuesta({
+            caja:'#opcops', bien:ok, elegida:o, correcta:bien,
+            contexto:(x.q||'')+' '+(x.es||''),
+            alSeguir:function(){ it++; paso(); }
+          });
+        }catch(e){
+          var r=document.getElementById('res');
+          if(r) r.innerHTML = ok ? '<div class="fb ok">Correcto.</div>'
+            : '<div class="fb no">Era: <b>'+esc(bien)+'</b></div>';
+          setTimeout(function(){ it++; paso(); }, 2400);
+        }
+      };
+    });
+    var sk=document.getElementById('skip');
+    if(sk) sk.onclick=function(){ it++; paso(); };
+  }
+
+  try{ window.__hcmBanco=BANCO; }catch(e){}
+})();
+
+/* ═══════════ VOZ_HCM ═══════════════════════════════════════════════
+   Brian quiere oír al cadete, no solo leer lo que el micrófono creyó
+   entender. Aquí, en los ejercicios de hablar, se graba el audio al
+   mismo tiempo que el reconocimiento y se engancha al intento, para que
+   en el panel se pueda reproducir y calificar dos veces: la máquina y
+   el maestro.
+   Se graba máximo 25 segundos y se descarta lo que pese de más: el
+   cadete tiene datos contados y la hoja tiene límite de celda.
+   ═════════════════════════════════════════════════════════════════ */
+(function(){
+  if(typeof paso!=='function' || typeof grabarInicio!=='function') return;
+
+  var HABLA={model:1, ask:1, free:1, roleplay:1, recuento:1, leer:1,
+             transf:1, drill:1, sit:1, ritmo:1, trabalenguas:1};
+  var MAX_SEG=25, MAX_B64=380000;   // ~380 KB en base64
+
+  var V={on:false, k:'', reloj:null};
+
+  function enganchar(b64, tipo, k, meta){
+    try{
+      for(var i=attempts.length-1;i>=0;i--){
+        if(String(attempts[i].tipo||'').indexOf(k)===0 && !attempts[i].audio){
+          attempts[i].audio=b64; attempts[i].audiotipo=tipo;
+          attempts[i].voz=true; return;
+        }
+      }
+      attempts.push({tipo:k+'-voz', meta:meta||'', oido:'[audio grabado]',
+                     pct:null, audio:b64, audiotipo:tipo, voz:true});
+    }catch(e){}
+  }
+
+  function arrancar(k, meta){
+    if(V.on) return;
+    V.on=true; V.k=k;
+    grabarInicio(function(blob){
+      V.on=false;
+      if(!blob || !blob.size) return;
+      try{
+        blobABase64(blob, function(b64){
+          if(!b64 || b64.length>MAX_B64) return;      // demasiado pesado: se suelta
+          enganchar(b64, blob.type||'audio/webm', k, meta);
+        });
+      }catch(e){}
+    }, function(){ V.on=false; });
+    clearTimeout(V.reloj);
+    V.reloj=setTimeout(parar, MAX_SEG*1000);
+  }
+  function parar(){
+    clearTimeout(V.reloj); V.reloj=null;
+    if(!V.on) return;
+    try{ grabarFin(); }catch(e){ V.on=false; }
+  }
+
+  var base=paso;
+  paso=function(){
+    parar();                                   // se cierra la del paso anterior
+    var r=base.apply(this,arguments);
+    try{ montar(); }catch(e){ console.error('voz',e); }
+    return r;
+  };
+
+  function montar(){
+    if(!MAT||sIdx==null||!MAT[sIdx]) return;
+    var S=MAT[sIdx]; if(!S.items||it<0||it>=S.items.length) return;
+    var x=S.items[it]; if(!x || !HABLA[x.k]) return;
+    if(typeof HAY_GRAB!=='undefined' && !HAY_GRAB) return;   // ya hay modo grabación aparte
+    var mic=document.getElementById('mic'); if(!mic) return;
+    if(mic.dataset.voz==='1') return;
+    mic.dataset.voz='1';
+    var meta=x.en||x.q||x.origen||x.titulo||'';
+    var prev=mic.onclick;
+    mic.onclick=function(ev){
+      try{ arrancar(x.k, meta); }catch(e){}
+      if(prev) return prev.call(this, ev);
+    };
+    /* si cierra la lección sin cambiar de paso, igual se guarda */
+    try{
+      var sk=document.getElementById('skip');
+      if(sk && !sk.dataset.voz){ sk.dataset.voz='1';
+        var pv=sk.onclick; sk.onclick=function(ev){ parar(); if(pv) return pv.call(this,ev); }; }
+    }catch(e){}
+  }
+
+  try{ window.__hcmVoz={parar:parar, estado:function(){ return V.on; }}; }catch(e){}
+})();
+
+/* ═══════════ PRESENTA_HCM ═══════════════════════════════════════════
+   La Presentación del tema traía la regla, un "así sí" y un "así no", y
+   se acababa ahí. Brian pidió tres cosas más:
+     · un video corto del tema (los que él publica en FB e Instagram),
+     · que TODO lo de la pantalla se oiga con solo tocarlo,
+     · y una lista clara de qué se hace y qué no se hace.
+   El video se lee de VIDEOS_HCM, y también de lo que Brian deje desde el
+   panel (material con tipo "video" y su lección), para que agregar uno no
+   obligue a volver a publicar la app.
+   ═══════════════════════════════════════════════════════════════════ */
+(function(){
+  if(typeof paso!=='function') return;
+
+  /* ── los videos del tema. yt = id de YouTube; mp4 = liga directa ── */
+  var VIDEOS_HCM={
+    1:{mp4:'video/tema-01.mp4', cartel:'video/tema-01.jpg', t:'Present Progressive para planes futuros', dur:'1:18'},
+    2:{mp4:'video/tema-02.mp4', cartel:'video/tema-02.jpg', t:'Because + cláusula · verbos copulativos', dur:'1:18'},
+    3:{mp4:'video/tema-03.mp4', cartel:'video/tema-03.jpg', t:'Past Progressive + when + Past Simple', dur:'1:18'},
+    4:{mp4:'video/tema-04.mp4', cartel:'video/tema-04.jpg', t:'Ask / tell + to-infinitive · comparar', dur:'1:18'},
+    5:{mp4:'video/tema-05.mp4', cartel:'video/tema-05.jpg', t:'Repaso: el taller, el compañero de cuarto y la mentira piadosa', dur:'1:18'},
+    6:{mp4:'video/tema-06.mp4', cartel:'video/tema-06.jpg', t:'Should / could · adverbios de modo en -ly', dur:'1:18'},
+    7:{mp4:'video/tema-07.mp4', cartel:'video/tema-07.jpg', t:'Verb + that + noun clause', dur:'1:18'},
+    8:{mp4:'video/tema-08.mp4', cartel:'video/tema-08.jpg', t:'Apologize + for + gerund / I\'m sorry + that', dur:'1:18'},
+    10:{mp4:'video/tema-10.mp4', cartel:'video/tema-10.jpg', t:'How + to-infinitive para instrucciones', dur:'1:18'},
+    11:{mp4:'video/tema-11.mp4', cartel:'video/tema-11.jpg', t:'Cláusulas de tiempo · be supposed to', dur:'1:18'},
+    12:{mp4:'video/tema-12.mp4', cartel:'video/tema-12.jpg', t:'Preposiciones de lugar · gerundio como objeto', dur:'1:18'},
+    13:{mp4:'video/tema-13.mp4', cartel:'video/tema-13.jpg', t:'Adjetivo + to-infinitive', dur:'1:18'},
+    14:{mp4:'video/tema-14.mp4', cartel:'video/tema-14.jpg', t:'Presente simple como futuro', dur:'1:18'},
+    15:{mp4:'video/tema-15.mp4', cartel:'video/tema-15.jpg', t:'Would/Could para solicitudes · Reported commands', dur:'1:18'},
+    16:{mp4:'video/tema-16.mp4', cartel:'video/tema-16.jpg', t:'Be able to — habilidad en todos los tiempos', dur:'1:18'},
+    17:{mp4:'video/tema-17.mp4', cartel:'video/tema-17.jpg', t:'How far / How long · Impersonal it', dur:'1:18'},
+  };
+  function videoDeLeccion(n){
+    var v=VIDEOS_HCM[n]||null;
+    try{
+      if(typeof DE_BRIAN!=='undefined' && DE_BRIAN && DE_BRIAN.length){
+        for(var i=0;i<DE_BRIAN.length;i++){
+          var m=DE_BRIAN[i];
+          if(m && m.tipo==='video' && String(m.leccion)===String(n)){
+            v={yt:m.yt||'', mp4:m.url||m.mp4||'', cartel:m.cartel||'', t:m.titulo||'', dur:m.dur||''};
+            break;
+          }
+        }
+      }
+    }catch(e){}
+    return (v && (v.yt||v.mp4)) ? v : null;
+  }
+
+  /* ── qué se hace y qué no, lección por lección (numeración de la app) ── */
+  var GUIA={
+   1:{si:["Usa <b>be + verbo-ing</b> cuando el plan ya está acordado: <i>I'm meeting the captain tomorrow.</i>",
+          "Di cuándo: <i>tomorrow, next week, at six</i>.",
+          "En la ventanilla pide con <i>I'd like to…</i> o <i>I need to…</i>"],
+      no:["<i>I meet the captain tomorrow.</i> — el presente simple no sirve para un plan con fecha.",
+          "<i>I will meet him tomorrow</i> cuando ya quedaron: ahí va el progresivo.",
+          "<i>I'm wanting an account.</i> — <i>want</i> no se usa en progresivo."]},
+   2:{si:["<b>because + sujeto + verbo</b>: <i>…because it has fresh butter.</i>",
+          "<b>taste, look, smell, sound, feel</b> van con <b>adjetivo</b>: <i>It tastes good.</i>"],
+      no:["<i>because of it has butter</i> — <i>because of</i> va con sustantivo, no con una oración.",
+          "<i>It tastes well.</i> — <i>well</i> es adverbio; aquí va <i>good</i>."]},
+   3:{si:["<b>was/were + verbo-ing</b> para lo que estaba pasando: <i>He was talking…</i>",
+          "<b>when + pasado simple</b> para lo que lo cortó: <i>…when he hit the car.</i>"],
+      no:["<i>He was hit the car.</i> — la acción corta va en pasado simple.",
+          "<i>He was talk.</i> — falta el <i>-ing</i>."]},
+   4:{si:["<b>ask/tell + persona + to + verbo</b>: <i>He told me to stop.</i>",
+          "<b>must</b> para la obligación y <b>must not</b> para lo prohibido.",
+          "Para comparar: <i>the same as, different from, similar to, like, alike</i>."],
+      no:["<i>He told to me to stop.</i> — <i>tell</i> no lleva <i>to</i> antes de la persona.",
+          "<i>You must to obey.</i> — después de <i>must</i> va el verbo pelón."]},
+   5:{si:["<b>can + verbo</b> sin <i>to</i>: <i>Ted can repair the car.</i>",
+          "Recicla el vocabulario de las lecciones 1 a 4: banco, comida, accidente, tránsito."],
+      no:["<i>Ted can to repair it.</i>", "<i>He cans repair it.</i> — <i>can</i> no lleva <i>-s</i>."]},
+   6:{si:["<b>should / could + verbo</b> sin <i>to</i>: <i>You should ask him.</i>",
+          "Para sugerir: <i>Why don't you ask him?</i>",
+          "El modo se dice con adverbio en <b>-ly</b>: <i>Ask him politely.</i>"],
+      no:["<i>You should to ask him.</i>",
+          "<i>He drives careful.</i> — va <i>carefully</i>."]},
+   7:{si:["<b>realize / think / know / believe / say + (that) + sujeto + verbo</b>.",
+          "El <i>that</i> se puede quitar: <i>He realized the tank was empty.</i>"],
+      no:["<i>He realized the tank to be empty.</i>",
+          "<i>He said me that…</i> — es <i>He told me that…</i> o <i>He said that…</i>"]},
+   8:{si:["<b>apologize for + verbo-ing</b>: <i>I apologize for breaking your window.</i>",
+          "<i>I'm sorry about</i> + sustantivo: <i>I'm sorry about your window.</i>",
+          "Adjetivo + that: <i>I'm sorry that I broke it.</i>"],
+      no:["<i>I apologize for break it.</i> — después de <i>for</i> va <i>-ing</i>.",
+          "<i>I apologize you.</i> — se disculpa uno <i>to</i> alguien <i>for</i> algo."]},
+   10:{si:["<b>how to + verbo</b> después de <i>tell, show, teach, learn, know, remember, forget, find out, ask</i>.",
+           "<i>Tell me how to use it.</i>"],
+       no:["<i>Tell me how the machine.</i> — <i>how</i> no va solo antes de un sustantivo.",
+           "<i>Show me how to using it.</i>"]},
+   11:{si:["<b>after, before, until, when, while</b> + sujeto + verbo en <b>presente</b>, aunque hables del futuro.",
+           "<b>be supposed to + verbo</b> para lo que se espera de ti: <i>You're supposed to be there at six.</i>"],
+       no:["<i>Before I will go…</i> — después de <i>before</i> no va futuro.",
+           "<i>He's supposed to going.</i>"]},
+   12:{si:["<b>begin, enjoy, finish, like, mind, start + verbo-ing</b>: <i>I like shopping.</i>",
+           "Lugar: <i>next to, across from, in front of, behind, near, under, above</i>."],
+       no:["<i>I enjoy to shop.</i>",
+           "<i>in the front of the store</i> cuando quieres decir <i>in front of</i> (enfrente)."]},
+   13:{si:["<b>Adjetivo + to + verbo</b>: <i>I'm glad to meet you. He's ready to start.</i>",
+           "Para presentar: <i>Let me introduce you to…</i>"],
+       no:["<i>I'm happy meeting you.</i> — en este patrón va <i>to meet</i>.",
+           "<i>Let me to introduce him.</i>"]},
+   14:{si:["<b>Presente simple</b> para horarios y programas: <i>The bus leaves at six.</i>",
+           "Sirve para lo que está en calendario: salidas, llegadas, funciones."],
+       no:["<i>The bus is leaving at six</i> si hablas del horario oficial.",
+           "No uses el presente simple para un plan tuyo sin horario: eso va con <i>be + -ing</i>."]},
+   15:{si:["<b>Would you…? / Could you…?</b> con un superior.",
+           "<b>Can you…? / Will you…?</b> con un compañero.",
+           "Reportar una orden: <i>He told me to wait.</i>"],
+       no:["<i>Would you to open the door?</i>",
+           "<i>He told to me to wait.</i>"]},
+   16:{si:["<b>be able to + verbo</b>: <i>I'm able to drive a truck.</i>",
+           "Para pasado y futuro: <i>was able to</i>, <i>will be able to</i>."],
+       no:["<i>I can able to drive.</i>",
+           "<i>He is able drive.</i> — falta el <i>to</i>."]},
+   17:{si:["<b>How far</b> para distancia: <i>How far is it from El Paso to Houston?</i>",
+           "<b>How long</b> para duración: <i>How long does it take?</i>",
+           "<b>it</b> impersonal para clima, hora, temperatura y distancia: <i>It's cold. It's six o'clock.</i>"],
+       no:["<i>How long is it from El Paso to Houston?</i> si preguntas distancia.",
+           "<i>Is cold today.</i> — el <i>it</i> no se quita."]}
+  };
+
+  function sinTags(s){ return String(s||'').replace(/<[^>]+>/g,''); }
+  /* se lee en inglés lo que está en inglés y en español lo demás */
+  function decir(txt){
+    txt=sinTags(txt).trim(); if(!txt) return;
+    var ingles=/^[A-Za-z0-9 ,.'"!?;:()\-—…]+$/.test(txt);
+    try{ say(txt, ingles?'en-US':'es-MX'); }catch(e){}
+  }
+  function hablable(el,txt){
+    if(!el) return;
+    el.classList.add('pz-oye');
+    el.setAttribute('role','button');
+    el.onclick=function(ev){ ev.stopPropagation(); decir(txt||el.textContent); };
+  }
+
+  function leccionActual(){
+    try{ var P2=(hcmLoad().perfil)||{}; return +(P2.parada_actual||P2.viendo||1); }
+    catch(e){ return 1; }
+  }
+
+  function marcoVideo(v){
+    if(!v) return '';
+    var cuerpo = v.yt
+      ? '<iframe src="https://www.youtube-nocookie.com/embed/'+v.yt+
+        '?rel=0&modestbranding=1&playsinline=1" title="El tema en video" '+
+        'allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>'
+      : '<video src="'+v.mp4+'"'+(v.cartel?' poster="'+v.cartel+'"':'')+
+        ' controls playsinline preload="none"></video>';
+    return '<div class="pz-vid"><div class="pz-vid-t">El tema en video'+
+      (v.dur?' · '+v.dur:'')+'</div><div class="pz-vid-m">'+cuerpo+'</div>'+
+      (v.t?'<div class="pz-vid-s">'+esc(v.t)+'</div>':'')+'</div>';
+  }
+
+  function lista(g){
+    if(!g) return '';
+    function bloque(cls,et,arr){
+      if(!arr||!arr.length) return '';
+      return '<div class="pz-col '+cls+'"><span class="pz-et">'+et+'</span>'+
+        arr.map(function(t){ return '<div class="pz-li">'+t+'</div>'; }).join('')+'</div>';
+    }
+    return '<div class="pz-guia">'+bloque('si','Qué se hace',g.si)+
+                                  bloque('no','Qué no se hace',g.no)+'</div>';
+  }
+
+  /* ── se engancha después de pintar el paso ── */
+  var base=paso;
+  paso=function(){
+    var r=base.apply(this,arguments);
+    try{ enriquecer(); }catch(e){ console.error('presenta',e); }
+    return r;
+  };
+
+  function enriquecer(){
+    if(!MAT||sIdx==null||!MAT[sIdx]) return;
+    var S=MAT[sIdx]; if(!S.items||it<0||it>=S.items.length) return;
+    var x=S.items[it]; if(!x||x.k!=='regla') return;
+    var caja=document.querySelector('.reglabox'); if(!caja) return;
+    if(document.getElementById('pz-extra')) return;     // ya estaba
+
+    var n=leccionActual();
+    var v=videoDeLeccion(n), g=GUIA[n];
+
+    /* el video va arriba de la regla; la guía, debajo del "así sí / así no" */
+    if(v) caja.insertAdjacentHTML('beforebegin', marcoVideo(v));
+
+    /* la guía va después del "por qué", no antes: si no, el texto de la
+       regla quedaba debajo de los recuadros y se leía al revés */
+    var par=document.querySelector('.parfila')||caja, ancla=par;
+    var sig=par.nextElementSibling;
+    if(sig && sig.classList && sig.classList.contains('qsub')) ancla=sig;
+    ancla.insertAdjacentHTML('afterend',
+      '<div id="pz-extra">'+lista(g)+
+      '<button class="oirb full pz-todo" id="pz-todo">'+
+        (typeof ico==='function'?ico('bocina',16):'▶')+' Oír toda la explicación</button>'+
+      '<p class="pz-tip">Toca cualquier recuadro para oírlo.</p></div>');
+
+    /* todo lo de la pantalla se oye al tocarlo */
+    hablable(document.querySelector('.regla-t'), x.titulo);
+    hablable(document.querySelector('.regla-d'), x.regla);
+    hablable(document.querySelector('.par.bien'), x.bien);
+    hablable(document.querySelector('.par.mal'),  x.bien);   // la mala no se dicta
+    if(x.porque && ancla!==par) hablable(ancla, x.porque);
+    document.querySelectorAll('#pz-extra .pz-li').forEach(function(el){
+      hablable(el, el.textContent);
+    });
+
+    var bt=document.getElementById('pz-todo');
+    if(bt) bt.onclick=function(){
+      var partes=[];
+      if(x.titulo) partes.push({t:x.titulo,en:true});
+      if(x.regla)  partes.push({t:x.regla,en:false});
+      if(x.bien)   partes.push({t:'Así sí.',en:false},{t:x.bien,en:true});
+      if(x.mal)    partes.push({t:'Así no.',en:false},{t:x.mal,en:true});
+      if(x.porque) partes.push({t:x.porque,en:false});
+      if(g&&g.si&&g.si.length) partes.push({t:'Qué se hace.',en:false},
+                                           {t:sinTags(g.si[0]),en:false});
+      if(g&&g.no&&g.no.length) partes.push({t:'Qué no se hace.',en:false},
+                                           {t:sinTags(g.no[0]),en:false});
+      (function sig(i){
+        if(i>=partes.length) return;
+        try{ say(partes[i].t, partes[i].en?'en-US':'es-MX', function(){ sig(i+1); }); }
+        catch(e){ sig(i+1); }
+      })(0);
+    };
+  }
+
+  /* ── el vestido ── */
+  try{
+    var st=document.createElement('style');
+    st.textContent=
+    '#pz-extra *,.pz-vid *{box-sizing:border-box}'+
+    '.pz-vid{margin:0 0 12px}'+
+    '.pz-vid-t{font-size:11px;letter-spacing:.07em;text-transform:uppercase;opacity:.62;margin-bottom:6px}'+
+    '.pz-vid-m{position:relative;width:100%;padding-top:56.25%;border-radius:14px;overflow:hidden;background:#000}'+
+    '.pz-vid-m iframe,.pz-vid-m video{position:absolute;inset:0;width:100%;height:100%;border:0;object-fit:cover}'+
+    '.pz-vid-s{font-size:12.5px;opacity:.7;margin-top:6px}'+
+    '.pz-oye{cursor:pointer;position:relative}'+
+    '.pz-oye:active{opacity:.78}'+
+    '.pz-oye::after{content:"▶";position:absolute;top:6px;right:8px;font-size:9px;opacity:.32}'+
+    '.pz-guia{display:grid;gap:8px;margin-top:12px}'+
+    '.pz-col{border-radius:13px;padding:10px 11px;border:1px solid var(--tenue,#e4ded0)}'+
+    '.pz-col.si{background:var(--verde-suave,#e7f1e9);border-color:transparent}'+
+    '.pz-col.no{background:#f6e7e4;border-color:transparent}'+
+    '.pz-et{display:block;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;'+
+      'opacity:.7;margin-bottom:5px;font-weight:700}'+
+    '.pz-li{font-size:13.5px;line-height:1.42;padding:5px 22px 5px 0;border-top:1px solid rgba(0,0,0,.07)}'+
+    '.pz-li:first-of-type{border-top:0}'+
+    '.pz-li i{opacity:.85}'+
+    '.pz-todo{width:100%;margin-top:10px}'+
+    '.pz-tip{font-size:11.5px;opacity:.6;text-align:center;margin:7px 0 0}';
+    document.head.appendChild(st);
+  }catch(e){}
+
+  try{ window.__hcmPresenta={videos:VIDEOS_HCM, guia:GUIA, poner:function(n,v){ VIDEOS_HCM[n]=v; }}; }catch(e){}
+})();
+
+/* ═══════════ EXTRAS_HCM ═══════════════════════════════════════════════
+   Dos cosas que pidió Brian:
+   1) Fuera el tiempo límite. Ya no se escoge cuántos minutos, ya no hay
+      cronómetro y la lección va completa: el cadete la cierra cuando la
+      acaba, no cuando suena un reloj.
+   2) En los ejercicios de oído, el texto de lo que se está diciendo.
+      Va detrás de un botón para que el ejercicio siga siendo de oído, y
+      se destapa solo en cuanto contesta, para que compare.
+   ═════════════════════════════════════════════════════════════════════ */
+(function(){
+
+  /* ── 1 · sin reloj ───────────────────────────────────────────── */
+  try{ HCM_MIN=0; MINUTOS=0; }catch(e){}
+  try{
+    if(typeof arrancarReloj==='function'){
+      var relojBase=arrancarReloj;
+      arrancarReloj=function(){ try{ HCM_MIN=0; MINUTOS=0; }catch(e){} return relojBase.apply(this,arguments); };
+    }
+  }catch(e){}
+  try{
+    if(typeof hcmElegirSesion==='function' && typeof irAParadaHCM==='function'){
+      hcmElegirSesion=function(n){
+        try{ HCM_MIN=0; MINUTOS=0; }catch(e){}
+        irAParadaHCM(n);
+      };
+    }
+  }catch(e){}
+
+  /* ── 2 · el texto de lo que se oye ───────────────────────────── */
+  if(typeof paso!=='function') return;
+
+  var CON_TEXTO={idea:1, detalle:1, dosc:1, segm:1};
+
+  function textoDe(x){
+    if(!x) return '';
+    if(x.k==='dosc') return x.audio||x.a||x.en||'';
+    return x.audio||x.en||'';
+  }
+
+  function ponerTexto(x){
+    if(document.getElementById('lt-caja')) return;
+    var t=textoDe(x); if(!t) return;
+    var donde=document.getElementById('res')||
+              document.querySelector('.opts')||
+              document.querySelector('.opsfila');
+    if(!donde) return;
+
+    donde.insertAdjacentHTML('beforebegin',
+      '<div id="lt-caja" class="lt">'+
+        '<button class="lt-bt" id="lt-bt">Ver el texto de lo que oyes</button>'+
+        '<div class="lt-tx" id="lt-tx" hidden>'+esc(t)+
+          (x.es?'<span class="lt-es">'+esc(x.es)+'</span>':'')+
+        '</div>'+
+      '</div>');
+
+    var bt=document.getElementById('lt-bt');
+    if(bt) bt.onclick=function(ev){ ev.stopPropagation(); destapar(); };
+  }
+
+  function destapar(){
+    var tx=document.getElementById('lt-tx'), bt=document.getElementById('lt-bt');
+    if(!tx) return;
+    tx.hidden=false;
+    if(bt) bt.remove();
+  }
+
+  var base=paso;
+  paso=function(){
+    var r=base.apply(this,arguments);
+    try{
+      if(!MAT||sIdx==null||!MAT[sIdx]) return r;
+      var S=MAT[sIdx]; if(!S.items||it<0||it>=S.items.length) return r;
+      var x=S.items[it];
+      if(x && CON_TEXTO[x.k]){
+        ponerTexto(x);
+        /* en cuanto escoge, el texto se destapa solo para que compare */
+        var cajas=document.querySelectorAll('.opts .opt, .opsfila .opt, #piezas .palb');
+        cajas.forEach(function(b){
+          b.addEventListener('click', function(){ setTimeout(destapar, 120); });
+        });
+      }
+    }catch(e){ console.error('extras',e); }
+    return r;
+  };
+
+  try{
+    var st=document.createElement('style');
+    st.textContent=
+    '.lt{margin:10px 0}'+
+    '.lt-bt{width:100%;padding:9px;border-radius:11px;border:1px dashed var(--tenue,#d8d0bd);'+
+      'background:transparent;font:inherit;font-size:12.5px;opacity:.78;cursor:pointer;color:inherit}'+
+    '.lt-tx{background:var(--fondo,#faf7ef);border:1px solid var(--tenue,#e4ded0);border-radius:12px;'+
+      'padding:10px 11px;font-size:14px;line-height:1.45}'+
+    '.lt-es{display:block;font-size:12.5px;opacity:.65;margin-top:5px}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+
 })();
 
 </script>
@@ -14741,6 +15768,5 @@ function hcmTutorial(){
 })();
 </script>
 
-<script src="novedades.js" data-donde="app"></script>
 </body>
 </html>

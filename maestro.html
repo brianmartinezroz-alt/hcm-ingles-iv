@@ -584,7 +584,7 @@ function pintarEntrada(msg){
 
 /* ── armazón ── */
 function pintar(){
-  var tabs = [['lecciones','Lecciones'],['vivo','En vivo'],['grupos','Grupos'],['juegos','Material'],['ayuda','Cómo se usa']];
+  var tabs = [['lecciones','Lecciones'],['vivo','En vivo'],['respuestas','Respuestas'],['grupos','Grupos'],['juegos','Material'],['ayuda','Cómo se usa']];
   var esEFA = escuela === 'efa';
   var selector =
     '<div class="escuelas"><div class="in">' +
@@ -622,6 +622,7 @@ function pintar(){
   var c = document.getElementById('cuerpo');
   if(vista === 'lecciones') leccionAbierta ? pintarLeccion(c) : pintarLecciones(c);
   else if(vista === 'vivo') pintarVivo(c);
+  else if(vista === 'respuestas') pintarRespuestas(c);
   else if(vista === 'grupos') pintarGrupos(c);
   else if(vista === 'juegos') pintarJuegos(c);
   else pintarAyuda(c);
@@ -813,6 +814,8 @@ function pintarLeccion(c){
    b = la bitácora de la sesión.                                              */
 var TIPOS_EJ = {
   model:'Repetir', drill:'Drill', ask:'Pregunta', hueco:'Hueco', ordenar:'Ordenar',
+  opcion:'Escoge la correcta', cazar:'Caza el error', numeros:'Números', dicto:'Dictado',
+  pares:'Pares de sonido', deletreo:'Deletreo', palabra:'Palabra', idiom:'Expresión',
   transf:'Transformar', idea:'Idea general', detalle:'Detalle', dosc:'Dos cosas',
   segm:'Segmentos', regla:'Regla', leer:'Leer', ritmo:'Ritmo', acento:'Acento',
   roleplay:'Rol', recuento:'Recuento', free:'Libre', pista:'Pidió pista',
@@ -851,9 +854,14 @@ function detalleSesion_(s){
       '</tr></thead><tbody>' +
       ints.map(function(x, i){
         var p = (x.p === null || x.p === undefined || x.p === '');
+        /* si el cadete grabó su voz, aquí se oye: la máquina transcribe,
+           pero quien califica el acento y la fluidez es el maestro */
+        var audio = x.a ? ('<audio controls preload="none" style="width:100%;margin-top:4px" src="' +
+          (/^https?:/.test(x.a) ? esc(x.a) : ('data:' + esc(x.at || 'audio/webm') + ';base64,' + esc(x.a))) +
+          '"></audio>') : '';
         return '<tr><td class="es">' + (i + 1) + '</td>' +
           '<td>' + esc(TIPOS_EJ[x.t] || x.t || '—') + '</td>' +
-          '<td class="dijo">' + (x.d ? esc(x.d) : '<span class="es">no habló</span>') + '</td>' +
+          '<td class="dijo">' + (x.d ? esc(x.d) : '<span class="es">no habló</span>') + audio + '</td>' +
           '<td>' + (x.m ? esc(x.m) : '<span class="es">—</span>') + '</td>' +
           '<td class="num">' + (p ? '<span class="es">—</span>'
             : '<span class="pc ' + clasePct_(x.p) + '">' + esc(x.p) + '%</span>') + '</td></tr>';
@@ -1319,6 +1327,223 @@ function pintarAyuda(c){
 }
 
 /* ── arranque ── */
+
+/* ═══════════ RESPUESTAS ═══════════════════════════════════════════════
+   El panel enseñaba quién entró, cuánto tiempo y cuántas frases dijo. Lo
+   que Brian necesita para dar clase es otra cosa: QUÉ contestaron y DÓNDE
+   la están regando. Aquí se juntan todos los ejercicios que se califican
+   solos (opción múltiple, hueco, escoger la correcta, caza el error,
+   ordenar, los de oído) y se ordenan por el que más se falla.
+   ════════════════════════════════════════════════════════════════════ */
+var AUTO_EJ = {
+  opcion:'Escoge la correcta', hueco:'Llena el hueco', cazar:'Caza el error',
+  ordenar:'Ordena la frase', segm:'Arma lo que oyó', idea:'Idea general',
+  detalle:'Detalle', dosc:'¿Cuál oyó?', idiom:'Expresión', palabra:'Palabra',
+  pares:'Pares de sonido', deletreo:'Deletreo', numeros:'Números', dicto:'Dictado'
+};
+var RESP_CACHE = null;     // {grupo:..., cadetes:[...], filas:[...]}
+
+function pintarRespuestas(c){
+  if(!DATOS){
+    c.innerHTML = '<p class="nota">La app todavía no trae la liga del servidor de datos.</p>';
+    return;
+  }
+  if(!paseHCM_()){
+    c.innerHTML = '<p class="nota">Entra primero en la pestaña <b>Grupos</b> con la clave del servidor. ' +
+      'El mismo pase sirve aquí.</p>';
+    return;
+  }
+  var GRUPOS6 = ['301','302','303','304','305','306'];
+  var sel = window.__respGrupo || '*';
+
+  c.innerHTML =
+    '<h2 class="tit">Respuestas de los cadetes</h2>' +
+    '<p class="tit-s">Todo lo que se califica solo: qué contestaron, qué era, y en qué reactivo se cae el grupo.</p>' +
+    '<div class="gchips">' +
+      GRUPOS6.concat(['*']).map(function(g){
+        return '<button class="gchip' + (g === '*' ? ' todos' : '') + (sel === g ? ' on' : '') +
+          '" data-g="' + g + '">' + (g === '*' ? 'Todos' : g) + '</button>';
+      }).join('') +
+    '</div>' +
+    '<div style="margin:10px 0 14px"><button class="bt" id="rtraer">Traer las respuestas</button>' +
+      '<span class="es" id="rest" style="margin-left:10px"></span></div>' +
+    '<div id="rcuerpo"></div>';
+
+  c.querySelectorAll('.gchip').forEach(function(b){
+    b.onclick = function(){ window.__respGrupo = b.dataset.g; RESP_CACHE = null; pintarRespuestas(c); };
+  });
+  document.getElementById('rtraer').onclick = function(){ traer(sel); };
+
+  if(RESP_CACHE && RESP_CACHE.grupo === sel) pintarTodo(RESP_CACHE);
+
+  function pedir(cuerpo){
+    return fetch(DATOS, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify(cuerpo)}).then(function(r){ return r.ok ? r.json() : null; });
+  }
+  function est(t){ var e = document.getElementById('rest'); if(e) e.textContent = t || ''; }
+
+  function traer(grupo){
+    est('Pidiendo la lista…');
+    pedir({accion:'panel_maestro', pase:paseHCM_()}).then(function(d){
+      if(!d || !d.ok){ est(''); 
+        document.getElementById('rcuerpo').innerHTML =
+          '<p class="nota">No pude leer la lista. ' + esc((d && d.error) || '') + '</p>'; return; }
+      /* el servidor viejo manda [{grupo,cadetes}]; el nuevo, {cadetes:[...]} */
+      var crudo = [];
+      if(Array.isArray(d)) d.forEach(function(g){ (g.cadetes || []).forEach(function(x){
+        x.grupo = x.grupo || g.grupo; crudo.push(x); }); });
+      else (d.cadetes || d.lista || []).forEach(function(x){ crudo.push(x); });
+      var todos = crudo.filter(function(x){
+        return grupo === '*' || String(x.grupo) === grupo; });
+      if(!todos.length){ est(''); 
+        document.getElementById('rcuerpo').innerHTML = '<p class="vacio">No hay cadetes en este grupo.</p>'; return; }
+      var filas = [], i = 0;
+      (function sig(){
+        if(i >= todos.length){
+          est('');
+          RESP_CACHE = {grupo:grupo, cadetes:todos, filas:filas};
+          pintarTodo(RESP_CACHE);
+          return;
+        }
+        var cad = todos[i++];
+        est('Leyendo ' + i + ' de ' + todos.length + '…');
+        pedir({accion:'detalle_cadete', pase:paseHCM_(), nombre:cad.nombre}).then(function(r){
+          if(r && r.ok) (r.sesiones || []).forEach(function(s){
+            var det = s.detalle; if(!det || !det.i) return;
+            det.i.forEach(function(e){
+              if(!AUTO_EJ[e.t]) return;
+              if(e.p === null || e.p === undefined || e.p === '') return;
+              filas.push({
+                nombre: cad.nombre, grupo: cad.grupo, carril: cad.carril,
+                leccion: s.leccion, titulo: s.titulo || s.leccion,
+                fecha: s.fecha, tipo: e.t, item: String(e.m || ''),
+                dijo: String(e.d || ''), ok: Number(e.p) >= 70
+              });
+            });
+          });
+          sig();
+        }).catch(sig);
+      })();
+    }).catch(function(){ est(''); });
+  }
+
+  function pintarTodo(C){
+    var filas = C.filas;
+    var cuerpo = document.getElementById('rcuerpo');
+    if(!filas.length){
+      cuerpo.innerHTML = '<p class="vacio">Todavía no hay respuestas calificadas de este grupo. ' +
+        'Aparecen en cuanto los cadetes hagan los ejercicios de gramática y de oído.</p>';
+      return;
+    }
+    var bien = filas.filter(function(f){ return f.ok; }).length;
+    var pct  = Math.round(bien / filas.length * 100);
+
+    /* 1 · por reactivo: el que más se falla, arriba */
+    var porItem = {};
+    filas.forEach(function(f){
+      var k = f.tipo + '|' + f.item;
+      if(!porItem[k]) porItem[k] = {tipo:f.tipo, item:f.item, leccion:f.leccion,
+                                    titulo:f.titulo, n:0, mal:0, quien:[]};
+      var o = porItem[k]; o.n++;
+      if(!f.ok){ o.mal++; o.quien.push({nombre:f.nombre, grupo:f.grupo, dijo:f.dijo}); }
+    });
+    var items = Object.keys(porItem).map(function(k){ return porItem[k]; })
+      .filter(function(o){ return o.mal > 0; })
+      .sort(function(a, b){ return (b.mal / b.n) - (a.mal / a.n) || b.n - a.n; });
+
+    /* 2 · por cadete */
+    var porCad = {};
+    filas.forEach(function(f){
+      if(!porCad[f.nombre]) porCad[f.nombre] = {nombre:f.nombre, grupo:f.grupo, n:0, mal:0, fallos:[]};
+      var o = porCad[f.nombre]; o.n++;
+      if(!f.ok){ o.mal++; o.fallos.push(f); }
+    });
+    var cads = Object.keys(porCad).map(function(k){ return porCad[k]; })
+      .sort(function(a, b){ return (b.mal / b.n) - (a.mal / a.n); });
+
+    /* 3 · por tema */
+    var porLec = {};
+    filas.forEach(function(f){
+      var k = String(f.leccion);
+      if(!porLec[k]) porLec[k] = {leccion:f.leccion, titulo:f.titulo, n:0, mal:0};
+      porLec[k].n++; if(!f.ok) porLec[k].mal++;
+    });
+    var lecs = Object.keys(porLec).map(function(k){ return porLec[k]; })
+      .sort(function(a, b){ return (b.mal / b.n) - (a.mal / a.n); });
+
+    cuerpo.innerHTML =
+      '<div class="det-r" style="margin-bottom:14px">' +
+        '<b>' + filas.length + ' respuestas calificadas</b>' +
+        '<b>' + pct + '% de acierto</b>' +
+        '<b>' + cads.length + ' cadetes</b>' +
+        '<b>' + items.length + ' reactivos con error</b>' +
+      '</div>' +
+
+      '<h4>Dónde la riegan · reactivo por reactivo</h4>' +
+      '<p class="es" style="font-size:12px;margin-bottom:6px">Toca un renglón para ver quién lo falló y qué contestó.</p>' +
+      '<table><thead><tr><th>Reactivo</th><th style="width:92px">Tipo</th>' +
+        '<th style="width:60px">Lección</th><th style="width:74px">Fallan</th></tr></thead><tbody>' +
+      items.slice(0, 60).map(function(o, i){
+        var p = Math.round(o.mal / o.n * 100);
+        return '<tr class="r-fila" data-i="' + i + '">' +
+            '<td class="dijo">' + esc(o.item) + '</td>' +
+            '<td>' + esc(AUTO_EJ[o.tipo] || o.tipo) + '</td>' +
+            '<td class="num">' + esc(o.leccion) + '</td>' +
+            '<td class="num"><span class="pc ' + (p >= 50 ? 'm' : p >= 25 ? 'r' : 'b') + '">' +
+              o.mal + '/' + o.n + '</span></td></tr>' +
+          '<tr class="det" id="ri' + i + '" style="display:none"><td colspan="4">' +
+            '<div class="det-in"><table class="mini"><thead><tr><th>Cadete</th>' +
+            '<th style="width:60px">Grupo</th><th>Contestó</th></tr></thead><tbody>' +
+            o.quien.map(function(q){
+              return '<tr><td>' + esc(q.nombre) + '</td><td>' + esc(q.grupo) + '</td>' +
+                '<td class="dijo">' + (q.dijo ? esc(q.dijo) : '<span class="es">no contestó</span>') + '</td></tr>';
+            }).join('') + '</tbody></table></div></td></tr>';
+      }).join('') + '</tbody></table>' +
+
+      '<h4 style="margin-top:22px">Por tema</h4>' +
+      '<table><thead><tr><th style="width:60px">Lección</th><th>Tema</th>' +
+        '<th style="width:74px">Fallan</th><th style="width:66px">Acierto</th></tr></thead><tbody>' +
+      lecs.map(function(o){
+        var ac = Math.round((o.n - o.mal) / o.n * 100);
+        return '<tr><td class="num">' + esc(o.leccion) + '</td><td>' + esc(o.titulo || '') + '</td>' +
+          '<td class="num">' + o.mal + '/' + o.n + '</td>' +
+          '<td class="num"><span class="pc ' + clasePct_(ac) + '">' + ac + '%</span></td></tr>';
+      }).join('') + '</tbody></table>' +
+
+      '<h4 style="margin-top:22px">Por cadete</h4>' +
+      '<p class="es" style="font-size:12px;margin-bottom:6px">Toca un renglón para ver todo lo que falló, con lo que contestó.</p>' +
+      '<table><thead><tr><th>Cadete</th><th style="width:60px">Grupo</th>' +
+        '<th style="width:74px">Falla</th><th style="width:66px">Acierto</th></tr></thead><tbody>' +
+      cads.map(function(o, i){
+        var ac = Math.round((o.n - o.mal) / o.n * 100);
+        return '<tr class="c-fila" data-i="' + i + '"><td>' + esc(o.nombre) + '</td>' +
+            '<td>' + esc(o.grupo) + '</td><td class="num">' + o.mal + '/' + o.n + '</td>' +
+            '<td class="num"><span class="pc ' + clasePct_(ac) + '">' + ac + '%</span></td></tr>' +
+          '<tr class="det" id="ci' + i + '" style="display:none"><td colspan="4">' +
+            '<div class="det-in">' + (o.fallos.length ?
+              '<table class="mini"><thead><tr><th style="width:52px">Lec</th><th style="width:92px">Tipo</th>' +
+              '<th>El reactivo</th><th>Contestó</th></tr></thead><tbody>' +
+              o.fallos.map(function(f){
+                return '<tr><td class="num">' + esc(f.leccion) + '</td>' +
+                  '<td>' + esc(AUTO_EJ[f.tipo] || f.tipo) + '</td>' +
+                  '<td>' + esc(f.item) + '</td>' +
+                  '<td class="dijo">' + (f.dijo ? esc(f.dijo) : '<span class="es">no contestó</span>') + '</td></tr>';
+              }).join('') + '</tbody></table>'
+              : '<p class="vacio">No falló ninguno.</p>') +
+            '</div></td></tr>';
+      }).join('') + '</tbody></table>';
+
+    cuerpo.querySelectorAll('tr.r-fila').forEach(function(tr){
+      tr.onclick = function(){ var d = document.getElementById('ri' + tr.dataset.i);
+        d.style.display = d.style.display === 'none' ? '' : 'none'; };
+    });
+    cuerpo.querySelectorAll('tr.c-fila').forEach(function(tr){
+      tr.onclick = function(){ var d = document.getElementById('ci' + tr.dataset.i);
+        d.style.display = d.style.display === 'none' ? '' : 'none'; };
+    });
+  }
+}
+
 function arrancar(){
   if(escuela === 'efa'){
     // EFA no necesita leer el material del Colegio: se abre de una vez.
