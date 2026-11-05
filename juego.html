@@ -23870,7 +23870,7 @@ onmessage = function(e){ var m = e.data, out = [];
     try { scRenderDock(); } catch (e) {}
     try { scSync(true); } catch (e) {}
   }
-  try { const vt = document.createElement("div"); vt.textContent = "v 5-nov c"; vt.style.cssText = "position:fixed;left:4px;bottom:2px;font:700 11px sans-serif;color:rgba(0,0,0,.45);z-index:99999;pointer-events:none"; (document.body ? Promise.resolve() : new Promise((r) => addEventListener("DOMContentLoaded", r))).then(() => document.body.appendChild(vt)); } catch (e) {}
+  try { const vt = document.createElement("div"); vt.textContent = "v 5-nov d"; vt.style.cssText = "position:fixed;left:4px;bottom:2px;font:700 11px sans-serif;color:rgba(0,0,0,.45);z-index:99999;pointer-events:none"; (document.body ? Promise.resolve() : new Promise((r) => addEventListener("DOMContentLoaded", r))).then(() => document.body.appendChild(vt)); } catch (e) {}
   function scMutedNow() {
     try { return !!(window.__gmute || (sc && !window.SC48 && game && game.mode === "scan" && view === "play" && game.phase === "q" && sc.audNoTime)); } catch (e) { return !!window.__gmute; }
   }
@@ -31585,6 +31585,11 @@ onmessage = function(e){ var m = e.data, out = [];
       if (img.naturalWidth === 310 && img.naturalHeight === 760) {
         const fs = hr * 2.1 / 190, sx = 0, sy = 0, sw = 310, sh = 330;
         c.drawImage(img, sx, sy, sw, sh, -(158 - sx) * fs + jig, hy - (205 - sy) * fs, sw * fs, sh * fs);
+        c.save();
+        c.translate(-158 * fs + jig, hy - 205 * fs);
+        c.scale(fs, fs);
+        scvB2FaceFx(c, mood, mo, t);
+        c.restore();
       } else {
         c.beginPath();
         c.ellipse(0, hy, hr * 0.95, hr * 1.06, 0, 0, 7);
@@ -31611,7 +31616,8 @@ onmessage = function(e){ var m = e.data, out = [];
         });
         scvText(c, "\u{1F4A2}", hr * 0.85, hy - hr * 0.85, u * 13, "#fff", "center", false);
       }
-      if (mood === "chew") {
+      const ffx = img.naturalWidth === 310 && img.naturalHeight === 760;
+      if (mood === "chew" && !ffx) {
         c.fillStyle = skin;
         [-1, 1].forEach((sd) => {
           c.beginPath();
@@ -31620,11 +31626,11 @@ onmessage = function(e){ var m = e.data, out = [];
           c.stroke();
         });
       }
-      if (mood === "taunt") scvText(c, "\u{1F61B}", hr * 0.9, hy + hr * 0.8, u * 13, "#fff", "center", false);
-      if (mood === "relief") scvText(c, "\u{1F60C}", hr * 0.95, hy - hr * 0.9, u * 12, "#fff", "center", false);
+      if (mood === "taunt" && !ffx) scvText(c, "\u{1F61B}", hr * 0.9, hy + hr * 0.8, u * 13, "#fff", "center", false);
+      if (mood === "relief" && !ffx) scvText(c, "\u{1F60C}", hr * 0.95, hy - hr * 0.9, u * 12, "#fff", "center", false);
       if (mood === "rage") scvText(c, "\u{1F4A2}", -hr * 0.95, hy - hr * 0.95, u * 13, "#fff", "center", false);
       if (mood === "ko") scvText(c, "\u{1F4AB}", 0, hy - hr * 1.3, u * 15, "#fff", "center", false);
-      if (mo > 0.5) {
+      if (mo > 0.5 && !ffx) {
         c.fillStyle = "#3A0A14";
         c.beginPath();
         c.ellipse(0, hy + hr * 0.62, hr * 0.45 * mo, hr * 0.32 * mo, 0, 0, 7);
@@ -31756,6 +31762,139 @@ onmessage = function(e){ var m = e.data, out = [];
         c.arc(-u * 20 + i * u * 13 + Math.sin(t + i) * u * 4, -u * 100 - k * u * 40, u * (4 + k * 8), 0, 7);
         c.fill();
       }
+    }
+  }
+  function scvB2FaceFx(c, mood, mo, t) {
+    const L = [132, 188], R = [212, 191], M = [160, 274], ink = "#14200E";
+    const patch = (x, y, rx, ry) => {
+      const r = Math.max(rx, ry), g = c.createRadialGradient(0, 0, 1, 0, 0, r);
+      g.addColorStop(0, "rgba(108,165,74,1)");
+      g.addColorStop(0.72, "rgba(108,165,74,1)");
+      g.addColorStop(1, "rgba(108,165,74,0)");
+      c.save();
+      c.translate(x, y);
+      c.scale(rx / r, ry / r);
+      c.fillStyle = g;
+      c.beginPath();
+      c.arc(0, 0, r, 0, 7);
+      c.fill();
+      c.restore();
+    };
+    const eyesPatch = () => { patch(L[0], L[1], 36, 23); patch(R[0], R[1], 36, 23); };
+    const mouthPatch = (w) => patch(M[0], M[1] - 4, w || 48, 28);
+    const openMouth = (k) => {
+      c.fillStyle = "#3A0A14";
+      c.strokeStyle = ink;
+      c.lineWidth = 4;
+      c.beginPath();
+      c.ellipse(M[0], M[1], 30 * k + 8, 22 * k + 6, 0, 0, 7);
+      c.fill();
+      c.stroke();
+      c.fillStyle = "#fff";
+      for (let i = -2; i <= 2; i++) {
+        c.beginPath();
+        c.moveTo(M[0] + i * 11 - 5, M[1] - 22 * k - 3);
+        c.lineTo(M[0] + i * 11 + 5, M[1] - 22 * k - 3);
+        c.lineTo(M[0] + i * 11, M[1] - 22 * k + 10);
+        c.fill();
+      }
+      c.fillStyle = "#E0506A";
+      c.beginPath();
+      c.ellipse(M[0], M[1] + 12 * k, 14 * k + 4, 7 * k + 2, 0, 0, 7);
+      c.fill();
+    };
+    const closed = (e, happy) => {
+      c.beginPath();
+      if (happy) c.arc(e[0], e[1] + 8, 14, Math.PI * 1.15, Math.PI * 1.85);
+      else { c.moveTo(e[0] - 14, e[1]); c.lineTo(e[0] + 14, e[1]); }
+      c.stroke();
+    };
+    c.lineCap = "round";
+    c.lineJoin = "round";
+    c.strokeStyle = ink;
+    if (mood === "pain") {
+      eyesPatch();
+      c.lineWidth = 6;
+      c.beginPath();
+      c.moveTo(L[0] - 16, L[1] - 10); c.lineTo(L[0] + 12, L[1]); c.lineTo(L[0] - 16, L[1] + 10);
+      c.moveTo(R[0] + 16, R[1] - 10); c.lineTo(R[0] - 12, R[1]); c.lineTo(R[0] + 16, R[1] + 10);
+      c.stroke();
+      mouthPatch();
+      openMouth(0.7 + Math.sin(t * 25) * 0.15);
+      c.fillStyle = "#7FD3FF";
+      [L, R].forEach((e, i) => { const ty = e[1] + 14 + ((t * 70 + i * 13) % 40); c.beginPath(); c.ellipse(e[0] + (i ? 10 : -10), ty, 5, 8, 0, 0, 7); c.fill(); });
+    } else if (mood === "ko") {
+      eyesPatch();
+      c.lineWidth = 6;
+      [L, R].forEach((e) => { c.beginPath(); c.moveTo(e[0] - 13, e[1] - 11); c.lineTo(e[0] + 13, e[1] + 11); c.moveTo(e[0] + 13, e[1] - 11); c.lineTo(e[0] - 13, e[1] + 11); c.stroke(); });
+      mouthPatch();
+      c.lineWidth = 5;
+      c.beginPath();
+      c.moveTo(M[0] - 26, M[1] - 2);
+      c.quadraticCurveTo(M[0], M[1] + 6, M[0] + 26, M[1] - 4);
+      c.stroke();
+      c.fillStyle = "#E0506A";
+      c.lineWidth = 3;
+      c.beginPath();
+      c.ellipse(M[0] + 14, M[1] + 14, 9, 14, 0.3, 0, 7);
+      c.fill();
+      c.stroke();
+    } else if (mood === "chew") {
+      eyesPatch();
+      c.lineWidth = 6;
+      [L, R].forEach((e) => closed(e, true));
+      mouthPatch(54);
+      if (mo > 0.5) openMouth(mo);
+      else {
+        c.lineWidth = 5;
+        c.beginPath();
+        for (let i = 0; i <= 8; i++) c.lineTo(M[0] - 28 + i * 7, M[1] + (i % 2 ? 5 : -5));
+        c.stroke();
+        const p = 1 + Math.sin(t * 18) * 0.12;
+        c.fillStyle = "#79B455";
+        c.lineWidth = 3;
+        [[92, 252], [228, 252]].forEach(([x, y]) => { c.beginPath(); c.ellipse(x, y, 30 * p, 26 * p, 0, 0, 7); c.fill(); c.stroke(); });
+      }
+    } else if (mood === "relief") {
+      eyesPatch();
+      c.lineWidth = 6;
+      [L, R].forEach((e) => closed(e, true));
+      c.fillStyle = "rgba(255,120,140,.5)";
+      [[100, 222], [222, 222]].forEach(([x, y]) => { c.beginPath(); c.ellipse(x, y, 18, 10, 0, 0, 7); c.fill(); });
+    } else if (mood === "taunt") {
+      patch(L[0], L[1], 36, 23);
+      c.lineWidth = 6;
+      closed(L, true);
+      c.lineWidth = 7;
+      c.beginPath();
+      c.moveTo(R[0] - 24, R[1] - 34);
+      c.lineTo(R[0] + 24, R[1] - 42);
+      c.stroke();
+      const w = Math.sin(t * 8) * 4;
+      c.fillStyle = "#E0506A";
+      c.lineWidth = 3;
+      c.beginPath();
+      c.ellipse(M[0] + w, M[1] + 26, 13, 20, 0, 0, 7);
+      c.fill();
+      c.stroke();
+      c.beginPath();
+      c.moveTo(M[0] + w, M[1] + 14);
+      c.lineTo(M[0] + w, M[1] + 34);
+      c.stroke();
+    } else if (mood === "rage") {
+      const g = 0.6 + Math.sin(t * 20) * 0.3;
+      [L, R].forEach((e) => { const gg = c.createRadialGradient(e[0], e[1], 2, e[0], e[1], 34); gg.addColorStop(0, `rgba(255,30,0,${g})`); gg.addColorStop(1, "rgba(255,30,0,0)"); c.fillStyle = gg; c.beginPath(); c.arc(e[0], e[1], 34, 0, 7); c.fill(); });
+      c.lineWidth = 10;
+      c.strokeStyle = "#1A0A08";
+      c.beginPath();
+      c.moveTo(L[0] - 34, L[1] - 36); c.lineTo(L[0] + 22, L[1] - 18);
+      c.moveTo(R[0] + 34, R[1] - 36); c.lineTo(R[0] - 22, R[1] - 18);
+      c.stroke();
+      c.strokeStyle = ink;
+      if (mo > 0.5) { mouthPatch(); openMouth(mo); }
+    } else if (mo > 0.5) {
+      mouthPatch();
+      openMouth(mo);
     }
   }
   function scvFwSpawn(arr, x, y, col) {
