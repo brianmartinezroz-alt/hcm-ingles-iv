@@ -15518,6 +15518,15 @@ function hcmTutorial(){
     };
   }catch(e){}
   try{ window.__hcmAudio.caido=function(){ return CAIDO_HASTA>Date.now(); }; }catch(e){}
+  /* al abrir la app se le pregunta al servidor si está vivo, con una frase
+     de una sola palabra: así, si está caído, ni la primera frase espera */
+  try{
+    setTimeout(function(){
+      if(!VOZ_ENDPOINT) return;
+      fetch(VOZ_ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({texto:'Ready.',idioma:'en',paquete:PAQUETE_ACTIVO||'audio-us',sexo:'f'})}).catch(function(){});
+    }, 1200);
+  }catch(e){}
 
   try{
     var st=document.createElement('style');
