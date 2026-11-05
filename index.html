@@ -15468,6 +15468,57 @@ function hcmTutorial(){
   /* (la voz del teléfono cuando falla el servidor ya la pone la capa
      NIVELES_CONSTANCIAS_AUDIO_HCM; aquí no se repite) */
 
+  /* ── cuando el servidor de voz está caído ──
+     El 5 de noviembre Google Cloud apagó la facturación del proyecto de la
+     voz: cada frase tardaba 2 segundos en regresar con error y hasta
+     entonces se intentaba la voz del teléfono — ya fuera del toque, donde el
+     iPhone muchas veces no la deja sonar. Resultado: silencio.
+     Ahora la app se da cuenta a la primera: si el servidor contesta con
+     error, durante los siguientes minutos ni lo intenta y la voz del
+     teléfono sale en el mismo instante del toque. Lo que ya se había oído
+     con la voz buena (en la memoria de la sesión) sigue sonando con ella.
+     Cada pocos minutos se vuelve a probar el servidor, y en cuanto la
+     facturación regrese la voz buena vuelve sola. */
+  var CAIDO_HASTA=0, AVISO_SILENCIO=false;
+  var ES_IOS=/iP(hone|ad|od)/.test(navigator.userAgent) ||
+             (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+  try{
+    var F0=window.fetch;
+    window.fetch=function(u){
+      var pr=F0.apply(this,arguments);
+      try{
+        if(typeof VOZ_ENDPOINT!=='undefined' && VOZ_ENDPOINT && String(u).indexOf(VOZ_ENDPOINT)===0){
+          pr.then(function(r){ return r.clone().json(); })
+            .then(function(d){
+              if(d && d.ok){ if(CAIDO_HASTA) anota('el servidor de voz volvió'); CAIDO_HASTA=0; }
+              else { CAIDO_HASTA=Date.now()+4*60000; anota('servidor de voz con error: '+String(d&&d.error||'').slice(0,60)); }
+            })
+            .catch(function(){ CAIDO_HASTA=Date.now()+60000; anota('servidor de voz sin respuesta'); });
+        }
+      }catch(e){}
+      return pr;
+    };
+  }catch(e){}
+  try{
+    var vdsBase=vozDelServidor;
+    vozDelServidor=function(texto,lang,cb,onFalla){
+      if(Date.now()<CAIDO_HASTA){
+        var k=clave(texto)+'|'+(PAQUETE_ACTIVO||'audio-us')+'|'+sexoDeLaFrase(texto);
+        if(VOZ_CACHE[k]){ return vdsBase.apply(this,arguments); }      // la buena, de memoria
+        anota('voz del teléfono: '+String(texto).slice(0,28));
+        try{ marcarCargando(false); }catch(e){}
+        if(ES_IOS && !AVISO_SILENCIO){
+          AVISO_SILENCIO=true;
+          try{ avisito('Si no oyes nada, quita el modo silencio del iPhone (el botón del costado) y sube el volumen.'); }catch(e){}
+        }
+        try{ hablar(texto,lang,cb); }catch(e){ cb&&cb(); }
+        return;
+      }
+      return vdsBase.apply(this,arguments);
+    };
+  }catch(e){}
+  try{ window.__hcmAudio.caido=function(){ return CAIDO_HASTA>Date.now(); }; }catch(e){}
+
   try{
     var st=document.createElement('style');
     st.textContent=
