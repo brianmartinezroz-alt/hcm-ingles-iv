@@ -1,0 +1,88 @@
+# Genera la voz de todas las frases de la app en los servidores gratuitos de
+# GitHub y la guarda en voz/. Se corre solo cuando cambian las frases, o a
+# mano desde la pestaña Actions → "Voces de la app" → Run workflow.
+name: Voces de la app
+
+on:
+  workflow_dispatch:
+    inputs:
+      motor:
+        description: 'chatterbox (como ElevenLabs) o kokoro (más rápido)'
+        required: true
+        default: 'chatterbox'
+        type: choice
+        options: [chatterbox, kokoro]
+  push:
+    paths: ['voces/frases.json']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: voces
+  cancel-in-progress: false
+
+jobs:
+  generar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        parte: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+    env:
+      MOTOR: ${{ github.event.inputs.motor || 'chatterbox' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Herramientas
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg espeak-ng
+      - name: Motor de voz
+        run: |
+          python -m pip install -q --upgrade pip
+          if [ "$MOTOR" = "chatterbox" ]; then
+            pip install -q --extra-index-url https://download.pytorch.org/whl/cpu chatterbox-tts
+          else
+            pip install -q --extra-index-url https://download.pytorch.org/whl/cpu "kokoro>=0.9.4" soundfile
+          fi
+      - name: Generar (parte ${{ matrix.parte }} de 16)
+        run: python voces/generar.py "$MOTOR" ${{ matrix.parte }} 16 salida
+      - uses: actions/upload-artifact@v4
+        with:
+          name: voz-${{ matrix.parte }}
+          path: salida/*.mp3
+          if-no-files-found: ignore
+          retention-days: 3
+
+  guardar:
+    needs: generar
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: nuevas
+          pattern: voz-*
+          merge-multiple: true
+      - name: Juntar y armar la lista
+        run: |
+          mkdir -p voz
+          cp -n nuevas/*.mp3 voz/ 2>/dev/null || true
+          python - <<'EOF'
+          import json, os
+          hs = sorted(f[:-4] for f in os.listdir('voz') if f.endswith('.mp3'))
+          json.dump({'v': 1, 'h': hs}, open('voz/lista.json', 'w'))
+          print(len(hs), 'audios en voz/')
+          EOF
+      - name: Guardar en el repositorio
+        run: |
+          git config user.name  "voces-app"
+          git config user.email "voces-app@users.noreply.github.com"
+          git add voz
+          git diff --cached --quiet && { echo "nada nuevo"; exit 0; }
+          git commit -m "Voces de la app: $(ls voz/*.mp3 | wc -l) audios"
+          git pull --rebase -q
+          git push
