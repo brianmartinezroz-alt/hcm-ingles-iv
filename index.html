@@ -15518,6 +15518,43 @@ function hcmTutorial(){
     };
   }catch(e){}
   try{ window.__hcmAudio.caido=function(){ return CAIDO_HASTA>Date.now(); }; }catch(e){}
+  /* ── las voces guardadas en el repositorio ──
+     Todas las frases de la app se generan una vez con una voz neuronal de
+     código abierto (en GitHub Actions, gratis) y se guardan en voz/. Si la
+     frase está en voz/lista.json, se toca el archivo: suena al instante,
+     sin servidor, sin facturación, y el teléfono la guarda para usarla sin
+     internet. Si no está, sigue el camino de siempre. */
+  var VOZ_LOCAL=null;
+  function fnvVoz(t){ var h=0x811c9dc5; t=String(t); for(var i=0;i<t.length;i++){ h^=t.charCodeAt(i); h=Math.imul(h,16777619)>>>0; } return ('0000000'+h.toString(16)).slice(-8); }
+  try{
+    fetch('voz/lista.json?d='+new Date().toISOString().slice(0,10),{cache:'no-cache'})
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        if(!d || !d.h) return;
+        VOZ_LOCAL={}; d.h.forEach(function(h){ VOZ_LOCAL[h]=1; });
+        anota('voces guardadas: '+d.h.length);
+      }).catch(function(){});
+  }catch(e){}
+  try{
+    var vdsCaido=vozDelServidor;
+    vozDelServidor=function(texto,lang,cb,onFalla){
+      if(VOZ_LOCAL && lang!=='es-MX'){
+        var h=fnvVoz(clave(texto));
+        if(VOZ_LOCAL[h]){
+          var args=arguments, yo=this;
+          anota('voz guardada: '+String(texto).slice(0,26));
+          reproducir('voz/'+h+'.mp3', function(){ cb&&cb(); },
+            function(){ vdsCaido.apply(yo,args); },          // si el archivo falla, el camino de siempre
+            function(){ cb&&cb(); }, VEL_PEDIDA);
+          return;
+        }
+      }
+      return vdsCaido.apply(this,arguments);
+    };
+  }catch(e){}
+  try{ window.__hcmAudio.locales=function(){ return VOZ_LOCAL?Object.keys(VOZ_LOCAL).length:0; }; }catch(e){}
+  try{ window.__hcmAudio.tieneLocal=function(t){ return !!(VOZ_LOCAL && VOZ_LOCAL[fnvVoz(clave(t))]); }; }catch(e){}
+
   /* al abrir la app se le pregunta al servidor si está vivo, con una frase
      de una sola palabra: así, si está caído, ni la primera frase espera */
   try{
@@ -16681,6 +16718,190 @@ function hcmTutorial(){
     '#es-nota{position:fixed;left:18px;right:18px;z-index:9992;padding:15px 17px;border-radius:16px;'+
       'background:#1C1510;color:#F7F0DC;box-shadow:0 14px 40px rgba(0,0,0,.4);font-size:16px;line-height:1.4}'+
     '#es-nota b{color:#F2D58A}#es-nota span{display:block;font-size:12px;opacity:.6;margin-top:6px}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+
+/* ═══════════ VOZ_VIVA_HCM ═══════════════════════════════════════════════
+   Voz natural en vivo, dentro del teléfono del cadete.
+   Motor: Kokoro-82M (código abierto, Apache-2.0) con kokoro-js. Se baja una
+   sola vez (≈ 90 MB), queda guardado en el teléfono y de ahí en adelante
+   habla sin servidor, sin facturación y sin internet.
+   · Inglés: las voces de Kokoro (af_heart / am_michael).
+   · Español: kokoro-js trae las voces en español (ef_dora, em_alex) pero no
+     sabe convertir el español a fonemas — solo inglés. Este código lo hace:
+     pasa el texto por eSpeak en español latino (es-419), lo tokeniza con el
+     mismo tokenizador del modelo y genera con la voz en español. Así la IA
+     explica en español con la misma voz natural.
+   · La respuesta de la IA se dice frase por frase: la primera suena
+     mientras se arma la siguiente, así la voz arranca casi al instante.
+   Orden: archivo guardado → voz natural en vivo → servidor de voz → voz del
+   teléfono. Si algo falla, sigue el siguiente; nunca se queda callada.
+   ═════════════════════════════════════════════════════════════════════ */
+(function(){
+  if(typeof vozDelServidor!=='function' || typeof reproducir!=='function') return;
+
+  var KOKORO_JS='https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js';
+  var FONEMAS_JS='https://cdn.jsdelivr.net/npm/phonemizer@1.2.1/+esm';
+  var MODELO='onnx-community/Kokoro-82M-v1.0-ONNX';
+  var K_DEC='hcm_vozviva';                 // 'si' | 'no'
+  var VOCES={en:{f:'af_heart', m:'am_michael'}, es:{f:'ef_dora', m:'em_alex'}};
+
+  var KK=null, PROM=null, ESTADO='nada', LENTO=false, PCT=0;
+  function log(t){ try{ var L=window.__hcmAudio&&window.__hcmAudio.log; if(L){ L.push(new Date().toTimeString().slice(0,8)+' [viva] '+t); if(L.length>30) L.shift(); } }catch(e){} }
+  function decision(){ try{ return localStorage.getItem(K_DEC)||''; }catch(e){ return ''; } }
+  function decidir(v){ try{ localStorage.setItem(K_DEC,v); }catch(e){} }
+
+  function pill(txt){
+    var p=document.getElementById('vv-pill');
+    if(!txt){ if(p) p.remove(); return; }
+    if(!p){ p=document.createElement('div'); p.id='vv-pill'; document.body.appendChild(p); }
+    p.textContent=txt;
+  }
+
+  function cargar(){
+    if(PROM) return PROM;
+    ESTADO='cargando'; log('cargando el modelo');
+    var gpu=!!navigator.gpu;
+    PROM=import(KOKORO_JS).then(function(m){
+      function abrir(opc){
+        return m.KokoroTTS.from_pretrained(MODELO, {dtype:opc.dtype, device:opc.device,
+          progress_callback:function(x){
+            if(x && x.status==='progress' && x.progress){ PCT=Math.round(x.progress); pill('🔊 Descargando la voz natural · '+PCT+'%'); }
+          }});
+      }
+      return (gpu ? abrir({dtype:'fp32',device:'webgpu'}).catch(function(e){ log('webgpu no: '+String(e&&e.message||e).slice(0,50)); return abrir({dtype:'q8',device:'wasm'}); })
+                  : abrir({dtype:'q8',device:'wasm'}))
+        .then(function(tts){ KK={m:m, tts:tts}; ESTADO='lista'; pill(''); log('lista ('+(gpu?'webgpu':'wasm')+')'); return KK; });
+    }).catch(function(e){
+      ESTADO='falla'; pill(''); PROM=null;
+      log('no se pudo cargar: '+String(e&&e.message||e).slice(0,70));
+      throw e;
+    });
+    return PROM;
+  }
+
+  /* ── español: fonemas con eSpeak es-419 ── */
+  var FON=null;
+  function fonemasEs(t){
+    if(!FON) FON=import(FONEMAS_JS);
+    return FON.then(function(p){ return p.phonemize(t,'es-419'); })
+      .then(function(r){ return (Array.isArray(r)?r.join(' '):String(r||'')).replace(/ʲ/g,'j').replace(/\s+/g,' ').trim(); });
+  }
+
+  function generar(t, es, sexo){
+    var voz=(es?VOCES.es:VOCES.en)[sexo==='m'?'m':'f'];
+    if(!es) return KK.tts.generate(t,{voice:voz, speed:0.95});
+    return fonemasEs(t).then(function(ph){
+      var ids=KK.tts.tokenizer(ph,{truncation:true}).input_ids;
+      return KK.tts.generate_from_ids(ids,{voice:voz, speed:1});
+    });
+  }
+
+  /* Float32 → wav, para tocarlo con el mismo reproductor desbloqueado */
+  function aWav(f32, sr){
+    var n=f32.length, b=new ArrayBuffer(44+n*2), v=new DataView(b);
+    function w(o,s){ for(var i=0;i<s.length;i++) v.setUint8(o+i,s.charCodeAt(i)); }
+    w(0,'RIFF'); v.setUint32(4,36+n*2,true); w(8,'WAVE'); w(12,'fmt ');
+    v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+    v.setUint32(24,sr,true); v.setUint32(28,sr*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true);
+    w(36,'data'); v.setUint32(40,n*2,true);
+    for(var i=0,o=44;i<n;i++,o+=2){ var x=Math.max(-1,Math.min(1,f32[i])); v.setInt16(o, x<0?x*0x8000:x*0x7FFF, true); }
+    return URL.createObjectURL(new Blob([b],{type:'audio/wav'}));
+  }
+
+  function partir(t){
+    var s=String(t).replace(/\s+/g,' ').trim(); if(!s) return [];
+    var a=s.split(/(?<=[.!?…])\s+/), out=[], cur='';
+    a.forEach(function(x){ if((cur+' '+x).trim().length<180) cur=(cur+' '+x).trim(); else { if(cur) out.push(cur); cur=x; } });
+    if(cur) out.push(cur);
+    return out;
+  }
+
+  /* ── hablar frase por frase: la primera suena mientras se arma la otra ── */
+  function hablarViva(texto, lang, cb, siFalla){
+    var es=(lang==='es-MX'), sexo=sexoDeLaFrase(texto), trozos=partir(texto);
+    if(!trozos.length){ cb&&cb(); return; }
+    var turno=TURNO, i=0, sig=null, t0=Date.now();
+    try{ marcarCargando(true); }catch(e){}
+    function pedir(k){ return generar(trozos[k], es, sexo); }
+    function toca(audio){
+      if(TURNO!==turno) return;                    // el cadete ya cambió de pantalla
+      var dur=audio.audio.length/audio.sampling_rate;
+      if(i===0){ var rtf=(Date.now()-t0)/1000/Math.max(.5,dur); LENTO = rtf>2.2; log('1a frase en '+(Date.now()-t0)+' ms'+(LENTO?' (teléfono lento)':'')); }
+      var url=aWav(audio.audio, audio.sampling_rate);
+      i++;
+      if(i<trozos.length) sig=pedir(i);            // la siguiente se arma mientras suena esta
+      reproducir(url, function(){
+        try{ URL.revokeObjectURL(url); }catch(e){}
+        if(i>=trozos.length){ cb&&cb(); return; }
+        turno=TURNO;
+        sig.then(toca).catch(function(){ cb&&cb(); });
+      }, function(){ siFalla(); }, function(){ cb&&cb(); }, VEL_PEDIDA);
+      turno=TURNO;                                 // reproducir() cambia el turno al arrancar
+    }
+    pedir(0).then(toca).catch(function(e){ log('falló: '+String(e&&e.message||e).slice(0,60)); siFalla(); });
+  }
+
+  /* ── el enganche ── */
+  var base=vozDelServidor;
+  vozDelServidor=function(texto,lang,cb,onFalla){
+    var yo=this, args=arguments;
+    var local = (lang!=='es-MX') && window.__hcmAudio && window.__hcmAudio.tieneLocal && window.__hcmAudio.tieneLocal(texto);
+    var caido = window.__hcmAudio && window.__hcmAudio.caido && window.__hcmAudio.caido();
+    /* teléfono lento y servidor sano: mejor el servidor */
+    if(KK && ESTADO==='lista' && !local && !(LENTO && !caido)){
+      hablarViva(texto, lang, cb, function(){ base.apply(yo,args); });
+      return;
+    }
+    return base.apply(this,arguments);
+  };
+
+  /* ── se ofrece una vez: el cadete decide si la baja ── */
+  function ofrecer(){
+    if(decision() || document.getElementById('vv-hoja')) return;
+    var h=document.createElement('div'); h.id='vv-hoja';
+    h.innerHTML='<div class="vv-in"><b>🔊 Voz natural en español e inglés</b>'+
+      '<p>Para que la app y la IA te hablen con voz natural, aunque no haya internet. '+
+      'Se descarga una sola vez (unos 90 MB). Mejor con Wi-Fi.</p>'+
+      '<div class="vv-bt"><button id="vv-si">Descargar ahora</button><button id="vv-no" class="vv-no">Ahora no</button></div></div>';
+    document.body.appendChild(h);
+    document.getElementById('vv-si').onclick=function(){ decidir('si'); h.remove(); pill('🔊 Preparando la voz natural…'); cargar().catch(function(){}); };
+    document.getElementById('vv-no').onclick=function(){ decidir('no-'+new Date().toISOString().slice(0,10)); h.remove(); };
+  }
+  function arrancar(){
+    var d=decision();
+    if(d==='si'){ setTimeout(function(){ cargar().catch(function(){}); }, 2500); return; }
+    /* "ahora no" se vuelve a preguntar a la semana */
+    if(d.indexOf('no-')===0){
+      var f=new Date(d.slice(3)); if(!isNaN(f) && Date.now()-f.getTime() < 7*864e5) return;
+      try{ localStorage.removeItem(K_DEC); }catch(e){}
+    }
+    var c=navigator.connection||{};
+    if(c.saveData) return;                         // el teléfono pidió ahorrar datos
+    setTimeout(ofrecer, 9000);
+  }
+  try{ arrancar(); }catch(e){}
+
+  try{
+    window.__hcmVozViva={estado:function(){ return {estado:ESTADO, pct:PCT, lento:LENTO, gpu:!!navigator.gpu}; },
+                         cargar:cargar, decir:function(t,l){ return new Promise(function(ok){ hablarViva(t,l||'en-US',ok,ok); }); },
+                         say:function(t,l){ say(t,l||'en-US'); }};
+  }catch(e){}
+
+  try{
+    var st=document.createElement('style');
+    st.textContent=
+    '#vv-pill{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:9998;padding:8px 14px;border-radius:20px;'+
+      'background:#1C1510;color:#F2D58A;font:600 12.5px/1.2 system-ui,sans-serif;box-shadow:0 6px 18px rgba(0,0,0,.25)}'+
+    '#vv-hoja{position:fixed;left:0;right:0;bottom:0;z-index:9997;padding:0 12px 96px;pointer-events:none}'+
+    '#vv-hoja .vv-in{pointer-events:auto;max-width:520px;margin:0 auto;padding:16px 17px;border-radius:18px;background:#1C1510;color:#F7F0DC;'+
+      'box-shadow:0 14px 40px rgba(0,0,0,.4);font-family:system-ui,sans-serif}'+
+    '#vv-hoja b{display:block;font-size:16px;color:#F2D58A}'+
+    '#vv-hoja p{font-size:13.5px;line-height:1.45;opacity:.85;margin:6px 0 12px}'+
+    '#vv-hoja .vv-bt{display:flex;gap:8px}'+
+    '#vv-hoja button{flex:1;padding:12px;border-radius:12px;border:0;font:inherit;font-weight:800;cursor:pointer;background:#F2D58A;color:#1C1510}'+
+    '#vv-hoja button.vv-no{background:transparent;color:#F7F0DC;border:1px solid rgba(255,255,255,.25);font-weight:600}';
     document.head.appendChild(st);
   }catch(e){}
 })();
