@@ -13422,7 +13422,16 @@ function hcmTutorial(){
     });
     return VOZ_DB_LISTA;
   }
+  /* En algunos iPhone (y en Safari en modo privado) abrir IndexedDB se
+     queda colgado para siempre, sin éxito ni error. Como la frase esperaba
+     a la bóveda antes de pedirse al servidor, esa frase nunca sonaba: era
+     uno de los "no se escucha nada". Ahora la bóveda tiene 700 ms; si no
+     contesta, se sigue al servidor como si no hubiera nada guardado. */
   function vozGuardada(k){
+    var plazo = new Promise(function(ok){ setTimeout(function(){ ok(null); }, 700); });
+    return Promise.race([plazo, vozGuardadaSin(k)]);
+  }
+  function vozGuardadaSin(k){
     return vozDB().then(function(d){
       if(!d) return null;
       return new Promise(function(ok){
@@ -15362,21 +15371,27 @@ function hcmTutorial(){
     }
     return AU1;
   }
+  var TTS_LIBRE=false;
   function desbloquear(){
+    /* la voz del teléfono, una sola vez */
+    if(!TTS_LIBRE){
+      TTS_LIBRE=true;
+      try{
+        if('speechSynthesis' in window){
+          var u=new SpeechSynthesisUtterance(' '); u.volume=0;
+          speechSynthesis.speak(u);
+        }
+      }catch(e){}
+    }
     if(LIBRE) return;
     var a=reproductor();
+    /* si ya está sonando una frase, ese play ya lo desbloqueó: no se toca */
+    if(!a.paused || (a.src && a.src.indexOf('data:audio/wav')<0 && a.src!=='')) { return; }
     try{
       a.src=SILENCIO;
       var p=a.play();
       if(p&&p.then) p.then(function(){ LIBRE=true; }).catch(function(){});
       else LIBRE=true;
-    }catch(e){}
-    /* la voz del teléfono también se desbloquea con un toque */
-    try{
-      if('speechSynthesis' in window){
-        var u=new SpeechSynthesisUtterance(' '); u.volume=0;
-        speechSynthesis.speak(u);
-      }
     }catch(e){}
   }
   ['touchend','click','keydown'].forEach(function(ev){
@@ -15387,7 +15402,7 @@ function hcmTutorial(){
   var PEND=null;
   function pedirToque(a, alSonar){
     PEND=function(){
-      try{ var p=a.play(); if(p&&p.then) p.then(alSonar).catch(function(){}); }catch(e){}
+      try{ var p=a.play(); if(p&&p.then) p.then(function(){ LIBRE=true; alSonar&&alSonar(); }).catch(function(){}); }catch(e){}
     };
     var v=document.getElementById('au-toca');
     if(!v){
@@ -15405,7 +15420,12 @@ function hcmTutorial(){
     setTimeout(function(){ if(v) v.classList.remove('on'); }, 9000);
   }
 
+  /* bitácora corta del audio: si un teléfono no suena, aquí se ve por qué */
+  var BIT=[];
+  function anota(t){ BIT.push(new Date().toTimeString().slice(0,8)+' '+t); if(BIT.length>30) BIT.shift(); }
+  try{ window.__hcmAudio={libre:function(){ return LIBRE; }, el:function(){ return AU1; }, log:BIT}; }catch(e){}
   reproducir=function(url,onOk,onNoExiste,onBloqueado,vel){
+    anota('reproducir '+String(url).slice(0,22));
     callarTodo();
     var miTurno=TURNO;
     var a=reproductor();
@@ -15428,10 +15448,12 @@ function hcmTutorial(){
     try{ p=a.play(); }catch(e){ fin(onNoExiste); return a; }
     if(p&&p.then){
       p.then(function(){
+        LIBRE=true; anota('suena');
         try{ marcarCargando(false); }catch(e){}
         if(miTurno!==TURNO){ try{ a.pause(); }catch(e){} }
         hecho=true; clearTimeout(reloj);
       }).catch(function(e){
+        anota('play rechazado: '+(e&&e.name));
         if(e && e.name==='NotAllowedError'){
           /* existe, pero el teléfono no dejó: se le pide un toque */
           fin(function(){
@@ -15443,26 +15465,8 @@ function hcmTutorial(){
     return a;
   };
 
-  /* ── si el servidor de voz falla, habla el teléfono ── */
-  try{
-    var avisoBase=avisoDeAudio;
-    avisoDeAudio=function(){
-      try{ VOZ_SINTETICA=true; }catch(e){}
-      return avisoBase.apply(this,arguments);
-    };
-  }catch(e){}
-  try{
-    var vozBase=vozDelServidor;
-    vozDelServidor=function(texto,lang,cb,onFalla){
-      return vozBase(texto,lang,cb,function(){
-        /* antes: silencio. ahora: la voz del teléfono dice la frase */
-        try{
-          if('speechSynthesis' in window){ hablar(texto,lang,cb); return; }
-        }catch(e){}
-        onFalla&&onFalla();
-      });
-    };
-  }catch(e){}
+  /* (la voz del teléfono cuando falla el servidor ya la pone la capa
+     NIVELES_CONSTANCIAS_AUDIO_HCM; aquí no se repite) */
 
   try{
     var st=document.createElement('style');
@@ -16467,12 +16471,10 @@ function hcmTutorial(){
     var v=vista();
     if(paso==='lista'){
       if(v.lista) return;
-      var ex=[9,18,19].filter(function(k){ return abierto(k); })[0];
-      if(!ex) return;
-      var card=document.querySelector('.tm-card[data-n="'+ex+'"] .tm-cab');
-      if(!card) return;
+      var bn=document.getElementById('es-bn-go');
+      if(!bn) return;
       marcar('lista');
-      foco(card,'Aquí estudias para tu <b>evaluación</b>. Tócala para abrirla.');
+      foco(bn,'Aquí estudias para tu <b>evaluación</b>. Toca este botón para empezar.');
     }else if(paso==='caja'){
       if(v.caja) return;
       var b=document.querySelector('#es-caja-'+n+' .es-v');
@@ -16504,12 +16506,50 @@ function hcmTutorial(){
               if(eti && !eti.querySelector('.es-chip')) eti.insertAdjacentHTML('beforeend',' <span class="es-chip">estudio abierto</span>');
             }
           });
+          ponerBanner();
           setTimeout(function(){ guia('lista'); }, 900);
         }catch(e){}
         return r;
       };
     }
   }catch(e){}
+
+  /* ══════ el aviso de arriba ══════
+     Brian pidió darle prioridad al estudio: mientras esté abierto, es lo
+     primero que ve el cadete al entrar, arriba de todas las lecciones.   */
+  function cualToca(){
+    var hoyT=Date.now(), mejor=null;
+    [9,18,19].forEach(function(k){
+      if(!abierto(k)) return;
+      var f=fechaDe(k); if(!f) return;
+      var dias=Math.ceil((f.getTime()-hoyT)/864e5);
+      if(dias < -3) return;                      // ya pasó hace días
+      if(!mejor || f < mejor.f) mejor={n:k, f:f, dias:dias};
+    });
+    return mejor;
+  }
+  function ponerBanner(){
+    var lista=document.querySelector('.tm-lista'); if(!lista) return;
+    var b=document.getElementById('es-banner'); if(b) b.remove();
+    var t=cualToca(); if(!t) return;
+    var L=LECCIONES_HCM[t.n]||{}, est=estado(t.n);
+    var cuando = t.dias>1 ? ('Faltan '+t.dias+' días') : (t.dias===1 ? 'Es mañana' : (t.dias===0 ? 'Es hoy' : 'Ya pasó: sigue repasando'));
+    var sig=['A','B','C'].filter(function(v){ return !(est.versiones[v]&&est.versiones[v].fin); })[0];
+    lista.insertAdjacentHTML('afterbegin',
+      '<div class="es-banner" id="es-banner">'+
+        '<div class="es-bn-k">📝 Estudio para tu evaluación · abierto</div>'+
+        '<b>'+esc(L.titulo||'Evaluación')+' · '+esc(L.fecha||'')+'</b>'+
+        '<span>'+cuando+' · llevas '+est.hechas+' de 3 versiones'+(est.completo?' · ✓ completo':'')+'</span>'+
+        '<div class="es-bn-bar"><i style="width:'+Math.round(est.hechas/3*100)+'%"></i></div>'+
+        '<button class="es-bn-go" id="es-bn-go">'+(est.completo?'Repasar otra vez':(sig?('Estudiar · versión '+sig):'Estudiar ahora'))+'</button>'+
+      '</div>');
+    document.getElementById('es-bn-go').onclick=function(){
+      if(!est.completo && sig){ correr(t.n, sig); return; }
+      var c=document.querySelector('.tm-card[data-n="'+t.n+'"]');
+      if(c && !c.classList.contains('ab')){ var h=c.querySelector('.tm-cab'); if(h) h.click(); }
+      else if(c) try{ c.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){}
+    };
+  }
 
   try{ window.__hcmEstudio={tarjeta:tarjeta, estado:estado, abierto:abierto, correr:correr, banco:EX,
                             guiaOtraVez:function(){ try{ localStorage.removeItem(K_GUIA); }catch(e){} guia('lista'); }}; }catch(e){}
@@ -16539,6 +16579,14 @@ function hcmTutorial(){
     '.es-con{font-size:12.5px;margin:10px 2px 0;opacity:.85}'+
     '.es-cerr{padding:8px 4px 10px}.es-cerr b{display:block;font-size:14px}.es-cerr span{display:block;font-size:12.5px;opacity:.7;margin-top:3px}'+
     '.tm-card.es-abierto{border-color:#8C3A32;box-shadow:0 0 0 3px rgba(140,58,50,.12)}'+
+    '.es-banner{box-sizing:border-box;margin:0 0 14px;padding:15px 16px;border-radius:18px;background:#1C1510;color:#F7F0DC;'+
+      'box-shadow:0 10px 28px rgba(28,21,16,.25)}'+
+    '.es-bn-k{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:#F2D58A;font-weight:700;margin-bottom:6px}'+
+    '.es-banner b{display:block;font-size:18px;line-height:1.25}'+
+    '.es-banner span{display:block;font-size:13px;opacity:.72;margin-top:3px}'+
+    '.es-bn-bar{height:6px;border-radius:4px;background:rgba(255,255,255,.14);margin:10px 0 12px;overflow:hidden}'+
+    '.es-bn-bar i{display:block;height:100%;background:#F2D58A}'+
+    '.es-bn-go{width:100%;padding:13px;border:0;border-radius:13px;background:#F2D58A;color:#1C1510;font:inherit;font-weight:800;font-size:15.5px;cursor:pointer}'+
     '.es-chip{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:7px;background:#8C3A32;color:#fff;font-size:9.5px;letter-spacing:.05em}'+
     '.es-run{padding:0 14px 110px}'+
     '.es-salir{background:none;border:0;font:inherit;font-size:13px;opacity:.7;padding:10px 0;cursor:pointer;color:inherit}'+
