@@ -16767,6 +16767,7 @@ function hcmTutorial(){
        tarjeta de video, más pesado pero mucho más rápido. */
     var movil=/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints>1 && /Mac/.test(navigator.platform));
     var gpu=!!navigator.gpu && !movil;
+    try{ var q=/[?&]voz=(wasm|webgpu)/.exec(location.search); if(q) gpu=(q[1]==='webgpu'); }catch(e){}
     PROM=import(KOKORO_JS).then(function(m){
       function abrir(opc){
         return m.KokoroTTS.from_pretrained(MODELO, {dtype:opc.dtype, device:opc.device,
