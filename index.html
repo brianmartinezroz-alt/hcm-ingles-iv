@@ -16762,7 +16762,11 @@ function hcmTutorial(){
   function cargar(){
     if(PROM) return PROM;
     ESTADO='cargando'; log('cargando el modelo');
-    var gpu=!!navigator.gpu;
+    /* En teléfono: q8 en WASM (≈ 90 MB) — es lo que se le promete al cadete.
+       En computadora con WebGPU (la del salón, la del maestro): fp32 en la
+       tarjeta de video, más pesado pero mucho más rápido. */
+    var movil=/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints>1 && /Mac/.test(navigator.platform));
+    var gpu=!!navigator.gpu && !movil;
     PROM=import(KOKORO_JS).then(function(m){
       function abrir(opc){
         return m.KokoroTTS.from_pretrained(MODELO, {dtype:opc.dtype, device:opc.device,
@@ -16772,21 +16776,198 @@ function hcmTutorial(){
       }
       return (gpu ? abrir({dtype:'fp32',device:'webgpu'}).catch(function(e){ log('webgpu no: '+String(e&&e.message||e).slice(0,50)); return abrir({dtype:'q8',device:'wasm'}); })
                   : abrir({dtype:'q8',device:'wasm'}))
-        .then(function(tts){ KK={m:m, tts:tts}; ESTADO='lista'; pill(''); log('lista ('+(gpu?'webgpu':'wasm')+')'); return KK; });
+        .then(function(tts){
+          KK={m:m, tts:tts}; ESTADO='lista'; pill(''); log('lista ('+(gpu?'webgpu':'wasm')+')');
+          /* calentamiento: la primera frase de verdad ya no paga la preparación */
+          var t0=Date.now();
+          tts.generate('Ready.',{voice:'af_heart'}).then(function(){ log('calentada en '+(Date.now()-t0)+' ms'); }).catch(function(){});
+          return KK;
+        });
     }).catch(function(e){
       ESTADO='falla'; pill(''); PROM=null;
-      log('no se pudo cargar: '+String(e&&e.message||e).slice(0,70));
+      log('no se pudo cargar: '+String(e&&e.message||e).slice(0,160));
       throw e;
     });
     return PROM;
   }
 
-  /* ── español: fonemas con eSpeak es-419 ── */
+/* ── fonemas del español, hechos aquí ──
+   El eSpeak que trae kokoro-js solo sabe inglés. El español se escribe casi
+   como suena, así que se convierte con reglas: seseo (c/z = s, como en
+   México), ll/y = ʝ, j/ge/gi = x, r fuerte al inicio y en rr, b/d/g suaves
+   entre vocales (β ð ɣ), diptongos (j, w) y el acento (ˈ) antes de la vocal
+   tónica, como lo escribe eSpeak. */
+function fonemasEspanol(texto){
+  var VOC='aeiouáéíóú', FUE='aeoáéóíú', DEB='iu';
+  function quitaAc(c){ return {'á':'a','é':'e','í':'i','ó':'o','ú':'u','ü':'u'}[c]||c; }
+  function esVoc(c){ return c && VOC.indexOf(c)>=0; }
+  function palabra(w){
+    w=w.toLowerCase();
+    if(!w) return '';
+    /* 1 · letras a sonidos, con marca de qué es vocal */
+    var s=[], i=0;
+    function push(f,v,ac){ s.push({f:f,v:!!v,ac:!!ac}); }
+    while(i<w.length){
+      var c=w[i], n=w[i+1]||'', n2=w[i+2]||'';
+      if(esVoc(c)){ push(quitaAc(c), true, 'áéíóú'.indexOf(c)>=0); i++; continue; }
+      if(c==='ü'){ push('w'); i++; continue; }
+      if(c==='c'&&n==='h'){ push('tʃ'); i+=2; continue; }
+      if(c==='l'&&n==='l'){ push('ʝ'); i+=2; continue; }
+      if(c==='r'&&n==='r'){ push('r'); i+=2; continue; }
+      if(c==='q'&&n==='u'){ push('k'); i+=2; continue; }
+      if(c==='g'&&n==='u'&&(n2==='e'||n2==='i'||n2==='é'||n2==='í')){ push('g'); i+=2; continue; }
+      if(c==='c'){ push('eéiíEI'.indexOf(n)>=0?'s':'k'); i++; continue; }
+      if(c==='g'){ push('eéií'.indexOf(n)>=0?'x':'g'); i++; continue; }
+      if(c==='j'){ push('x'); i++; continue; }
+      if(c==='z'){ push('s'); i++; continue; }
+      if(c==='v'||c==='b'){ push('b'); i++; continue; }
+      if(c==='h'){ i++; continue; }
+      if(c==='ñ'){ push('ɲ'); i++; continue; }
+      if(c==='x'){ push(i===0?'s':'ks'); i++; continue; }
+      if(c==='y'){ if(i===w.length-1||!esVoc(n)) push('i',true,false); else push('ʝ'); i++; continue; }
+      if(c==='w'){ push('w'); i++; continue; }
+      if(c==='k'){ push('k'); i++; continue; }
+      if(c==='r'){ push(i===0?'r':'ɾ'); i++; continue; }
+      if('pbtdfgklmnsr'.indexOf(c)>=0){ push(c); i++; continue; }
+      i++;                                          // otros signos: fuera
+    }
+    /* r después de n, l, s: fuerte */
+    for(var k=1;k<s.length;k++) if(s[k].f==='ɾ' && /^[nls]$/.test(s[k-1].f)) s[k].f='r';
+    /* 2 · núcleos de sílaba: vocales fuertes, o débiles sin otra vocal al lado
+           (o con acento); las débiles junto a otra vocal se vuelven j / w */
+    for(var a=0;a<s.length;a++){
+      var x=s[a]; if(!x.v || x.ac) continue;
+      if(DEB.indexOf(x.f)<0) continue;
+      var izq=s[a-1], der=s[a+1];
+      var juntoFuerte=(der&&der.v&&(FUE.indexOf(der.f)>=0||der.ac)) || (izq&&izq.v&&(FUE.indexOf(izq.f)>=0||izq.ac));
+      var debDeb=(der&&der.v&&!der.ac&&DEB.indexOf(der.f)>=0);   // ui, iu: la primera se desliza
+      if(juntoFuerte||debDeb){ x.v=false; x.f=(x.f==='i'?'j':'w'); }
+    }
+    var nucleos=[]; s.forEach(function(x,k){ if(x.v) nucleos.push(k); });
+    if(!nucleos.length) return s.map(function(x){return x.f;}).join('');
+    /* 3 · acento: el marcado; si no, llana o aguda según cómo termina */
+    var tonico=-1;
+    s.forEach(function(x,k){ if(x.v&&x.ac) tonico=k; });
+    if(tonico<0){
+      var ult=w.replace(/[^a-záéíóúüñ]/g,'').slice(-1);
+      if(nucleos.length===1) tonico=nucleos[0];
+      else if(/[aeiouns]/.test(ult)) tonico=nucleos[nucleos.length-2];
+      else tonico=nucleos[nucleos.length-1];
+    }
+    /* 4 · b d g suaves entre vocales o tras consonante que no sea nasal/l */
+    for(var b=1;b<s.length;b++){
+      var p=s[b-1].f, f=s[b].f;
+      if(f==='b'||f==='d'||f==='g'){
+        var duro=/^(m|n|ɲ)$/.test(p) || (f==='d' && p==='l');
+        if(!duro) s[b].f={b:'β',d:'ð',g:'ɣ'}[f];
+      }
+    }
+    /* palabras de una sílaba sin acento léxico (el, la, de, que...) van átonas */
+    var atonas=' el la los las lo de del a al en con por para que y o u se me te le les nos un una unos unas mi tu su sus mis tus si es ';
+    var out='';
+    s.forEach(function(x,k){ if(k===tonico && !(nucleos.length===1 && atonas.indexOf(' '+w+' ')>=0)) out+='ˈ'; out+=x.f; });
+    return out;
+  }
+  /* las palabras, respetando la puntuación (Kokoro hace pausas con ella) */
+  return String(texto)
+    .replace(/\d+/g, function(n){ return numeroEs(+n); })
+    .split(/(\s+|[.,;:!?¡¿…—"«»“”()])/)
+    .map(function(t){
+      if(!t) return '';
+      if(/^\s+$/.test(t)) return ' ';
+      if(/^[A-DXa-d]$/.test(t) && t===t.toUpperCase()) return {A:'ˈa',B:'bˈe',C:'sˈe',D:'dˈe',X:'ˈekis'}[t];
+      if(/^[.,;:!?¡¿…—"«»“”()]$/.test(t)) return t;
+      return palabra(t);
+    }).join('').replace(/\s+/g,' ').trim();
+}
+function numeroEs(n){
+  var u=['cero','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez','once','doce','trece','catorce','quince','dieciséis','diecisiete','dieciocho','diecinueve','veinte'];
+  var d=['','','veinti','treinta','cuarenta','cincuenta','sesenta','setenta','ochenta','noventa'];
+  if(n<=20) return u[n];
+  if(n<30) return 'veinti'+u[n-20];
+  if(n<100) return d[Math.floor(n/10)]+(n%10?' y '+u[n%10]:'');
+  if(n===100) return 'cien';
+  if(n<1000){ var c=['','ciento','doscientos','trescientos','cuatrocientos','quinientos','seiscientos','setecientos','ochocientos','novecientos'][Math.floor(n/100)]; return c+(n%100?' '+numeroEs(n%100):''); }
+  return String(n);
+}
+
+/* ── qué partes son inglés dentro de una explicación en español ──
+   La IA explica en español pero pone ejemplos en inglés. Las partes en
+   inglés se pasan por el eSpeak inglés y todo se dice con la misma voz en
+   español: suena como un maestro mexicano leyendo su ejemplo. */
+var EN_PAL=(' i you he she it we they am is are was were be been being have has had do does did will would should could can may might must '+
+  'the an of to in on at for with from by about into over after before when while until because so and or but if then than not '+
+  'my your his her its our their this that these those there here what which who whom whose where why how '+
+  'go goes went gone going get got make made take took come came see saw know knew think thought say said tell told ask asked '+
+  'like want need open account deposit bank sir officer driver car truck gate license window sorry apologize breaking '+
+  'tomorrow yesterday today morning night every day week work home school soldier soldiers cadet base book phone '+
+  'talking driving waiting eating working studying doing shopping meeting happened hit called realized empty tank '+
+  'study good well cake taste tastes smell smells bread coffee soup meat salty sweet fresh bad always never often please '+
+  'thanks thank yes now also very really too much many more less big small new old ready glad happy able supposed '+
+  'advice help call wait stop show teach learn remember forget find out up down off back again sentence word answer '+
+  'question correct wrong right left next last first one two three four five six seven eight nine ten ').split(' ');
+/* las que en español también existen (a, me, no, he, son, come, red, pie) no
+   cuentan como inglés si van solas; estas otras sí, aunque vayan solas */
+var EN_FUERTE=(" the you your should would could was were they them their have has had will can't don't doesn't didn't "+
+  "i'm it's what when where which who how this that these those with from about because study every ").split(' ');
+var EN_F={}; EN_FUERTE.forEach(function(w){ if(w) EN_F[w]=1; });
+var EN_SET={}; EN_PAL.forEach(function(w){ if(w) EN_SET[w]=1; });
+function esIngles(w){
+  var x=w.toLowerCase().replace(/[^a-z']/g,'');
+  if(!x) return false;
+  if(/[áéíóúñü¿¡]/i.test(w)) return false;
+  if(EN_SET[x]) return true;
+  if(/'(s|t|m|re|ll|ve|d)$/.test(x)) return true;
+  if(/(th|sh|wh|ck|ee|oo|ght|ing$|tion$)/.test(x) && !/ción$/.test(x)) return true;
+  if(/^w|w$|k[^a-z]?$/.test(x)) return true;
+  return false;
+}
+function partesIdioma(texto){
+  var out=[];
+  function mete(t,es){ if(!t.trim()) { if(out.length) out[out.length-1].t+=t; return; }
+    if(out.length && out[out.length-1].es===es) out[out.length-1].t+=t; else out.push({t:t,es:es}); }
+  /* lo que va entre comillas se decide completo, por mayoría */
+  var trozos=String(texto).split(/(["“”«»][^"“”«»]{2,200}["“”«»])/);
+  trozos.forEach(function(tr){
+    if(/^["“”«»]/.test(tr)){
+      var ws=tr.replace(/["“”«»]/g,'').split(/\s+/).filter(Boolean);
+      var en=ws.filter(esIngles).length;
+      mete(tr.replace(/["“”«»]/g,''), !(en*2>=ws.length)); return;
+    }
+    /* fuera de comillas: palabra por palabra, pero una palabra inglesa
+       suelta entre español se queda en español (evita "a", "me", "no") */
+    var ps=tr.split(/(\s+)/), marcas=ps.map(function(p){ return /\S/.test(p) ? esIngles(p) : null; });
+    function limpia(p){ return p.toLowerCase().replace(/[^a-z']/g,''); }
+    function vecino(k,dir,arr){ for(var a=k+dir;a>=0&&a<ps.length;a+=dir) if(arr[a]!==null) return arr[a]; return null; }
+    /* 1 · inglés si es palabra fuerte, o si tiene otra inglesa al lado */
+    var dec=marcas.map(function(m,k){
+      if(m===null) return null;
+      return !!(m && (EN_F[limpia(ps[k])] || vecino(k,-1,marcas)===true || vecino(k,1,marcas)===true || /'|^(i|I)$/.test(ps[k])));
+    });
+    /* 2 · una palabra entre dos inglesas también es inglés ("You should study every day") */
+    var fin=dec.map(function(d,k){ if(d===null) return null; return d || (vecino(k,-1,dec)===true && vecino(k,1,dec)===true); });
+    for(var k=0;k<ps.length;k++){
+      if(fin[k]===null){ mete(ps[k], out.length?out[out.length-1].es:true); continue; }
+      mete(ps[k], !fin[k]);
+    }
+  });
+  return out.filter(function(p){ return p.t.trim(); });
+}
+
+  /* ── español: las partes en español con las reglas de arriba; las partes en
+        inglés, con el eSpeak inglés (el único que trae el paquete) ── */
   var FON=null;
-  function fonemasEs(t){
+  function fonemasIngles(t){
     if(!FON) FON=import(FONEMAS_JS);
-    return FON.then(function(p){ return p.phonemize(t,'es-419'); })
-      .then(function(r){ return (Array.isArray(r)?r.join(' '):String(r||'')).replace(/ʲ/g,'j').replace(/\s+/g,' ').trim(); });
+    return FON.then(function(p){ return p.phonemize(t,'en-us'); })
+      .then(function(r){ return (Array.isArray(r)?r.join(' '):String(r||''))
+        .replace(/ʲ/g,'j').replace(/r/g,'ɹ').replace(/x/g,'k').replace(/ɬ/g,'l').replace(/\s+/g,' ').trim(); });
+  }
+  function fonemasEs(t){
+    var partes=partesIdioma(t);
+    return Promise.all(partes.map(function(p){
+      return p.es ? Promise.resolve(fonemasEspanol(p.t)) : fonemasIngles(p.t);
+    })).then(function(a){ return a.join(' ').replace(/\s+/g,' ').trim(); });
   }
 
   function generar(t, es, sexo){
@@ -16840,7 +17021,7 @@ function hcmTutorial(){
       }, function(){ siFalla(); }, function(){ cb&&cb(); }, VEL_PEDIDA);
       turno=TURNO;                                 // reproducir() cambia el turno al arrancar
     }
-    pedir(0).then(toca).catch(function(e){ log('falló: '+String(e&&e.message||e).slice(0,60)); siFalla(); });
+    pedir(0).then(toca).catch(function(e){ log('falló: '+String(e&&e.message||e).slice(0,160)); siFalla(); });
   }
 
   /* ── el enganche ── */
