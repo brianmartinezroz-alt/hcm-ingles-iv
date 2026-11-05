@@ -12004,7 +12004,7 @@ var LECCIONES_HCM=[null,
   {titulo:"Should I ask Lt Clark for help?",sub:"Should/could · adverbios en -ly",                  fecha:"22 Oct"},
   {titulo:"He realized the tank was empty", sub:"Verb + that + noun clause",                fecha:"29 Oct"},
   {titulo:"I apologize for breaking your window",sub:"Apologize + for + gerund",            fecha:"6 Nov"},
-  {titulo:"1ª Evaluación Parcial",          sub:"ALC Book 11 · versión A, B o C",          fecha:"13 Nov",examen:true},
+  {titulo:"1ª Evaluación Parcial",          sub:"ALC Book 9 · versiones A, B y C",          fecha:"13 Nov",examen:true},
   {titulo:"Tell me how to",                 sub:"How + to-infinitive · aparatos",           fecha:"3 Dic"},
   {titulo:"Sue exercises before she goes to work",sub:"Before/after · be supposed to",     fecha:"11 Dic"},
   {titulo:"Like shopping in the mall",      sub:"Preposiciones de lugar · gerundio",          fecha:"18 Dic"},
@@ -13804,9 +13804,16 @@ function hcmTutorial(){
     PARCIALES.forEach(function(pa){
       var lecs = BLOQUES_HCM[pa.ex] || [];
       if(!lecs.length) return;
-      var minimo = 3;
-      lecs.forEach(function(n){ minimo = Math.min(minimo, nivelMaxDe(nv[n] || {})); });
-      if(!minimo) return;
+      /* Antes se ganaba terminando TODAS las lecciones del parcial. Ahora es
+         la constancia de trabajo extraclase y se gana con el 100 % del
+         estudio para la evaluación: las tres versiones, A, B y C. */
+      var est = (window.__hcmEstudio && window.__hcmEstudio.estado) ? window.__hcmEstudio.estado(pa.ex) : null;
+      if(!est || !est.completo) return;
+      /* el nivel: el más bajo de las lecciones que sí hizo; si no hizo
+         ninguna, el carril con el que estudió */
+      var minimo = 0;
+      lecs.forEach(function(n){ var m = nivelMaxDe(nv[n] || {}); if(m) minimo = minimo ? Math.min(minimo, m) : m; });
+      if(!minimo) minimo = ORDEN[Ph.carril || 'medio'] || 2;
       var niv = minimo === 3 ? 'alto' : (minimo === 2 ? 'medio' : 'bajo');
       var ya = lista.some(function(x){ return x.p === pa.id && x.niv === niv; });
       if(ya) return;
@@ -13853,6 +13860,10 @@ function hcmTutorial(){
     };
   }
 
+  try{ window.__hcmConstanciaRevisa=function(){
+    try{ var Dh=hcmLoad(), Ph=Dh.perfil||{}; var ev=evaluar(Ph);
+         if(ev.nuevas.length){ resumenPerfil(Ph); Dh.perfil=Ph; hcmSave(Dh); } }catch(e){}
+  }; }catch(e){}
   function pantallaConstancias(){
     try{ soltarMapa(); }catch(e){}
     try{ callarTodo(); }catch(e){}
@@ -13861,8 +13872,8 @@ function hcmTutorial(){
     var nv = niveles(), lista = leerJ(K_CONST, []);
     var h = '<div class="card"><button class="volver" id="const-volver" style="background:none;border:0;font:inherit;color:#6E5716;cursor:pointer;padding:0;margin-bottom:10px">← Más</button>' +
       '<div class="qlbl">Comprobante de tu trabajo</div><h2 class="met-t">Mis constancias</h2>' +
-      '<p class="qsub">Se ganan terminando <b>todas</b> las lecciones de un parcial. La constancia dice el nivel con el que las hiciste; ' +
-      'si después las repites en un nivel más alto, ganas otra. Tu maestro las ve en su panel, con el mismo folio.</p><div class="const-lista">';
+      '<p class="qsub">Es tu <b>constancia de trabajo extraclase</b>. Se gana terminando el <b>estudio para la evaluación</b> de cada parcial: ' +
+      'las tres versiones, A, B y C. Tu maestro la ve en su panel, con el mismo folio.</p><div class="const-lista">';
     PARCIALES.forEach(function(pa){
       var lecs = BLOQUES_HCM[pa.ex] || [], hechas = 0, chips = '';
       lecs.forEach(function(n, i){
@@ -13871,12 +13882,13 @@ function hcmTutorial(){
         chips += '<span class="' + (m ? 'ok' : '') + '">' + (i + 1 + (pa.id === 'P2' ? 8 : 0)) + (m ? ' ' + ({1:'B', 2:'I', 3:'A'})[m] : '') + '</span>';
       });
       var gan = lista.filter(function(x){ return x.p === pa.id; });
-      h += '<div class="const-p"><h3>' + pa.nombre + '</h3><div class="s">' + pa.det + ' · llevas ' + hechas + ' de ' + lecs.length + '</div>' +
-        '<div class="const-barra"><i style="width:' + Math.round(hechas / Math.max(1, lecs.length) * 100) + '%"></i></div>' +
+      var est = (window.__hcmEstudio && window.__hcmEstudio.estado) ? window.__hcmEstudio.estado(pa.ex) : {hechas:0,total:3};
+      h += '<div class="const-p"><h3>' + pa.nombre + '</h3><div class="s">' + pa.det + ' · estudio: ' + est.hechas + ' de 3 versiones · lecciones: ' + hechas + ' de ' + lecs.length + '</div>' +
+        '<div class="const-barra"><i style="width:' + Math.round(est.hechas / 3 * 100) + '%"></i></div>' +
         (pa.id !== 'CF' ? '<div class="const-lec">' + chips + '</div>' : '') +
         (gan.length ? '<div class="const-gan">' + gan.map(function(x){
           return '<button type="button" data-folio="' + esc(x.folio) + '">🎖 ' + NOMBRE_NIV[x.niv] + ' · ver</button>';
-        }).join('') + '</div>' : '<div class="s" style="margin-top:6px">' + (hechas === lecs.length ? '' : 'Te faltan ' + (lecs.length - hechas) + ' lecciones.') + '</div>') +
+        }).join('') + '</div>' : '<div class="s" style="margin-top:6px">' + (est.hechas === 3 ? '' : 'Te falta' + (3 - est.hechas > 1 ? 'n ' : ' ') + (3 - est.hechas) + ' versi' + (3 - est.hechas > 1 ? 'ones' : 'ón') + ' del estudio.') + '</div>') +
         '</div>';
     });
     h += '</div><p class="tiny" style="margin-top:14px">B = Básico · I = Intermedio · A = Avanzado. Los exámenes parciales los aplica tu maestro en clase; esto comprueba tu práctica.</p></div>';
@@ -13896,9 +13908,9 @@ function hcmTutorial(){
     var esc2 = (typeof escudoHCM === 'function') ? escudoHCM(64) : '';
     APP.innerHTML = '<div style="padding:14px 12px 90px"><div id="hcm-const-doc">' + esc2 +
       '<div class="lema">Heroico Colegio Militar · Idioma Extranjero IV</div>' +
-      '<h1>Constancia de práctica</h1><p>Se hace constar que el cadete</p>' +
+      '<h1>Constancia de trabajo extraclase</h1><p>Se hace constar que el cadete</p>' +
       '<div class="quien">' + esc(x.nombre || '') + '</div>' +
-      '<p>completó en la app de práctica de inglés todas las lecciones del <b>' + esc(pa.nombre) + '</b> (' + esc(pa.det) + '), ' +
+      '<p>completó en la app de práctica de inglés el estudio para la evaluación del <b>' + esc(pa.nombre) + '</b> (' + esc(pa.det) + '), versiones A, B y C, ' +
       'en el nivel <b>' + esc(NOMBRE_NIV[x.niv]) + '</b>.</p>' +
       '<div class="datos"><div><b>Grupo</b>' + esc(x.grupo || '—') + '</div><div><b>Nivel</b>' + esc(NOMBRE_NIV[x.niv]) + '</div>' +
       '<div><b>Fecha</b>' + esc(x.fecha) + '</div><div><b>Tiempo de práctica</b>' + Math.round(min / 60) + ' min</div>' +
@@ -14823,6 +14835,12 @@ function hcmTutorial(){
     });
     card.classList.add('ab'); ABIERTA=n;
     var L=LECCIONES_HCM[n];
+    if(L&&L.examen&&window.__hcmEstudio&&typeof esEvaluacionHCM==='function'&&esEvaluacionHCM(n)){
+      try{ window.__hcmEstudio.tarjeta(n, caja); }
+      catch(e){ console.error('estudio',e); caja.innerHTML='<p class="tm-vacio">No pude abrir el estudio.</p>'; }
+      if(!sinScroll) try{ card.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){}
+      return;
+    }
     if(L&&L.examen&&!(typeof esEvaluacionHCM==='function'&&esEvaluacionHCM(n))){
       caja.innerHTML='<p class="tm-vacio">La evaluación la aplica tu maestro en clase el '+
         esc(L.fecha)+'. Mientras, repasa las lecciones de este bloque.</p>';
@@ -15210,61 +15228,71 @@ function hcmTutorial(){
 })();
 
 /* ═══════════ VOZ_HCM ═══════════════════════════════════════════════
-   Brian quiere oír al cadete, no solo leer lo que el micrófono creyó
-   entender. Aquí, en los ejercicios de hablar, se graba el audio al
-   mismo tiempo que el reconocimiento y se engancha al intento, para que
-   en el panel se pueda reproducir y calificar dos veces: la máquina y
-   el maestro.
-   Se graba máximo 25 segundos y se descarta lo que pese de más: el
-   cadete tiene datos contados y la hoja tiene límite de celda.
+   Se graba la voz del cadete para que el maestro la oiga en el panel.
+   Primera versión: grababa en TODOS los ejercicios de hablar, en paralelo
+   con el reconocimiento de voz. Eso peleaba por el micrófono: en iPhone
+   dejaba el audio de la app saliendo por la bocina del oído (casi no se
+   oía) y en algunos Android tumbaba el reconocimiento.
+   Ahora: solo en la Producción, con su propio botón, con su propia
+   grabadora, y el micrófono se suelta en cuanto termina.
    ═════════════════════════════════════════════════════════════════ */
 (function(){
-  if(typeof paso!=='function' || typeof grabarInicio!=='function') return;
+  if(typeof paso!=='function') return;
+  if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder)) return;
 
-  var HABLA={model:1, ask:1, free:1, roleplay:1, recuento:1, leer:1,
-             transf:1, drill:1, sit:1, ritmo:1, trabalenguas:1};
-  var MAX_SEG=25, MAX_B64=380000;   // ~380 KB en base64
+  var PROD={free:1, roleplay:1, recuento:1};
+  var MAX_SEG=40, MAX_B64=600000;
+  var G={rec:null, st:null, trozos:[], reloj:null};
 
-  var V={on:false, k:'', reloj:null};
-
-  function enganchar(b64, tipo, k, meta){
-    try{
-      for(var i=attempts.length-1;i>=0;i--){
-        if(String(attempts[i].tipo||'').indexOf(k)===0 && !attempts[i].audio){
-          attempts[i].audio=b64; attempts[i].audiotipo=tipo;
-          attempts[i].voz=true; return;
-        }
-      }
-      attempts.push({tipo:k+'-voz', meta:meta||'', oido:'[audio grabado]',
-                     pct:null, audio:b64, audiotipo:tipo, voz:true});
-    }catch(e){}
+  function soltar(){
+    clearTimeout(G.reloj); G.reloj=null;
+    try{ if(G.rec && G.rec.state!=='inactive') G.rec.stop(); }catch(e){}
+    try{ if(G.st) G.st.getTracks().forEach(function(t){ t.stop(); }); }catch(e){}
+    G.st=null;
   }
 
-  function arrancar(k, meta){
-    if(V.on) return;
-    V.on=true; V.k=k;
-    grabarInicio(function(blob){
-      V.on=false;
-      if(!blob || !blob.size) return;
-      try{
-        blobABase64(blob, function(b64){
-          if(!b64 || b64.length>MAX_B64) return;      // demasiado pesado: se suelta
-          enganchar(b64, blob.type||'audio/webm', k, meta);
+  function grabar(x, bt, est){
+    if(G.rec && G.rec.state==='recording'){ soltar(); return; }
+    try{ callarTodo(); }catch(e){}
+    navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){
+      G.st=st; G.trozos=[];
+      var tipo='';
+      ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].forEach(function(t){
+        if(!tipo && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) tipo=t;
+      });
+      var r = tipo ? new MediaRecorder(st,{mimeType:tipo}) : new MediaRecorder(st);
+      G.rec=r;
+      r.ondataavailable=function(e){ if(e.data && e.data.size) G.trozos.push(e.data); };
+      r.onstop=function(){
+        try{ G.st && G.st.getTracks().forEach(function(t){ t.stop(); }); }catch(e){}
+        G.st=null;
+        var blob=new Blob(G.trozos,{type:r.mimeType||'audio/webm'});
+        bt.classList.remove('rec'); bt.innerHTML='🎙️ Grabar otra vez';
+        if(!blob.size){ est.textContent='No se oyó nada. Inténtalo otra vez.'; return; }
+        var url=URL.createObjectURL(blob);
+        blobABase64(blob,function(b64){
+          if(!b64 || b64.length>MAX_B64){ est.textContent='Quedó muy larga. Grábala más corta (menos de 40 segundos).'; return; }
+          try{
+            for(var i=attempts.length-1;i>=0;i--) if(attempts[i].voz && attempts[i].tipo===x.k+'-voz') attempts.splice(i,1);
+            attempts.push({tipo:x.k+'-voz', meta:x.q||x.en||'', oido:'[audio para el maestro]',
+                           pct:null, audio:b64, audiotipo:blob.type, voz:true});
+          }catch(e){}
+          est.innerHTML='<audio controls playsinline src="'+url+'" style="width:100%;margin-top:6px"></audio>'+
+            '<span class="vz-ok">Guardada. Tu maestro la escucha y la califica.</span>';
         });
-      }catch(e){}
-    }, function(){ V.on=false; });
-    clearTimeout(V.reloj);
-    V.reloj=setTimeout(parar, MAX_SEG*1000);
-  }
-  function parar(){
-    clearTimeout(V.reloj); V.reloj=null;
-    if(!V.on) return;
-    try{ grabarFin(); }catch(e){ V.on=false; }
+      };
+      r.start();
+      bt.classList.add('rec'); bt.innerHTML='⏹ Ya terminé';
+      est.textContent='Te estoy grabando. Habla con calma.';
+      G.reloj=setTimeout(soltar, MAX_SEG*1000);
+    }).catch(function(){
+      est.textContent='No me dejaron usar el micrófono. Revisa el permiso del navegador.';
+    });
   }
 
   var base=paso;
   paso=function(){
-    parar();                                   // se cierra la del paso anterior
+    soltar();
     var r=base.apply(this,arguments);
     try{ montar(); }catch(e){ console.error('voz',e); }
     return r;
@@ -15273,26 +15301,183 @@ function hcmTutorial(){
   function montar(){
     if(!MAT||sIdx==null||!MAT[sIdx]) return;
     var S=MAT[sIdx]; if(!S.items||it<0||it>=S.items.length) return;
-    var x=S.items[it]; if(!x || !HABLA[x.k]) return;
-    if(typeof HAY_GRAB!=='undefined' && !HAY_GRAB) return;   // ya hay modo grabación aparte
-    var mic=document.getElementById('mic'); if(!mic) return;
-    if(mic.dataset.voz==='1') return;
-    mic.dataset.voz='1';
-    var meta=x.en||x.q||x.origen||x.titulo||'';
-    var prev=mic.onclick;
-    mic.onclick=function(ev){
-      try{ arrancar(x.k, meta); }catch(e){}
-      if(prev) return prev.call(this, ev);
-    };
-    /* si cierra la lección sin cambiar de paso, igual se guarda */
-    try{
-      var sk=document.getElementById('skip');
-      if(sk && !sk.dataset.voz){ sk.dataset.voz='1';
-        var pv=sk.onclick; sk.onclick=function(ev){ parar(); if(pv) return pv.call(this,ev); }; }
-    }catch(e){}
+    var x=S.items[it]; if(!x || !PROD[x.k]) return;
+    if(document.getElementById('vz-caja')) return;
+    var card=document.querySelector('.qcard'); if(!card) return;
+    card.insertAdjacentHTML('beforeend',
+      '<div id="vz-caja" class="vz"><div class="vz-t">Para tu maestro</div>'+
+      '<p class="vz-d">Graba tu respuesta completa. La revisa la IA y también tu maestro.</p>'+
+      '<button class="vz-b" id="vz-b" type="button">🎙️ Grabar mi respuesta</button>'+
+      '<div class="vz-e" id="vz-e"></div></div>');
+    var bt=document.getElementById('vz-b'), est=document.getElementById('vz-e');
+    bt.onclick=function(ev){ ev.stopPropagation(); grabar(x, bt, est); };
   }
 
-  try{ window.__hcmVoz={parar:parar, estado:function(){ return V.on; }}; }catch(e){}
+  try{
+    var st=document.createElement('style');
+    st.textContent=
+    '.vz{margin-top:16px;padding:13px;border-radius:14px;border:1px dashed var(--oro,#B99A4B);background:rgba(201,168,76,.07)}'+
+    '.vz-t{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;opacity:.75}'+
+    '.vz-d{font-size:13px;opacity:.75;margin:4px 0 10px}'+
+    '.vz-b{width:100%;padding:12px;border-radius:12px;border:0;background:#1C1510;color:#F2D58A;font:inherit;font-weight:700;cursor:pointer}'+
+    '.vz-b.rec{background:#8C3A32;color:#fff;animation:auLate 1.2s infinite}'+
+    '.vz-e{font-size:12.5px;margin-top:8px;opacity:.85}'+
+    '.vz-ok{display:block;margin-top:6px;color:var(--verde,#3F7D52);font-weight:600}';
+    document.head.appendChild(st);
+  }catch(e){}
+
+  try{ window.__hcmVoz={soltar:soltar}; }catch(e){}
+})();
+
+/* ═══════════ AUDIO_HCM ═══════════════════════════════════════════════
+   "No se escucha nada." La causa, en el iPhone (y en varios Android):
+   cada frase llegaba del servidor 2 o 3 segundos después del toque, se
+   metía en un reproductor NUEVO y se esperaba a que "estuviera listo"
+   para darle play. Para entonces el toque ya había caducado, Safari
+   rechazaba el play y la app se quedaba callada sin avisar. En iPhone,
+   además, el reproductor nuevo ni siquiera carga hasta que alguien le da
+   play, así que a veces esperaba para siempre.
+   Ahora:
+   1) un solo reproductor para toda la app, desbloqueado en el primer
+      toque con un silencio — después Safari ya lo deja sonar;
+   2) play de inmediato, sin esperar;
+   3) si aun así el teléfono lo bloquea, sale un botón grande de
+      "Toca para escuchar" y ese toque sí suena;
+   4) si el servidor de voz no contesta, habla la voz del teléfono:
+      mejor una voz de robot que el silencio.
+   ═════════════════════════════════════════════════════════════════════ */
+(function(){
+  if(typeof reproducir!=='function') return;
+
+  /* medio segundo de silencio, para desbloquear */
+  var SILENCIO='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+  var AU1=null, LIBRE=false;
+  function reproductor(){
+    if(!AU1){
+      AU1=document.createElement('audio');
+      AU1.setAttribute('playsinline',''); AU1.setAttribute('webkit-playsinline','');
+      AU1.preload='auto';
+      AU1.style.display='none';
+      try{ document.body.appendChild(AU1); }catch(e){}
+    }
+    return AU1;
+  }
+  function desbloquear(){
+    if(LIBRE) return;
+    var a=reproductor();
+    try{
+      a.src=SILENCIO;
+      var p=a.play();
+      if(p&&p.then) p.then(function(){ LIBRE=true; }).catch(function(){});
+      else LIBRE=true;
+    }catch(e){}
+    /* la voz del teléfono también se desbloquea con un toque */
+    try{
+      if('speechSynthesis' in window){
+        var u=new SpeechSynthesisUtterance(' '); u.volume=0;
+        speechSynthesis.speak(u);
+      }
+    }catch(e){}
+  }
+  ['touchend','click','keydown'].forEach(function(ev){
+    document.addEventListener(ev, desbloquear, {capture:true, passive:true});
+  });
+
+  /* ── el botón de rescate, cuando el teléfono no deja sonar ── */
+  var PEND=null;
+  function pedirToque(a, alSonar){
+    PEND=function(){
+      try{ var p=a.play(); if(p&&p.then) p.then(alSonar).catch(function(){}); }catch(e){}
+    };
+    var v=document.getElementById('au-toca');
+    if(!v){
+      v=document.createElement('button');
+      v.id='au-toca'; v.type='button';
+      v.innerHTML='<span class="au-ic">🔊</span><span>Toca para escuchar</span>';
+      document.body.appendChild(v);
+      v.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        v.classList.remove('on');
+        var f=PEND; PEND=null; if(f) f();
+      });
+    }
+    v.classList.add('on');
+    setTimeout(function(){ if(v) v.classList.remove('on'); }, 9000);
+  }
+
+  reproducir=function(url,onOk,onNoExiste,onBloqueado,vel){
+    callarTodo();
+    var miTurno=TURNO;
+    var a=reproductor();
+    var hecho=false;
+    function fin(f){ if(hecho) return; hecho=true; clearTimeout(reloj); f&&f(); }
+    try{ a.pause(); }catch(e){}
+    a.onended=null; a.onerror=null; a.oncanplaythrough=null;
+    a.src=url;
+    try{
+      a.playbackRate=(vel||VEL_AUDIO||1);
+      if('preservesPitch' in a) a.preservesPitch=true;
+      if('webkitPreservesPitch' in a) a.webkitPreservesPitch=true;
+    }catch(e){}
+    AUDIO_ACTUAL=a;
+    a.onended=function(){ if(miTurno!==TURNO) return; onOk&&onOk(); };
+    a.onerror=function(){ fin(onNoExiste); };
+    /* si en 7 segundos no arrancó, se da por bloqueado */
+    var reloj=setTimeout(function(){ fin(function(){ pedirToque(a,function(){}); onBloqueado&&onBloqueado(); }); }, 7000);
+    var p;
+    try{ p=a.play(); }catch(e){ fin(onNoExiste); return a; }
+    if(p&&p.then){
+      p.then(function(){
+        try{ marcarCargando(false); }catch(e){}
+        if(miTurno!==TURNO){ try{ a.pause(); }catch(e){} }
+        hecho=true; clearTimeout(reloj);
+      }).catch(function(e){
+        if(e && e.name==='NotAllowedError'){
+          /* existe, pero el teléfono no dejó: se le pide un toque */
+          fin(function(){
+            pedirToque(a, function(){ try{ marcarCargando(false); }catch(x){} });
+          });
+        }else fin(onNoExiste);
+      });
+    }else{ hecho=true; clearTimeout(reloj); }
+    return a;
+  };
+
+  /* ── si el servidor de voz falla, habla el teléfono ── */
+  try{
+    var avisoBase=avisoDeAudio;
+    avisoDeAudio=function(){
+      try{ VOZ_SINTETICA=true; }catch(e){}
+      return avisoBase.apply(this,arguments);
+    };
+  }catch(e){}
+  try{
+    var vozBase=vozDelServidor;
+    vozDelServidor=function(texto,lang,cb,onFalla){
+      return vozBase(texto,lang,cb,function(){
+        /* antes: silencio. ahora: la voz del teléfono dice la frase */
+        try{
+          if('speechSynthesis' in window){ hablar(texto,lang,cb); return; }
+        }catch(e){}
+        onFalla&&onFalla();
+      });
+    };
+  }catch(e){}
+
+  try{
+    var st=document.createElement('style');
+    st.textContent=
+    '#au-toca{position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(20px);'+
+      'z-index:9999;display:flex;align-items:center;gap:10px;padding:15px 24px;border:0;border-radius:40px;'+
+      'background:#1C1510;color:#F2D58A;font:700 17px/1 system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35);'+
+      'opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}'+
+    '#au-toca.on{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0);'+
+      'animation:auLate 1.3s ease-in-out infinite}'+
+    '#au-toca .au-ic{font-size:22px}'+
+    '@keyframes auLate{0%,100%{box-shadow:0 10px 30px rgba(0,0,0,.35),0 0 0 0 rgba(201,168,76,.55)}'+
+      '50%{box-shadow:0 10px 30px rgba(0,0,0,.35),0 0 0 14px rgba(201,168,76,0)}}';
+    document.head.appendChild(st);
+  }catch(e){}
 })();
 
 /* ═══════════ PRESENTA_HCM ═══════════════════════════════════════════
@@ -15646,6 +15831,748 @@ function hcmTutorial(){
     '.lt-tx{background:var(--fondo,#faf7ef);border:1px solid var(--tenue,#e4ded0);border-radius:12px;'+
       'padding:10px 11px;font-size:14px;line-height:1.45}'+
     '.lt-es{display:block;font-size:12.5px;opacity:.65;margin-top:5px}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+
+/* ═══════════ ESTUDIO_HCM ═══════════════════════════════════════════════
+   Estudio para la evaluación. Brian lo pidió así:
+   · que se abra a partir de la fecha (dos semanas antes del examen);
+   · preguntas y audios parecidos a los del ALC Book 9 (versiones A, B y C)
+     pero NO iguales, con los mismos temas, para estudiar;
+   · en cada pregunta, una pista y el botón de voz para preguntarle a la IA
+     por qué es una respuesta y no la otra;
+   · la constancia de trabajo extraclase se gana con el 100 % del estudio;
+   · círculos difuminados que le enseñan al cadete dónde tocar.
+   ═════════════════════════════════════════════════════════════════════ */
+(function(){
+  if(typeof LECCIONES_HCM==='undefined' || typeof BLOQUES_HCM==='undefined') return;
+  /* ══════ el banco de estudio ══════
+     Son reactivos NUEVOS, escritos aquí, con los mismos temas que mide el
+     libro en cada parcial (ALC Book 9 para el primero, Book 10 para el
+     segundo). No son el examen: son para estudiarlo.
+     Formato: igual que el del libro — se oye y se escoge, se lee y se
+     contesta, y unos de gramática y vocabulario.                        */
+  var EX = {
+
+  /* ─────────── PRIMER PARCIAL · lecciones 1 a 8 ─────────── */
+  9: {
+   A:[
+    {t:'oir',audio:"Good morning. I'd like to open a savings account, please.",
+     q:'¿Dónde está esta persona?',ops:['En un banco','En un restaurante','En una gasolinera','En un hospital'],bien:0,
+     pista:'Fíjate en "savings account".',porque:'"Savings account" es cuenta de ahorros: eso se pide en un banco.'},
+    {t:'oir',audio:"What were you doing when the accident happened?",
+     q:'Escoge la mejor respuesta.',ops:['I was driving to the base.','I will drive to the base.','I drive to the base every day.','I drove yesterday.'],bien:0,
+     pista:'La pregunta va en pasado progresivo; la respuesta también.',porque:'"What were you doing" pide was/were + -ing: "I was driving".'},
+    {t:'oir',audio:"The sergeant told me to wait at the gate.",
+     q:'¿Qué le dijeron?',ops:['Que esperara en la puerta','Que abriera la puerta','Que cerrara la puerta','Que llamara al sargento'],bien:0,
+     pista:'"told me to wait" es una orden reportada.',porque:'tell + persona + to + verbo reporta una orden: le dijeron que esperara.'},
+    {t:'oir',audio:"This soup tastes very salty today.",
+     q:'¿Qué pasa con la sopa?',ops:['Tiene mucha sal','Está fría','Está dulce','No sabe a nada'],bien:0,
+     pista:'"salty" viene de "salt".',porque:'"Taste" es verbo copulativo y va con adjetivo: tastes salty = sabe salada.'},
+    {t:'oir',audio:"You should see a doctor. You don't look well.",
+     q:'¿Qué le está dando?',ops:['Un consejo','Una orden','Una disculpa','Un permiso'],bien:0,
+     pista:'Fíjate en el modal.',porque:'"Should" sirve para aconsejar, no para mandar.'},
+    {t:'oir',audio:"I'm sorry about your window. — That's all right. Don't worry about it.",
+     q:'¿Qué está haciendo la primera persona?',ops:['Disculpándose','Pidiendo un favor','Dando las gracias','Haciendo una pregunta'],bien:0,
+     pista:'"I'+"'"+'m sorry about…"',porque:'"I’m sorry about + sustantivo" es una disculpa; la otra persona la acepta.'}
+   ,{t:'lectura',titulo:'An accident on Highway 15',
+     texto:"Yesterday afternoon there was an accident on Highway 15. A young driver was talking on his phone when he hit a blue truck. Nobody was hurt, but both cars were damaged. A police officer arrived ten minutes later and asked the driver to show his license. The officer told him that drivers must not use their phones while they are driving. The young man apologized for causing the accident and promised to be more careful.",
+     preg:[
+      {q:'What was the driver doing when he hit the truck?',ops:['He was talking on his phone.','He was eating.','He was sleeping.','He was reading a map.'],bien:0,
+       pista:'Busca "was …ing when".',porque:'El texto dice "was talking on his phone when he hit a blue truck".'},
+      {q:'What did the officer ask the driver to do?',ops:['To show his license','To call a doctor','To move the truck','To pay a fine'],bien:0,
+       pista:'Busca "asked … to".',porque:'"asked the driver to show his license": ask + persona + to + verbo.'},
+      {q:'Why did the driver apologize?',ops:['Because he caused the accident','Because he was late','Because he lost his license','Because he broke a window'],bien:0,
+       pista:'"apologized for …ing".',porque:'"He apologized for causing the accident": apologize for + gerundio.'},
+      {q:'How did the young driver probably feel at the end?',ops:['Sorry','Angry','Happy','Bored'],bien:0,
+       pista:'Esta no está escrita: piénsala.',porque:'Se disculpó y prometió tener más cuidado: se sentía apenado.'}]}
+   ,{t:'gram',q:'He ____ on the radio when the car hit him.',ops:['was talking','talked','is talking','talks'],bien:0,
+     pista:'La acción larga va en pasado progresivo.',porque:'La acción que estaba en curso lleva was/were + -ing; la que la corta va en pasado simple.'}
+   ,{t:'gram',q:'I like this coffee ____ it smells fresh.',ops:['because','because of','so','but'],bien:0,
+     pista:'Después viene sujeto + verbo.',porque:'"Because" va con una oración; "because of" va con sustantivo.'}
+   ,{t:'gram',q:'The officer told me ____ my license.',ops:['to show','show','showing','showed'],bien:0,
+     pista:'tell + persona + ?',porque:'tell/ask + persona + to + verbo: "told me to show".'}
+   ,{t:'gram',q:'You ____ ask Lieutenant Clark for help.',ops:['should','should to','shoulds','are should'],bien:0,
+     pista:'Después del modal va el verbo pelón.',porque:'Should no lleva "to" ni "-s": "You should ask".'}
+   ,{t:'gram',q:'I apologize ____ your window.',ops:['for breaking','to break','for break','breaking'],bien:0,
+     pista:'apologize for + ?',porque:'Después de "for" va el gerundio: "for breaking".'}
+   ],
+   B:[
+    {t:'oir',audio:"I need to make a deposit and then withdraw two hundred pesos.",
+     q:'¿Qué va a hacer?',ops:['Depositar y luego retirar','Solo depositar','Abrir una cuenta nueva','Pagar una multa'],bien:0,
+     pista:'deposit / withdraw.',porque:'"Make a deposit" es depositar y "withdraw" es retirar.'},
+    {t:'oir',audio:"I'm meeting the captain tomorrow at nine.",
+     q:'¿Cuándo es la cita?',ops:['Mañana a las nueve','Hoy a las nueve','La semana que viene','Ya pasó'],bien:0,
+     pista:'Presente progresivo con tiempo futuro.',porque:'"I’m meeting … tomorrow" habla de un plan ya acordado para mañana.'},
+    {t:'oir',audio:"He didn't eat the meat because it smelled bad.",
+     q:'¿Por qué no se lo comió?',ops:['Porque olía mal','Porque estaba frío','Porque no tenía hambre','Porque era mucho'],bien:0,
+     pista:'because + oración.',porque:'"because it smelled bad": smell es copulativo y va con adjetivo.'},
+    {t:'oir',audio:"Ask him to open the gate, please.",
+     q:'¿Qué le pidieron?',ops:['Que le pida abrir la puerta','Que cierre la puerta','Que pregunte la hora','Que espere afuera'],bien:0,
+     pista:'ask + persona + to + verbo.',porque:'"Ask him to open" = pídele que abra.'},
+    {t:'oir',audio:"Why don't you talk to the sergeant? He could help you.",
+     q:'¿Qué está haciendo?',ops:['Sugiriendo algo','Dando una orden','Pidiendo permiso','Quejándose'],bien:0,
+     pista:'"Why don’t you…?"',porque:'"Why don’t you…?" y "could" sirven para sugerir.'},
+    {t:'oir',audio:"He realized that the tank was empty.",
+     q:'¿De qué se dio cuenta?',ops:['De que el tanque estaba vacío','De que el tanque estaba lleno','De que el carro era nuevo','De que llegaba tarde'],bien:0,
+     pista:'realize that + oración.',porque:'Los verbos de actividad mental llevan una cláusula con "that".'}
+   ,{t:'lectura',titulo:'At the bank',
+     texto:"Private Soto went to the bank on Friday morning. He wanted to open a savings account because he is saving money for a car. The clerk asked him to fill out a form and to show his military ID. Soto was writing his address when the clerk told him that the bank closes early on Fridays. Soto finished quickly, made a deposit of five hundred pesos, and thanked the clerk. He is coming back next week to ask about a loan.",
+     preg:[
+      {q:'Why does Soto want a savings account?',ops:['He is saving for a car.','He lost his wallet.','He wants a new ID.','He is paying a fine.'],bien:0,
+       pista:'Busca "because".',porque:'"because he is saving money for a car".'},
+      {q:'What was Soto doing when the clerk spoke to him?',ops:['He was writing his address.','He was counting money.','He was leaving the bank.','He was calling a friend.'],bien:0,
+       pista:'"was …ing when".',porque:'"Soto was writing his address when the clerk told him…".'},
+      {q:'When is Soto coming back?',ops:['Next week','Tomorrow','On Friday afternoon','Never'],bien:0,
+       pista:'Presente progresivo con tiempo futuro.',porque:'"He is coming back next week" es un plan acordado.'},
+      {q:'What kind of person does Soto seem to be?',ops:['Careful with money','Careless','Impatient','Dishonest'],bien:0,
+       pista:'Esta se deduce.',porque:'Ahorra, deposita y pregunta por un préstamo: cuida su dinero.'}]}
+   ,{t:'gram',q:'She ____ to the bank next Friday.',ops:['is going','goes','going','will going'],bien:0,
+     pista:'Es un plan con fecha.',porque:'Un plan acordado va en presente progresivo: "is going".'}
+   ,{t:'gram',q:'The cake tastes ____ because it has fresh butter.',ops:['good','well','goodly','better than'],bien:0,
+     pista:'Verbo copulativo.',porque:'Taste va con adjetivo: "tastes good", no "tastes well".'}
+   ,{t:'gram',q:'Drivers ____ use their phones while they are driving.',ops:['must not','not must','must no','don’t must'],bien:0,
+     pista:'Prohibición.',porque:'La prohibición es "must not" + verbo pelón.'}
+   ,{t:'gram',q:'He drives very ____.',ops:['carefully','careful','care','carefuly'],bien:0,
+     pista:'Modifica al verbo.',porque:'El modo se dice con adverbio en -ly: carefully.'}
+   ,{t:'gram',q:'I think ____ he is late again.',ops:['that','what','to','of'],bien:0,
+     pista:'Verbo de actividad mental.',porque:'think/know/realize + (that) + sujeto + verbo.'}
+   ],
+   C:[
+    {t:'oir',audio:"The bread smells fresh. I like it.",
+     q:'¿Qué dice del pan?',ops:['Que huele fresco','Que está duro','Que está caro','Que está frío'],bien:0,
+     pista:'smell + adjetivo.',porque:'"Smells fresh": huele fresco.'},
+    {t:'oir',audio:"They were driving to the base when the truck hit them.",
+     q:'¿Qué estaban haciendo?',ops:['Iban manejando a la base','Estaban estacionados','Estaban esperando','Estaban caminando'],bien:0,
+     pista:'was/were + -ing.',porque:'La acción larga va en pasado progresivo: "were driving".'},
+    {t:'oir',audio:"Could you help me with this report, please?",
+     q:'¿Qué está haciendo?',ops:['Pidiendo ayuda con cortesía','Dando una orden','Disculpándose','Dando un consejo'],bien:0,
+     pista:'"Could you…?"',porque:'"Could you…?" es una petición cortés.'},
+    {t:'oir',audio:"I apologize for arriving late, sir.",
+     q:'¿Por qué se disculpa?',ops:['Por llegar tarde','Por no venir','Por hablar fuerte','Por perder un papel'],bien:0,
+     pista:'apologize for + -ing.',porque:'"for arriving late": se disculpa por haber llegado tarde.'},
+    {t:'oir',audio:"This sign is the same as that one.",
+     q:'¿Qué dice de los letreros?',ops:['Que son iguales','Que son distintos','Que están rotos','Que son nuevos'],bien:0,
+     pista:'the same as.',porque:'"The same as" significa igual que.'},
+    {t:'oir',audio:"He said that he was tired, so he went to bed early.",
+     q:'¿Qué dijo él?',ops:['Que estaba cansado','Que tenía hambre','Que estaba enfermo','Que llegaba tarde'],bien:0,
+     pista:'say that + oración.',porque:'"He said that he was tired".'}
+   ,{t:'lectura',titulo:'A piece of advice',
+     texto:"Cadet Luna was worried about his English test, so he asked his classmate for advice. His classmate told him that he should study a little every day instead of studying all night. He also said that Luna could listen to the radio in English while he was cleaning his room. Luna thought that the idea was strange, but he tried it. Two weeks later he answered the questions quickly and correctly, and he thanked his classmate politely.",
+     preg:[
+      {q:'What advice did the classmate give?',ops:['To study a little every day','To study all night','To change classes','To stop studying'],bien:0,
+       pista:'Busca "should".',porque:'"he should study a little every day".'},
+      {q:'What could Luna do while cleaning his room?',ops:['Listen to the radio in English','Read the book','Write a report','Call his family'],bien:0,
+       pista:'"could … while".',porque:'"He could listen to the radio in English while he was cleaning".'},
+      {q:'How did Luna answer the questions two weeks later?',ops:['Quickly and correctly','Slowly','Badly','He did not answer.'],bien:0,
+       pista:'Adverbios en -ly.',porque:'"quickly and correctly" describen cómo contestó.'},
+      {q:'Did the advice work?',ops:['Yes, it did.','No, it did not.','We do not know.','He never tried it.'],bien:0,
+       pista:'Se deduce del final.',porque:'Contestó rápido y bien, y le dio las gracias: sí funcionó.'}]}
+   ,{t:'gram',q:'What ____ when the accident happened?',ops:['were you doing','did you do','you were doing','do you do'],bien:0,
+     pista:'Pasado progresivo en pregunta.',porque:'"What were you doing…?" pregunta por la acción en curso.'}
+   ,{t:'gram',q:'He asked me ____ the door.',ops:['to close','close','closing','closed'],bien:0,
+     pista:'ask + persona + to + verbo.',porque:'"asked me to close".'}
+   ,{t:'gram',q:'She answered ____.',ops:['politely','polite','politeness','political'],bien:0,
+     pista:'Adverbio de modo.',porque:'El modo se dice con -ly: politely.'}
+   ,{t:'gram',q:'He ____ me that the road was closed.',ops:['told','said','say','tells to'],bien:0,
+     pista:'¿Lleva persona?',porque:'Con persona va "told me"; "said" no lleva persona directa.'}
+   ,{t:'gram',q:'I’m sorry ____ the noise last night.',ops:['about','for to','of','by'],bien:0,
+     pista:'sorry + ? + sustantivo.',porque:'"I’m sorry about + sustantivo"; con verbo sería "sorry for + -ing".'}
+   ]
+  },
+
+  /* ─────────── SEGUNDO PARCIAL · lecciones 9 a 16 del curso ─────────── */
+  18: {
+   A:[
+    {t:'oir',audio:"Can you tell me how to use this machine?",
+     q:'¿Qué está pidiendo?',ops:['Que le expliquen cómo se usa','Que se la presten','Que la reparen','Que la apaguen'],bien:0,
+     pista:'how to + verbo.',porque:'"how to use" pide la manera de usarla.'},
+    {t:'oir',audio:"Sue exercises before she goes to work.",
+     q:'¿Cuándo hace ejercicio?',ops:['Antes de ir al trabajo','Después del trabajo','En el trabajo','Los domingos'],bien:0,
+     pista:'before + oración.',porque:'"before she goes to work": antes de ir al trabajo.'},
+    {t:'oir',audio:"You're supposed to be at the gate at six.",
+     q:'¿Qué le están diciendo?',ops:['Que debe estar en la puerta a las seis','Que ya puede irse','Que llegó temprano','Que la puerta está cerrada'],bien:0,
+     pista:'be supposed to.',porque:'"be supposed to" es lo que se espera que hagas.'},
+    {t:'oir',audio:"The bus from Dallas leaves at six tomorrow morning.",
+     q:'¿Qué información es?',ops:['Un horario','Una opinión','Una orden','Una disculpa'],bien:0,
+     pista:'Presente simple con valor de futuro.',porque:'Los horarios van en presente simple: "The bus leaves at six".'},
+    {t:'oir',audio:"Would you introduce your family, please?",
+     q:'¿Cómo es la petición?',ops:['Formal y cortés','Grosera','Una orden','Una pregunta de examen'],bien:0,
+     pista:'"Would you…?"',porque:'"Would you…?" es la forma más cortés de pedir.'},
+    {t:'oir',audio:"My son is able to read the newspaper.",
+     q:'¿Qué dice de su hijo?',ops:['Que ya puede leer el periódico','Que quiere un periódico','Que no sabe leer','Que compra el periódico'],bien:0,
+     pista:'be able to.',porque:'"is able to read" es poder/ser capaz de leer.'}
+   ,{t:'lectura',titulo:'A flat tire',
+     texto:"On Saturday the Ramirez family was driving to the lake when they got a flat tire. Mr. Ramirez did not know how to change it, so he asked a neighbor for help. The neighbor showed him how to use the jack and told him that he was supposed to check the spare tire every month. It took them about twenty minutes. The lake is only thirty miles from their house, so they arrived before lunch and were able to swim all afternoon.",
+     preg:[
+      {q:'What did the neighbor show Mr. Ramirez?',ops:['How to use the jack','Where the lake is','How to drive','How to buy a tire'],bien:0,
+       pista:'"showed him how to…".',porque:'"showed him how to use the jack".'},
+      {q:'What is Mr. Ramirez supposed to do every month?',ops:['Check the spare tire','Wash the car','Call the neighbor','Buy a new car'],bien:0,
+       pista:'be supposed to.',porque:'"he was supposed to check the spare tire every month".'},
+      {q:'How far is the lake from their house?',ops:['Thirty miles','Twenty minutes','Thirty minutes','Three miles'],bien:0,
+       pista:'How far pide distancia.',porque:'"thirty miles from their house" es distancia, no tiempo.'},
+      {q:'How was their day in the end?',ops:['Good','Ruined','Short','Dangerous'],bien:0,
+       pista:'Se deduce.',porque:'Llegaron antes de comer y nadaron toda la tarde.'}]}
+   ,{t:'gram',q:'Tell me how ____ the copier.',ops:['to use','use','using','used'],bien:0,
+     pista:'how + to + verbo.',porque:'Después de tell/show/teach va "how to + verbo".'}
+   ,{t:'gram',q:'Before I ____ home, I’ll call you.',ops:['go','will go','going','went'],bien:0,
+     pista:'Después de before no va futuro.',porque:'"Before I go home": presente aunque hables del futuro.'}
+   ,{t:'gram',q:'I enjoy ____ in the mall.',ops:['shopping','to shop','shop','shopped'],bien:0,
+     pista:'enjoy + ?',porque:'enjoy/finish/mind + gerundio.'}
+   ,{t:'gram',q:'We’re glad ____ you.',ops:['to meet','meeting','meet','met'],bien:0,
+     pista:'Adjetivo + to + verbo.',porque:'glad/happy/ready + to + verbo.'}
+   ,{t:'gram',q:'How ____ is it from El Paso to Houston?',ops:['far','long','much','many'],bien:0,
+     pista:'Distancia.',porque:'"How far" pregunta distancia; "how long", duración.'}
+   ],
+   B:[
+    {t:'oir',audio:"He taught me how to change a flat tire.",
+     q:'¿Qué le enseñó?',ops:['A cambiar una llanta','A manejar','A lavar el carro','A llenar el tanque'],bien:0,
+     pista:'teach + how to.',porque:'"taught me how to change a flat tire".'},
+    {t:'oir',audio:"Wait here until I come back.",
+     q:'¿Hasta cuándo espera?',ops:['Hasta que él regrese','Diez minutos','Hasta mañana','No tiene que esperar'],bien:0,
+     pista:'until + oración.',porque:'"until I come back": hasta que yo regrese.'},
+    {t:'oir',audio:"The bank is across from the post office.",
+     q:'¿Dónde está el banco?',ops:['Enfrente del correo','Atrás del correo','Dentro del correo','Junto a la escuela'],bien:0,
+     pista:'across from.',porque:'"Across from" es enfrente de.'},
+    {t:'oir',audio:"Let me introduce you to Sergeant Lee.",
+     q:'¿Qué va a hacer?',ops:['Presentarlo con el sargento','Pedirle un favor','Despedirse','Darle una orden'],bien:0,
+     pista:'introduce … to …',porque:'"Let me introduce you to…" es presentar a alguien.'},
+    {t:'oir',audio:"The movie starts at eight, so we leave at seven.",
+     q:'¿A qué hora empieza la película?',ops:['A las ocho','A las siete','A las nueve','No dice'],bien:0,
+     pista:'Horario en presente simple.',porque:'"The movie starts at eight".'},
+    {t:'oir',audio:"How long does it take to get to the base?",
+     q:'¿Qué está preguntando?',ops:['Cuánto tarda','Qué tan lejos está','Cuánto cuesta','A qué hora sale'],bien:0,
+     pista:'How long.',porque:'"How long does it take" pregunta por la duración.'}
+   ,{t:'lectura',titulo:'The new neighbor',
+     texto:"A new family moved in next to the Garza house last week. On Sunday Mrs. Garza was happy to meet them, and she introduced her husband to the father, Mr. Peña. Mr. Peña is able to speak three languages because he worked in Canada for six years. He told the Garzas that he is supposed to start his new job on Monday. The office is only two miles away, so he walks there before the sun gets hot.",
+     preg:[
+      {q:'How many languages is Mr. Peña able to speak?',ops:['Three','Two','Six','One'],bien:0,
+       pista:'be able to.',porque:'"is able to speak three languages".'},
+      {q:'When is he supposed to start his job?',ops:['On Monday','On Sunday','Next month','He already started.'],bien:0,
+       pista:'be supposed to.',porque:'"he is supposed to start his new job on Monday".'},
+      {q:'Why does he walk to the office?',ops:['Because it is only two miles away','Because he has no car','Because he likes rain','Because the bus is late'],bien:0,
+       pista:'Busca la distancia.',porque:'"The office is only two miles away, so he walks there".'},
+      {q:'What kind of neighbor does Mr. Peña seem to be?',ops:['Friendly','Rude','Shy and silent','Angry'],bien:0,
+       pista:'Se deduce.',porque:'Platicó con los Garza y les contó de su trabajo.'}]}
+   ,{t:'gram',q:'He finished ____ at seven.',ops:['working','to work','work','works'],bien:0,
+     pista:'finish + ?',porque:'finish + gerundio.'}
+   ,{t:'gram',q:'He’s ready ____ the test.',ops:['to take','taking','take','took'],bien:0,
+     pista:'Adjetivo + to.',porque:'ready/glad/afraid + to + verbo.'}
+   ,{t:'gram',q:'The train from Dallas ____ early tomorrow.',ops:['arrives','is arriving soon','arrive','arrived'],bien:0,
+     pista:'Horario.',porque:'Los horarios van en presente simple: "arrives".'}
+   ,{t:'gram',q:'____ you open the window, please?',ops:['Would','Will to','Do','Are'],bien:0,
+     pista:'Petición cortés.',porque:'"Would you…?" para pedir con cortesía.'}
+   ,{t:'gram',q:'I’m ____ drive a truck.',ops:['able to','able','able of','can able to'],bien:0,
+     pista:'Falta algo.',porque:'"be able to + verbo": I’m able to drive.'}
+   ],
+   C:[
+    {t:'oir',audio:"I forgot how to turn it off.",
+     q:'¿Qué se le olvidó?',ops:['Cómo apagarlo','Dónde lo dejó','A qué hora','Para qué sirve'],bien:0,
+     pista:'forget how to.',porque:'"forgot how to turn it off".'},
+    {t:'oir',audio:"After he finishes the report, he goes home.",
+     q:'¿Cuándo se va a casa?',ops:['Después de terminar el reporte','Antes de empezar','A mediodía','No se va'],bien:0,
+     pista:'after + oración.',porque:'"After he finishes the report".'},
+    {t:'oir',audio:"The car is in front of the house.",
+     q:'¿Dónde está el carro?',ops:['Enfrente de la casa','Dentro de la casa','Atrás de la casa','En la esquina'],bien:0,
+     pista:'in front of.',porque:'"In front of" es enfrente de.'},
+    {t:'oir',audio:"I'm happy to be here with you today.",
+     q:'¿Cómo se siente?',ops:['Contento','Molesto','Nervioso','Cansado'],bien:0,
+     pista:'Adjetivo + to.',porque:'"happy to be here": está contento de estar ahí.'},
+    {t:'oir',audio:"Can you change a flat tire?",
+     q:'¿Qué le preguntan?',ops:['Si sabe cambiar una llanta','Si tiene una llanta','Si quiere manejar','Si vio el carro'],bien:0,
+     pista:'can = habilidad.',porque:'"Can you change…?" pregunta si sabe hacerlo.'},
+    {t:'oir',audio:"It's cold and windy today.",
+     q:'¿De qué habla?',ops:['Del clima','De una persona','De un carro','De la hora'],bien:0,
+     pista:'it impersonal.',porque:'El "it" impersonal se usa para el clima, la hora y la distancia.'}
+   ,{t:'lectura',titulo:'Saturday at the mall',
+     texto:"Carlos likes shopping at the Logar Mall on Saturdays. The mall is across from the bus station, so it takes him only fifteen minutes to get there. Last Saturday he was supposed to meet his sister at noon, but she called and told him to wait until one o'clock. While he was waiting, he finished reading a magazine and bought a shirt. When his sister arrived, she was glad to see that he was not angry.",
+     preg:[
+      {q:'Where is the mall?',ops:['Across from the bus station','Behind the school','Next to his house','In another city'],bien:0,
+       pista:'Preposición de lugar.',porque:'"The mall is across from the bus station".'},
+      {q:'How long does it take Carlos to get there?',ops:['Fifteen minutes','One hour','Fifteen miles','All morning'],bien:0,
+       pista:'How long = duración.',porque:'"it takes him only fifteen minutes".'},
+      {q:'What did his sister tell him to do?',ops:['To wait until one o’clock','To go home','To buy a shirt','To call her later'],bien:0,
+       pista:'tell + persona + to.',porque:'"told him to wait until one o’clock".'},
+      {q:'How did Carlos spend the time?',ops:['Reading and shopping','Sleeping','Arguing','Driving'],bien:0,
+       pista:'"While he was waiting…".',porque:'Terminó de leer una revista y compró una camisa.'}]}
+   ,{t:'gram',q:'She doesn’t mind ____.',ops:['waiting','to wait','wait','waited'],bien:0,
+     pista:'mind + ?',porque:'mind + gerundio.'}
+   ,{t:'gram',q:'He told me ____ at the gate.',ops:['to wait','wait','waiting','waited'],bien:0,
+     pista:'Orden reportada.',porque:'tell + persona + to + verbo.'}
+   ,{t:'gram',q:'____ is twenty degrees outside.',ops:['It','Is','There','That'],bien:0,
+     pista:'El it no se quita.',porque:'El clima lleva "it": "It’s twenty degrees".'}
+   ,{t:'gram',q:'He wasn’t ____ finish the report.',ops:['able to','able','can','able for'],bien:0,
+     pista:'Pasado de be able to.',porque:'"wasn’t able to finish".'}
+   ,{t:'gram',q:'Show me how ____ it.',ops:['to do','do','doing','done'],bien:0,
+     pista:'how + to.',porque:'"Show me how to do it".'}
+   ]
+  }
+  };
+  /* el final junta los dos parciales: una versión de cada uno, revuelta */
+  EX[19] = {
+    A: EX[9].A.slice(0,4).concat(EX[18].A.slice(0,4), EX[9].A.slice(7,10), EX[18].A.slice(7,10)),
+    B: EX[9].B.slice(0,4).concat(EX[18].B.slice(0,4), EX[9].B.slice(7,10), EX[18].B.slice(7,10)),
+    C: EX[9].C.slice(0,4).concat(EX[18].C.slice(0,4), EX[9].C.slice(7,10), EX[18].C.slice(7,10))
+  };
+  /* ══════ cuándo se abre ══════
+     El estudio de cada evaluación se abre dos semanas antes de su fecha y
+     se queda abierto. La fecha sale de la misma lista de lecciones.      */
+  var MESES={ene:0,feb:1,mar:2,abr:3,may:4,jun:5,jul:6,ago:7,sep:8,oct:9,nov:10,dic:11};
+  var DIAS_ANTES=14;
+  function fechaDe(n){
+    var L=LECCIONES_HCM[n]; if(!L||!L.fecha) return null;
+    var m=String(L.fecha).toLowerCase().match(/(\d{1,2})\s*([a-záéíóú]{3})/);
+    if(!m) return null;
+    var mes=MESES[m[2].normalize('NFD').replace(/[̀-ͯ]/g,'')];
+    if(mes===undefined) return null;
+    var anio = mes>=7 ? 2026 : 2027;        // ciclo 2026–2027
+    return new Date(anio, mes, +m[1], 7, 0, 0);
+  }
+  function abreEl(n){ var f=fechaDe(n); return f ? new Date(f.getTime()-DIAS_ANTES*864e5) : null; }
+  function abierto(n){
+    try{ if(/[?&#]estudio=abierto/.test(location.href)) return true; }catch(e){}
+    var a=abreEl(n); return !a || Date.now()>=a.getTime();
+  }
+  function fechaBonita(d){
+    var m=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    return d.getDate()+' de '+m[d.getMonth()];
+  }
+
+  /* ══════ lo que lleva cada cadete ══════ */
+  var K_EST='hcm_estudio';
+  function leer(){ try{ return JSON.parse(localStorage.getItem(K_EST)||'{}'); }catch(e){ return {}; } }
+  function guardar(o){ try{ localStorage.setItem(K_EST, JSON.stringify(o)); }catch(e){} }
+  function cuenta(v){ return v.reduce(function(s,x){ return s+(x.t==='lectura'?x.preg.length:1); },0); }
+  function estado(n){
+    var e=leer()[n]||{}, hechas=0, ok=0, tot=0;
+    ['A','B','C'].forEach(function(v){
+      if(e[v]&&e[v].fin){ hechas++; ok+=e[v].ok||0; tot+=e[v].n||0; }
+    });
+    return {hechas:hechas, total:3, completo:hechas===3, aciertos:ok, preguntas:tot, versiones:e};
+  }
+
+  /* ══════ los reactivos, ya en fila ══════
+     La lectura se vuelve varias preguntas; las opciones se barajan siempre
+     igual para la misma pregunta, así el cadete puede volver y comparar. */
+  function semilla(t){ var h=2166136261; t=String(t); for(var i=0;i<t.length;i++){ h^=t.charCodeAt(i); h=Math.imul(h,16777619)>>>0; } return h; }
+  function barajar(ops, s){
+    var a=ops.map(function(o,i){ return {o:o,i:i}; }), x=s||1;
+    for(var i=a.length-1;i>0;i--){ x=(Math.imul(x^(x>>>15),2246822519)+i*374761393)>>>0; x=(x^(x>>>13))>>>0; var j=Math.floor(x/4294967296*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+  function filaDe(n,v){
+    var out=[], src=(EX[n]&&EX[n][v])||[];
+    src.forEach(function(x){
+      if(x.t==='lectura'){
+        x.preg.forEach(function(p,k){
+          out.push({t:'leer', titulo:x.titulo, texto:x.texto, q:p.q, ops:p.ops, bien:p.bien,
+                    pista:p.pista, porque:p.porque, k:k, de:x.preg.length});
+        });
+      }else out.push(x);
+    });
+    return out.map(function(x){
+      var y={}; for(var k in x) y[k]=x[k];
+      y.mix=barajar(x.ops, semilla(n+v+(x.q||'')+(x.audio||'')));
+      return y;
+    });
+  }
+  var PARTE={oir:'Parte I · Listening', leer:'Parte II · Reading', gram:'Parte III · Grammar'};
+
+  /* ══════ la tarjeta del estudio, dentro de la lista de temas ══════ */
+  function tarjeta(n, caja){
+    var L=LECCIONES_HCM[n]||{}, est=estado(n), abre=abreEl(n);
+    var lecs=(BLOQUES_HCM[n]||[]).filter(function(k){ return LECCIONES_HCM[k]&&!LECCIONES_HCM[k].examen; });
+    var libro = n===9 ? 'ALC Book 9' : String(L.sub||'').split(' · ')[0];
+    if(!abierto(n)){
+      caja.innerHTML='<div class="es-cerr"><b>El estudio se abre el '+esc(fechaBonita(abre))+'</b>'+
+        '<span>Dos semanas antes de tu evaluación ('+esc(L.fecha)+'). Mientras, sigue con las lecciones.</span></div>';
+      return;
+    }
+    var vs=['A','B','C'].map(function(v){
+      var e=est.versiones[v]||{}, n15=cuenta(EX[n][v]);
+      var lleva=(e.r||[]).length;
+      var et = e.fin ? ('✓ '+e.ok+' de '+e.n) : (lleva ? ('va en '+lleva+' de '+n15) : (n15+' preguntas'));
+      return '<button class="es-v'+(e.fin?' hecha':'')+'" data-ev="'+n+'" data-v="'+v+'">'+
+        '<span class="es-vl">'+v+'</span>'+
+        '<span class="es-vt"><b>Versión '+v+'</b><span>'+et+'</span></span>'+
+        '<span class="es-go">'+(e.fin?'otra vez':'▶')+'</span></button>';
+    }).join('');
+    caja.innerHTML=
+      '<div class="es-caja" id="es-caja-'+n+'">'+
+        '<div class="es-k">Estudio para la evaluación · '+libro+'</div>'+
+        '<p class="es-d">Tres versiones como las del examen: oír, leer y gramática. '+
+          'No son el examen: son para que llegues listo. En cada pregunta puedes pedir una pista '+
+          'y preguntarle a la IA <b>por qué</b>, hablando.</p>'+
+        '<div class="es-bar"><i style="width:'+Math.round(est.hechas/3*100)+'%"></i></div>'+
+        '<div class="es-bt">'+est.hechas+' de 3 versiones'+(est.completo?' · <b>estudio completo</b>':'')+'</div>'+
+        '<div class="es-vs">'+vs+'</div>'+
+        '<div class="es-temas"><span>Lo que entra</span>'+
+          lecs.map(function(k){ return '<i>'+esc(LECCIONES_HCM[k].titulo)+'</i>'; }).join('')+'</div>'+
+        '<button class="es-rep" data-rep="'+n+'">Repasar las lecciones del bloque</button>'+
+        '<p class="es-con">🎖 '+(est.completo
+          ? 'Ya ganaste tu constancia de trabajo extraclase. Está en Más → Mis constancias.'
+          : 'Termina las tres versiones y ganas tu constancia de trabajo extraclase.')+'</p>'+
+      '</div>';
+    caja.querySelectorAll('.es-v').forEach(function(b){
+      b.onclick=function(){ correr(+b.dataset.ev, b.dataset.v); };
+    });
+    var r=caja.querySelector('[data-rep]');
+    if(r) r.onclick=function(){ irAParadaHCM(+r.dataset.rep); };
+    setTimeout(function(){ guia('caja', n); }, 350);
+  }
+
+  /* ══════ el examen de estudio ══════ */
+  var C=null;     // {n, v, fila, i, r:[...], t0}
+  function correr(n, v){
+    var todo=leer(); todo[n]=todo[n]||{};
+    var prev=todo[n][v]||{};
+    var fila=filaDe(n,v);
+    var r = (!prev.fin && prev.r && prev.r.length<fila.length) ? prev.r.slice() : [];
+    C={n:n, v:v, fila:fila, i:r.length, r:r, t0:Date.now(), ints:[]};
+    try{ soltarMapa(); }catch(e){}
+    pintar();
+  }
+  function salvar(fin){
+    var todo=leer(); todo[C.n]=todo[C.n]||{};
+    var ok=C.r.filter(function(x){ return x.ok; }).length;
+    var prev=todo[C.n][C.v]||{};
+    todo[C.n][C.v]={r:fin?[]:C.r, fin:!!(fin||prev.fin), ok:fin?ok:(prev.ok||0), n:C.fila.length,
+                    fecha:new Date().toISOString().slice(0,10), mejor:Math.max(prev.mejor||0, fin?ok:0)};
+    guardar(todo);
+  }
+  function app(){ return document.getElementById('app'); }
+
+  function pintar(){
+    try{ callarTodo(); }catch(e){}
+    var x=C.fila[C.i];
+    if(!x){ final(); return; }
+    var tot=C.fila.length;
+    var h='<div class="es-run">'+
+      '<button class="es-salir" id="es-salir">← Salir del estudio</button>'+
+      '<div class="es-head"><span>Versión '+C.v+' · '+PARTE[x.t]+'</span><b>'+(C.i+1)+' / '+tot+'</b></div>'+
+      '<div class="es-prog">'+C.fila.map(function(_,k){
+        var c=k<C.i?(C.r[k]&&C.r[k].ok?'ok':'no'):(k===C.i?'aqui':'');
+        return '<i class="'+c+'"></i>'; }).join('')+'</div>'+
+      '<div class="qcard es-card">';
+    if(x.t==='oir'){
+      h+='<div class="qlbl">Escucha y escoge</div>'+
+         '<button class="oirb full es-oir" id="es-oir">🔊 Escuchar</button>'+
+         '<div class="es-tx" id="es-tx" hidden>'+esc(x.audio)+'</div>'+
+         '<div class="qtxt" style="font-size:19px;margin-top:12px">'+esc(x.q)+'</div>';
+    }else if(x.t==='leer'){
+      h+='<div class="qlbl">Lee y contesta · '+(x.k+1)+' de '+x.de+'</div>'+
+         '<div class="es-lec"><b>'+esc(x.titulo)+'</b><p>'+esc(x.texto)+'</p>'+
+         '<button class="es-mini" id="es-leer">🔊 Oír el texto</button></div>'+
+         '<div class="qtxt" style="font-size:19px;margin-top:12px">'+esc(x.q)+'</div>';
+    }else{
+      h+='<div class="qlbl">Escoge la correcta</div>'+
+         '<div class="qtxt" style="font-size:21px">'+esc(x.q).replace('____','<span class="hueco">____</span>')+'</div>';
+    }
+    h+='<div class="opts" id="es-ops">'+x.mix.map(function(m,k){
+          return '<button class="opt" data-k="'+k+'"><span class="es-let">'+'ABCD'.charAt(k)+'</span> '+esc(m.o)+'</button>';
+        }).join('')+'</div>'+
+       '<div class="es-ayuda"><button class="es-mini" id="es-pista">💡 Pista</button>'+
+         '<button class="es-mini" id="es-voz">🎙️ Pregúntale a la IA</button></div>'+
+       '<div id="es-res"></div>'+
+       '</div></div>';
+    app().innerHTML=h;
+    window.scrollTo(0,0);
+
+    document.getElementById('es-salir').onclick=function(){ salvar(false); C=null; try{ mostrarMapa(); }catch(e){} };
+    var o=document.getElementById('es-oir');
+    if(o){ o.onclick=function(){ say(x.audio,'en-US'); }; setTimeout(function(){ try{ say(x.audio,'en-US'); }catch(e){} },500); }
+    var lr=document.getElementById('es-leer');
+    if(lr) lr.onclick=function(){ say(x.texto,'en-US'); };
+    document.getElementById('es-pista').onclick=function(){
+      var r=document.getElementById('es-res');
+      r.innerHTML='<div class="es-pis">💡 '+esc(x.pista||'Lee otra vez la pregunta con calma.')+'</div>';
+      try{ say(x.pista||'','es-MX'); }catch(e){}
+      C.pista=true;
+    };
+    document.getElementById('es-voz').onclick=function(){ preguntar(x, null); };
+    app().querySelectorAll('#es-ops .opt').forEach(function(b){
+      b.onclick=function(){ contestar(x, +b.dataset.k); };
+    });
+    try{ precargarLista([x.audio, x.texto].filter(Boolean)); }catch(e){}
+    if(C.i===0) setTimeout(function(){ guia('pregunta'); }, 600);
+  }
+
+  function contestar(x, k){
+    var m=x.mix[k], ok=(m.i===x.bien), bien=x.ops[x.bien];
+    app().querySelectorAll('#es-ops .opt').forEach(function(b,j){
+      b.disabled=true;
+      if(x.mix[j].i===x.bien) b.classList.add('ok');
+      else if(j===k) b.classList.add('no');
+    });
+    C.r.push({ok:ok, e:m.o, p:!!C.pista}); C.pista=false;
+    C.ints.push({tipo:'ex-'+x.t, meta:(x.audio?('🔊 '+x.audio+' · '):'')+x.q+' → '+bien, oido:m.o, pct:ok?100:0});
+    salvar(false);
+    var tx=document.getElementById('es-tx'); if(tx) tx.hidden=false;
+    var r=document.getElementById('es-res');
+    r.innerHTML='<div class="fb '+(ok?'ok':'no')+'"><div class="fb-t">'+(ok?'Correcto':'Era: '+esc(bien))+'</div>'+
+        '<div class="fb-p">'+esc(x.porque||'')+'</div></div>'+
+      '<div class="es-post">'+
+        '<button class="es-mini" id="es-porq">🤖 ¿Por qué? Explícame</button>'+
+        '<button class="es-mini" id="es-voz2">🎙️ Pregúntale hablando</button></div>'+
+      '<div id="es-ia"></div>'+
+      '<button class="btn" id="es-sig" style="margin-top:12px">'+(C.i+1<C.fila.length?'Siguiente':'Ver mi resultado')+'</button>';
+    if(ok) try{ say(bien,'en-US'); }catch(e){}
+    document.getElementById('es-porq').onclick=function(){ explicar(x, m.o, ''); };
+    document.getElementById('es-voz2').onclick=function(){ preguntar(x, m.o); };
+    document.getElementById('es-sig').onclick=function(){ C.i++; pintar(); };
+  }
+
+  /* ══════ la IA explica ══════
+     El cerebro de la app recibe la pregunta, las opciones, cuál es la buena
+     y cuál escogió el cadete; contesta en español sencillo. Si no hay red,
+     queda la explicación escrita.                                         */
+  function explicar(x, eligio, duda){
+    var caja=document.getElementById('es-ia') || document.getElementById('es-res');
+    if(!caja) return;
+    var bien=x.ops[x.bien];
+    var ops=x.mix.map(function(m,k){ return 'ABCD'.charAt(k)+') '+m.o; }).join(' · ');
+    var pide='Soy cadete y estudio para mi examen de inglés (ALC). '+
+      (x.texto?('Texto: "'+x.texto+'". '):'')+(x.audio?('Audio: "'+x.audio+'". '):'')+
+      'Pregunta: "'+x.q+'". Opciones: '+ops+'. La correcta es "'+bien+'". '+
+      (eligio?('Yo escogí "'+eligio+'". '):'Todavía no contesto: NO me digas la respuesta, dame solo una pista. ')+
+      (duda?('Mi duda: "'+duda+'". '):'')+
+      'Explícame en español, en máximo cuatro líneas y con palabras sencillas, '+
+      (eligio?'por qué la correcta es la correcta y por qué las otras no. Dame un ejemplo corto en inglés.':'cómo pensarla.');
+    caja.innerHTML='<div class="es-iab"><b>🤖 Tu asistente</b><span>pensando…</span></div>';
+    var listo=false;
+    var corto=setTimeout(function(){
+      if(listo) return; listo=true;
+      caja.innerHTML='<div class="es-iab"><b>🤖 Tu asistente</b><span>'+esc(eligio?(x.porque||''):(x.pista||''))+'</span>'+
+        '<em>Sin conexión con la IA: esta es la explicación del libro.</em></div>';
+    }, 14000);
+    try{
+      pedirIA('ayuda',{pregunta:pide, leccion:C.n, carril:((hcmLoad().perfil||{}).carril||'medio'), idioma:'es'},
+        function(res){
+          if(listo) return; listo=true; clearTimeout(corto);
+          var t=(res&&(res.respuesta||res.texto))||'';
+          if(!t){ t=eligio?(x.porque||''):(x.pista||''); }
+          caja.innerHTML='<div class="es-iab"><b>🤖 Tu asistente</b><span>'+esc(t).replace(/\n/g,'<br>')+'</span>'+
+            '<button class="es-mini" id="es-oiria">🔊 Oírlo</button></div>';
+          var oi=document.getElementById('es-oiria'); if(oi) oi.onclick=function(){ say(t,'es-MX'); };
+          try{ say(t,'es-MX'); }catch(e){}
+          try{ C.ints.push({tipo:'pregunta-ia', meta:x.q, oido:(duda||'¿por qué?')+' → '+t.slice(0,240), pct:null}); }catch(e){}
+        },
+        function(){
+          if(listo) return; listo=true; clearTimeout(corto);
+          caja.innerHTML='<div class="es-iab"><b>🤖 Tu asistente</b><span>'+esc(eligio?(x.porque||''):(x.pista||''))+'</span>'+
+            '<em>La IA no contestó: esta es la explicación del libro.</em></div>';
+        });
+    }catch(e){ clearTimeout(corto); }
+  }
+
+  /* ══════ preguntar con la voz ══════ */
+  function preguntar(x, eligio){
+    var R=window.SpeechRecognition||window.webkitSpeechRecognition;
+    var caja=document.getElementById('es-ia') || document.getElementById('es-res');
+    if(!R){
+      caja.innerHTML='<div class="es-iab"><b>Escribe tu duda</b>'+
+        '<input class="tx" id="es-dtx" placeholder="¿Por qué no va la otra?" autocomplete="off">'+
+        '<button class="es-mini" id="es-dok" style="margin-top:8px">Preguntar</button></div>';
+      document.getElementById('es-dok').onclick=function(){
+        var q=(document.getElementById('es-dtx').value||'').trim(); if(q) explicar(x, eligio, q);
+      };
+      return;
+    }
+    try{ callarTodo(); }catch(e){}
+    var rec=new R(); rec.lang='es-MX'; rec.interimResults=false; rec.maxAlternatives=1;
+    caja.innerHTML='<div class="es-iab es-oye"><b>🎙️ Te escucho…</b><span>Pregunta lo que quieras: "¿por qué no es la B?", "¿qué significa was talking?"</span></div>';
+    var oyo=false;
+    rec.onresult=function(e){
+      oyo=true;
+      var q=(e.results[0]&&e.results[0][0]&&e.results[0][0].transcript)||'';
+      caja.innerHTML='<div class="es-iab"><b>Preguntaste</b><span>“'+esc(q)+'”</span></div>';
+      explicar(x, eligio, q);
+    };
+    rec.onerror=function(){ if(!oyo) caja.innerHTML='<div class="es-iab"><b>No te oí</b><span>Toca otra vez el micrófono y habla cerca del teléfono.</span></div>'; };
+    rec.onend=function(){ if(!oyo && caja.querySelector('.es-oye')) caja.innerHTML='<div class="es-iab"><b>No te oí</b><span>Toca otra vez y habla.</span></div>'; };
+    try{ rec.start(); }catch(e){}
+  }
+
+  /* ══════ el resultado ══════ */
+  function final(){
+    var ok=C.r.filter(function(r){ return r.ok; }).length, n=C.fila.length;
+    var por={oir:[0,0],leer:[0,0],gram:[0,0]};
+    C.fila.forEach(function(x,k){ por[x.t][1]++; if(C.r[k]&&C.r[k].ok) por[x.t][0]++; });
+    salvar(true);
+    var est=estado(C.n);
+    try{
+      hcmGuardarAvance(C.n, C.ints, Math.round((Date.now()-C.t0)/1000),
+        {titulo:'Estudio para la evaluación · Versión '+C.v, items_total:n});
+    }catch(e){}
+    var pct=Math.round(ok/n*100);
+    var falta=['A','B','C'].filter(function(v){ return !(est.versiones[v]&&est.versiones[v].fin); });
+    var h='<div class="es-run"><div class="qcard es-card es-fin">'+
+      '<div class="qlbl">Versión '+C.v+' terminada</div>'+
+      '<div class="es-gran">'+ok+'<small> de '+n+'</small></div>'+
+      '<div class="es-pct '+(pct>=80?'b':pct>=60?'r':'m')+'">'+pct+'%</div>'+
+      '<div class="es-part">'+
+        ['oir','leer','gram'].map(function(t){
+          return '<div><b>'+PARTE[t].split(' · ')[1]+'</b><span>'+por[t][0]+' / '+por[t][1]+'</span></div>';
+        }).join('')+'</div>'+
+      '<p class="qsub">'+(pct>=80?'Vas muy bien. ':pct>=60?'Vas bien; repasa las que fallaste. ':'Repasa la regla de los temas que fallaste y vuelve a intentarla. ')+
+        (falta.length?('Te falta'+(falta.length>1?'n':'')+' la'+(falta.length>1?'s':'')+' versi'+(falta.length>1?'ones ':'ón ')+falta.join(', ')+'.')
+                     :'<b>Terminaste las tres versiones.</b>')+'</p>'+
+      (est.completo?'<div class="es-medal">🎖 Ganaste tu constancia de trabajo extraclase. Está en Más → Mis constancias.</div>':'')+
+      (falta.length?'<button class="btn" id="es-otra">Seguir con la versión '+falta[0]+'</button>':'')+
+      '<button class="btn ghost" id="es-volver" style="margin-top:8px">Volver a los temas</button>'+
+      '</div></div>';
+    app().innerHTML=h;
+    var o=document.getElementById('es-otra'); if(o) o.onclick=function(){ correr(C.n, falta[0]); };
+    document.getElementById('es-volver').onclick=function(){ C=null; try{ mostrarMapa(); }catch(e){} };
+    try{ if(est.completo && typeof window.__hcmConstanciaRevisa==='function') window.__hcmConstanciaRevisa(); }catch(e){}
+  }
+
+  /* ══════ los círculos que guían ══════
+     Un velo difuminado sobre la pantalla con un hueco redondo y suave
+     donde hay que tocar, y una nota que dice qué hacer. Sale una vez por
+     paso; desde "ver el tutorial" se puede repetir.                      */
+  var K_GUIA='hcm_guia_estudio';
+  function vista(){ try{ return JSON.parse(localStorage.getItem(K_GUIA)||'{}'); }catch(e){ return {}; } }
+  function marcar(k){ var v=vista(); v[k]=1; try{ localStorage.setItem(K_GUIA, JSON.stringify(v)); }catch(e){} }
+  function foco(el, texto, alTocar){
+    if(!el) return;
+    quitarFoco();
+    try{ el.scrollIntoView({block:'center'}); }catch(e){}
+    setTimeout(function(){
+      var r=el.getBoundingClientRect();
+      var cx=r.left+r.width/2, cy=r.top+r.height/2;
+      var rad=Math.max(46, Math.min(150, Math.max(r.width, r.height)/2+22));
+      var v=document.createElement('div'); v.id='es-velo';
+      var hueco='radial-gradient(circle at '+cx+'px '+cy+'px, transparent '+rad+'px, rgba(0,0,0,.6) '+(rad+38)+'px)';
+      v.style.webkitMaskImage=hueco; v.style.maskImage=hueco;
+      var aro=document.createElement('div'); aro.id='es-aro';
+      aro.style.left=(cx-rad)+'px'; aro.style.top=(cy-rad)+'px';
+      aro.style.width=aro.style.height=(rad*2)+'px';
+      var nota=document.createElement('div'); nota.id='es-nota';
+      nota.innerHTML='<b>'+texto+'</b><span>Toca donde brilla</span>';
+      var abajo = cy < window.innerHeight*0.55;
+      nota.style.top = abajo ? (cy+rad+18)+'px' : '';
+      nota.style.bottom = abajo ? '' : (window.innerHeight-(cy-rad)+18)+'px';
+      document.body.appendChild(v); document.body.appendChild(aro); document.body.appendChild(nota);
+      function fuera(){ quitarFoco(); }
+      v.onclick=fuera; nota.onclick=fuera;
+      aro.onclick=function(){ quitarFoco(); if(alTocar) alTocar(); else try{ el.click(); }catch(e){} };
+      try{ say(texto.replace(/<[^>]+>/g,''),'es-MX'); }catch(e){}
+    }, 380);
+  }
+  function quitarFoco(){ ['es-velo','es-aro','es-nota'].forEach(function(i){ var e=document.getElementById(i); if(e) e.remove(); }); }
+
+  function guia(paso, n){
+    var v=vista();
+    if(paso==='lista'){
+      if(v.lista) return;
+      var ex=[9,18,19].filter(function(k){ return abierto(k); })[0];
+      if(!ex) return;
+      var card=document.querySelector('.tm-card[data-n="'+ex+'"] .tm-cab');
+      if(!card) return;
+      marcar('lista');
+      foco(card,'Aquí estudias para tu <b>evaluación</b>. Tócala para abrirla.');
+    }else if(paso==='caja'){
+      if(v.caja) return;
+      var b=document.querySelector('#es-caja-'+n+' .es-v');
+      if(!b) return;
+      marcar('caja');
+      foco(b,'Empieza por la <b>versión A</b>. Son 15 preguntas como las del examen.');
+    }else if(paso==='pregunta'){
+      if(v.pregunta) return;
+      var bv=document.getElementById('es-voz');
+      if(!bv) return;
+      marcar('pregunta');
+      foco(bv,'Si no sabes por qué, <b>pregúntale a la IA</b> con tu voz. También hay pista.', function(){});
+    }
+  }
+
+  /* ══════ se engancha a la lista de temas ══════ */
+  try{
+    if(window.__hcmTemas && window.__hcmTemas.pantalla){
+      var pantallaBase=mostrarMapa;
+      mostrarMapa=function(){
+        var r=pantallaBase.apply(this,arguments);
+        try{
+          [9,18,19].forEach(function(k){
+            var c=document.querySelector('.tm-card[data-n="'+k+'"]');
+            if(!c) return;
+            if(abierto(k)){
+              c.classList.add('es-abierto');
+              var eti=c.querySelector('.tm-eti');
+              if(eti && !eti.querySelector('.es-chip')) eti.insertAdjacentHTML('beforeend',' <span class="es-chip">estudio abierto</span>');
+            }
+          });
+          setTimeout(function(){ guia('lista'); }, 900);
+        }catch(e){}
+        return r;
+      };
+    }
+  }catch(e){}
+
+  try{ window.__hcmEstudio={tarjeta:tarjeta, estado:estado, abierto:abierto, correr:correr, banco:EX,
+                            guiaOtraVez:function(){ try{ localStorage.removeItem(K_GUIA); }catch(e){} guia('lista'); }}; }catch(e){}
+
+  /* ══════ el vestido ══════ */
+  try{
+    var st=document.createElement('style');
+    st.textContent=
+    '.es-caja,.es-run *{box-sizing:border-box}'+
+    '.es-caja{padding:4px 3px 6px}'+
+    '.es-k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--oro,#8F7320);margin:6px 0 4px}'+
+    '.es-d{font-size:13.5px;line-height:1.45;opacity:.8;margin:0 0 10px}'+
+    '.es-bar{height:7px;border-radius:5px;background:rgba(0,0,0,.08);overflow:hidden}'+
+    '.es-bar i{display:block;height:100%;background:var(--verde,#3F7D52)}'+
+    '.es-bt{font-size:12px;opacity:.7;margin:5px 0 10px}'+
+    '.es-v{display:flex;align-items:center;gap:11px;width:100%;text-align:left;font:inherit;color:inherit;'+
+      'padding:11px 12px;margin-bottom:7px;border-radius:13px;border:1px solid var(--tenue,#e4ded0);background:var(--fondo,#faf7ef);cursor:pointer}'+
+    '.es-v.hecha{border-color:transparent;background:#E7F1E9}'+
+    '.es-vl{flex:0 0 34px;height:34px;border-radius:10px;background:#1C1510;color:#F2D58A;font-weight:800;'+
+      'display:flex;align-items:center;justify-content:center}'+
+    '.es-v.hecha .es-vl{background:var(--verde,#3F7D52);color:#fff}'+
+    '.es-vt{flex:1}.es-vt b{display:block;font-size:15px}.es-vt span{font-size:12.5px;opacity:.7}'+
+    '.es-go{font-size:12px;opacity:.6}'+
+    '.es-temas{margin:10px 0 4px;font-size:12px}.es-temas span{display:block;font-weight:700;opacity:.7;margin-bottom:4px}'+
+    '.es-temas i{display:inline-block;font-style:normal;margin:0 5px 5px 0;padding:3px 8px;border-radius:8px;background:rgba(0,0,0,.05)}'+
+    '.es-rep{width:100%;margin-top:8px;padding:10px;border-radius:12px;border:1px dashed var(--tenue,#d8d0bd);background:none;font:inherit;font-size:13px;cursor:pointer;color:inherit}'+
+    '.es-con{font-size:12.5px;margin:10px 2px 0;opacity:.85}'+
+    '.es-cerr{padding:8px 4px 10px}.es-cerr b{display:block;font-size:14px}.es-cerr span{display:block;font-size:12.5px;opacity:.7;margin-top:3px}'+
+    '.tm-card.es-abierto{border-color:#8C3A32;box-shadow:0 0 0 3px rgba(140,58,50,.12)}'+
+    '.es-chip{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:7px;background:#8C3A32;color:#fff;font-size:9.5px;letter-spacing:.05em}'+
+    '.es-run{padding:0 14px 110px}'+
+    '.es-salir{background:none;border:0;font:inherit;font-size:13px;opacity:.7;padding:10px 0;cursor:pointer;color:inherit}'+
+    '.es-head{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;letter-spacing:.05em;text-transform:uppercase;opacity:.75}'+
+    '.es-prog{display:flex;gap:3px;margin:8px 0 12px}.es-prog i{flex:1;height:5px;border-radius:3px;background:rgba(0,0,0,.09)}'+
+    '.es-prog i.ok{background:var(--verde,#3F7D52)}.es-prog i.no{background:#8C3A32}.es-prog i.aqui{background:var(--oro,#B99A4B)}'+
+    '.es-tx{margin-top:10px;padding:10px 12px;border-radius:11px;background:var(--fondo,#faf7ef);border:1px solid var(--tenue,#e4ded0);font-size:14px}'+
+    '.es-lec{padding:12px 13px;border-radius:13px;background:var(--fondo,#faf7ef);border:1px solid var(--tenue,#e4ded0)}'+
+    '.es-lec b{display:block;font-size:14.5px;margin-bottom:5px}.es-lec p{font-size:14px;line-height:1.55;margin:0 0 8px}'+
+    '.es-let{display:inline-block;width:22px;font-weight:800;opacity:.55}'+
+    '.es-ayuda,.es-post{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}'+
+    '.es-mini{flex:1;min-width:130px;padding:10px 12px;border-radius:12px;border:1px solid var(--tenue,#d8d0bd);background:#fff;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;color:inherit}'+
+    '.es-pis{margin-top:10px;padding:10px 12px;border-radius:11px;background:#FFF6DD;font-size:14px}'+
+    '.es-iab{margin-top:10px;padding:12px 13px;border-radius:13px;background:#EEF2F8;font-size:14px;line-height:1.5}'+
+    '.es-iab b{display:block;font-size:12px;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;opacity:.75}'+
+    '.es-iab em{display:block;font-size:11.5px;opacity:.6;margin-top:6px}'+
+    '.es-iab .es-mini{margin-top:8px;flex:none}'+
+    '.es-oye{background:#FBEDEA;animation:auLate 1.2s infinite}'+
+    '.es-fin{text-align:center}.es-gran{font:800 64px/1 Georgia,serif;margin:10px 0 0}.es-gran small{font-size:22px;opacity:.6}'+
+    '.es-pct{display:inline-block;margin:8px 0 12px;padding:4px 12px;border-radius:10px;font-weight:800}'+
+    '.es-pct.b{background:#E7F1E9;color:#2E6A41}.es-pct.r{background:#FFF3D6;color:#8A6410}.es-pct.m{background:#F6E6E3;color:#8C3A32}'+
+    '.es-part{display:flex;gap:8px;margin:4px 0 12px}.es-part div{flex:1;padding:9px;border-radius:11px;background:var(--fondo,#faf7ef)}'+
+    '.es-part b{display:block;font-size:11.5px;opacity:.7}.es-part span{font-size:17px;font-weight:800}'+
+    '.es-medal{margin:10px 0;padding:12px;border-radius:13px;background:#F3E9CF;font-weight:700}'+
+    /* los círculos */
+    '#es-velo{position:fixed;inset:0;z-index:9990;background:rgba(10,8,5,.55);'+
+      '-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}'+
+    '#es-aro{position:fixed;z-index:9991;border-radius:50%;cursor:pointer;'+
+      'box-shadow:0 0 0 3px rgba(242,213,138,.9),0 0 34px 10px rgba(242,213,138,.55);animation:esLate 1.6s ease-in-out infinite}'+
+    '@keyframes esLate{0%,100%{box-shadow:0 0 0 3px rgba(242,213,138,.9),0 0 34px 8px rgba(242,213,138,.45)}'+
+      '50%{box-shadow:0 0 0 6px rgba(242,213,138,.55),0 0 54px 20px rgba(242,213,138,.25)}}'+
+    '#es-nota{position:fixed;left:18px;right:18px;z-index:9992;padding:15px 17px;border-radius:16px;'+
+      'background:#1C1510;color:#F7F0DC;box-shadow:0 14px 40px rgba(0,0,0,.4);font-size:16px;line-height:1.4}'+
+    '#es-nota b{color:#F2D58A}#es-nota span{display:block;font-size:12px;opacity:.6;margin-top:6px}';
     document.head.appendChild(st);
   }catch(e){}
 })();
