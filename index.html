@@ -17063,7 +17063,15 @@ function partesIdioma(texto){
     if(c.saveData) return;                         // el teléfono pidió ahorrar datos
     setTimeout(ofrecer, 9000);
   }
-  try{ arrancar(); }catch(e){}
+  /* APAGADO por ahora (5 nov 2026). Medido en la computadora de Brian: la
+     voz natural tarda 8 a 11 s por frase con la tarjeta de video, y en modo
+     teléfono (WASM) congela la pantalla mientras genera, porque GitHub Pages
+     no deja usar varios núcleos. Para el cadete eso es peor que la voz del
+     teléfono. El código se queda listo para cuando haya un servidor propio
+     de voz o un trabajador en segundo plano; se puede probar a mano con
+     ?voz=webgpu o ?voz=wasm en la dirección. */
+  var VIVA_ACTIVA = /[?&]voz=(wasm|webgpu)/.test(location.search);
+  try{ if(VIVA_ACTIVA) arrancar(); }catch(e){}
 
   try{
     window.__hcmVozViva={estado:function(){ return {estado:ESTADO, pct:PCT, lento:LENTO, gpu:!!navigator.gpu}; },
