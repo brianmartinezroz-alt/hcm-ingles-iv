@@ -7,11 +7,11 @@ on:
   workflow_dispatch:
     inputs:
       motor:
-        description: 'chatterbox (como ElevenLabs) o kokoro (más rápido)'
+        description: 'google (la voz buena de Google), chatterbox o kokoro'
         required: true
         default: 'chatterbox'
         type: choice
-        options: [chatterbox, kokoro]
+        options: [google, chatterbox, kokoro]
   push:
     paths: ['voces/frases.json']
 
@@ -50,7 +50,9 @@ jobs:
         timeout-minutes: 20
         run: |
           python -m pip install -q --upgrade pip
-          if [ "$MOTOR" = "chatterbox" ]; then
+          if [ "$MOTOR" = "google" ]; then
+            pip install -q requests
+          elif [ "$MOTOR" = "chatterbox" ]; then
             pip install -q --extra-index-url https://download.pytorch.org/whl/cpu chatterbox-tts
           else
             pip install -q --extra-index-url https://download.pytorch.org/whl/cpu "kokoro>=0.9.4" soundfile
@@ -78,7 +80,7 @@ jobs:
       - name: Juntar y armar la lista
         run: |
           mkdir -p voz
-          cp -n nuevas/*.mp3 voz/ 2>/dev/null || true
+          cp nuevas/*.mp3 voz/ 2>/dev/null || true
           python - <<'EOF'
           import json, os
           hs = sorted(f[:-4] for f in os.listdir('voz') if f.endswith('.mp3'))
