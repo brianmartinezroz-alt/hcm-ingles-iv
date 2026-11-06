@@ -17028,6 +17028,7 @@ function partesIdioma(texto){
   /* ── el enganche ── */
   var base=vozDelServidor;
   vozDelServidor=function(texto,lang,cb,onFalla){
+    if(!String(texto==null?'':texto).replace(/<[^>]*>/g,'').trim()){ try{ cb&&cb(); }catch(e){} return; }   // nada que decir
     var yo=this, args=arguments;
     var local = (lang!=='es-MX') && window.__hcmAudio && window.__hcmAudio.tieneLocal && window.__hcmAudio.tieneLocal(texto);
     var caido = window.__hcmAudio && window.__hcmAudio.caido && window.__hcmAudio.caido();
