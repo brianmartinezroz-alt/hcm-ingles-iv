@@ -1671,8 +1671,10 @@ function etiquetaVoz(v){
   return {nombre:n||v.name,pais:pais};
 }
 function elegirVozES(){
+  // la de mejor calidad (mejorada / neural / Google), y entre iguales, la de México o EE. UU.
+  function pts(v){ return calidadVoz(v)*2 + (/mx/i.test(v.lang)?2:/us|419/i.test(v.lang)?1:0); }
   VOZ_ES=VOCES.filter(function(v){return /^es(-|_)/i.test(v.lang);})
-              .sort(function(a,b){return (/mx|us/i.test(b.lang)?1:0)-(/mx|us/i.test(a.lang)?1:0);})[0]||null;
+              .sort(function(a,b){return pts(b)-pts(a);})[0]||null;
 }
 function aplicarVoz(id){
   if(!id)return;
@@ -15532,7 +15534,9 @@ function hcmTutorial(){
       .then(function(d){
         if(!d || !d.h) return;
         VOZ_LOCAL={}; d.h.forEach(function(h){ VOZ_LOCAL[h]=1; });
-        anota('voces guardadas: '+d.h.length);
+        // las que ya tienen la voz de Google (Gemini) se tocan primero
+        (d.g||[]).forEach(function(h){ VOZ_LOCAL[h]=2; });
+        anota('voces guardadas: '+d.h.length+' · con voz de Google: '+(d.g||[]).length);
       }).catch(function(){});
   }catch(e){}
   try{
@@ -15541,11 +15545,17 @@ function hcmTutorial(){
       if(VOZ_LOCAL && lang!=='es-MX'){
         var h=fnvVoz(clave(texto));
         if(VOZ_LOCAL[h]){
-          var args=arguments, yo=this;
-          anota('voz guardada: '+String(texto).slice(0,26));
-          reproducir('voz/'+h+'.mp3', function(){ cb&&cb(); },
-            function(){ vdsCaido.apply(yo,args); },          // si el archivo falla, el camino de siempre
-            function(){ cb&&cb(); }, VEL_PEDIDA);
+          var args=arguments, yo=this, vel=VEL_PEDIDA;
+          var respaldo=function(){ vdsCaido.apply(yo,args); };   // si el archivo falla, el camino de siempre
+          var deGoogle=(VOZ_LOCAL[h]===2);
+          anota('voz guardada'+(deGoogle?' (Google)':'')+': '+String(texto).slice(0,26));
+          reproducir('voz/'+h+(deGoogle?'-g':'')+'.mp3', function(){ cb&&cb(); },
+            function(){
+              // la de Google no cargó: la anterior, y si tampoco, el servidor
+              if(deGoogle){ reproducir('voz/'+h+'.mp3', function(){ cb&&cb(); }, respaldo, function(){ cb&&cb(); }, vel); }
+              else respaldo();
+            },
+            function(){ cb&&cb(); }, vel);
           return;
         }
       }
