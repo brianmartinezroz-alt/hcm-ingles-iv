@@ -83,8 +83,10 @@ jobs:
           cp nuevas/*.mp3 voz/ 2>/dev/null || true
           python - <<'EOF'
           import json, os
-          hs = sorted(f[:-4] for f in os.listdir('voz') if f.endswith('.mp3'))
-          json.dump({'v': 1, 'h': hs}, open('voz/lista.json', 'w'))
+          fs = [f[:-4] for f in os.listdir('voz') if f.endswith('.mp3')]
+          hs = sorted(f for f in fs if not f.endswith('-g'))
+          gs = sorted(f[:-2] for f in fs if f.endswith('-g'))
+          json.dump({'v': 1, 'h': hs, 'g': gs}, open('voz/lista.json', 'w'))
           print(len(hs), 'audios en voz/')
           EOF
       - name: Guardar en el repositorio

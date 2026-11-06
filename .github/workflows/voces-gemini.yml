@@ -1,0 +1,59 @@
+# La voz nueva de Google (Gemini TTS) con la capa GRATIS de Google AI Studio.
+# Necesita un secreto del repositorio llamado GEMINI_API_KEY (lo pone Brian en
+# Settings → Secrets and variables → Actions; nadie más lo ve).
+# Lo gratis alcanza para pocas frases al día, así que corre solo cada día y
+# avanza donde se quedó. Cuando ya están todas, no hace nada.
+name: Voces Google (Gemini)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 8 * * *'      # justo después de que Google reinicia lo gratis del día
+
+permissions:
+  contents: write
+
+concurrency:
+  group: voces-gemini
+  cancel-in-progress: false
+
+jobs:
+  generar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 140
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Herramientas
+        timeout-minutes: 12
+        run: |
+          for i in 1 2 3; do
+            sudo timeout 180 apt-get update -qq && sudo timeout 180 apt-get install -y -qq ffmpeg && break
+            echo "apt tardó demasiado, otra vez ($i)"; sleep 5
+          done
+          command -v ffmpeg
+          pip install -q requests
+      - name: Generar con la voz de Google
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python voces/generar.py gemini 0 1 salida
+      - name: Guardar en el repositorio
+        run: |
+          mkdir -p voz
+          cp salida/*-g.mp3 voz/ 2>/dev/null || true
+          python - <<'PY'
+          import json, os
+          f = [x[:-4] for x in os.listdir('voz') if x.endswith('.mp3')]
+          h = sorted(x for x in f if not x.endswith('-g'))
+          g = sorted(x[:-2] for x in f if x.endswith('-g'))
+          json.dump({'v': 1, 'h': h, 'g': g}, open('voz/lista.json', 'w'))
+          print(len(h), 'audios de respaldo ·', len(g), 'con la voz de Google')
+          PY
+          git config user.name  "voces-app"
+          git config user.email "voces-app@users.noreply.github.com"
+          git add voz
+          if git diff --cached --quiet; then echo "nada nuevo hoy"; exit 0; fi
+          git commit -q -m "Voces Google: $(python -c "import json;print(len(json.load(open('voz/lista.json'))['g']))") frases"
+          for i in 1 2 3 4; do git pull -q --rebase && git push -q && break; sleep 5; done
