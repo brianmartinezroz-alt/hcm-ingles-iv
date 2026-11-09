@@ -7,11 +7,11 @@ on:
   workflow_dispatch:
     inputs:
       motor:
-        description: 'google (la voz buena de Google), chatterbox o kokoro'
+        description: 'kokoro (la voz buena, gratis), chatterbox o google'
         required: true
-        default: 'chatterbox'
+        default: 'kokoro'
         type: choice
-        options: [google, chatterbox, kokoro]
+        options: [kokoro, chatterbox, google]
   push:
     paths: ['voces/frases.json']
 
@@ -29,9 +29,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        parte: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+        parte: [0,1,2,3,4,5,6,7]
     env:
-      MOTOR: ${{ github.event.inputs.motor || 'chatterbox' }}
+      MOTOR: ${{ github.event.inputs.motor || 'kokoro' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -50,19 +50,25 @@ jobs:
         timeout-minutes: 20
         run: |
           python -m pip install -q --upgrade pip
-          if [ "$MOTOR" = "google" ]; then
+          if [ "$MOTOR" = "kokoro" ]; then
+            pip install -q kokoro-onnx soundfile
+            curl -sL -o kokoro-v1.0.int8.onnx https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.int8.onnx
+            curl -sL -o voices-v1.0.bin https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
+          elif [ "$MOTOR" = "google" ]; then
             pip install -q requests
           elif [ "$MOTOR" = "chatterbox" ]; then
             pip install -q --extra-index-url https://download.pytorch.org/whl/cpu chatterbox-tts
           else
             pip install -q --extra-index-url https://download.pytorch.org/whl/cpu "kokoro>=0.9.4" soundfile
           fi
-      - name: Generar (parte ${{ matrix.parte }} de 16)
-        run: python voces/generar.py "$MOTOR" ${{ matrix.parte }} 16 salida
+      - name: Generar (parte ${{ matrix.parte }} de 8)
+        run: python voces/generar.py "$MOTOR" ${{ matrix.parte }} 8 salida
       - uses: actions/upload-artifact@v4
         with:
           name: voz-${{ matrix.parte }}
-          path: salida/*.mp3
+          path: |
+            salida/*.mp3
+            salida/*.json
           if-no-files-found: ignore
           retention-days: 3
 
@@ -90,7 +96,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: voz-dialogos
-          path: salida/*.mp3
+          path: |
+            salida/*.mp3
+            salida/*.json
           if-no-files-found: ignore
           retention-days: 3
 
@@ -110,7 +118,13 @@ jobs:
           mkdir -p voz
           cp nuevas/*.mp3 voz/ 2>/dev/null || true
           python - <<'EOF'
-          import json, os
+          import json, os, glob
+          # las que ya tienen la voz de Kokoro (para no rehacerlas)
+          p = 'voz/kokoro.json'
+          ks = set(json.load(open(p))) if os.path.exists(p) else set()
+          for q in glob.glob('nuevas/kokoro_nuevas_*.json'):
+              ks |= set(json.load(open(q)))
+          json.dump(sorted(ks), open(p, 'w'))
           fs = [f[:-4] for f in os.listdir('voz') if f.endswith('.mp3')]
           hs = sorted(f for f in fs if not f.endswith('-g'))
           gs = sorted(f[:-2] for f in fs if f.endswith('-g'))
