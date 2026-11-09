@@ -16925,6 +16925,69 @@ function hcmTutorial(){
   }catch(e){}
 })();
 
+/* ═══════════ LATIDO_SIEMPRE_HCM ══════════════════════════════════════════
+   Brian (9 nov): "hay cadetes que ya entraron y no me avisaste".
+   La causa: el latido (lo que avisa al maestro y alimenta "En vivo") solo
+   arrancaba con el reloj de la sesión vieja. Desde que la pantalla principal
+   es la lista de temas, el ejercicio suelto y el estudio para la evaluación
+   ya no lo prendían, así que esos cadetes entraban sin que nadie se enterara.
+   Ahora el latido arranca en cuanto el cadete abre la app (si ya dio su
+   nombre), sigue en toda la app mientras la tenga en pantalla, se pausa si
+   la deja en segundo plano y vuelve a avisar en cuanto regresa. Además dice
+   dónde anda: tema, ejercicio o estudio (versión y pregunta).
+   ═════════════════════════════════════════════════════════════════════ */
+(function(){
+  if(typeof mandarLatido!=='function' || typeof datosDelLatido!=='function') return;
+  var DONDE=null;          // {leccion, titulo, paso, reactivo} cuando está en el estudio
+  var base=datosDelLatido;
+  datosDelLatido=function(){
+    var d=base.apply(this,arguments);
+    if(DONDE){ for(var k in DONDE) if(DONDE[k]!==undefined) d[k]=DONDE[k]; }
+    else if(!d.leccion && !d.titulo){ d.titulo='En la pantalla de temas'; }
+    d.donde = DONDE ? 'estudio' : (d.paso ? 'ejercicio' : 'temas');
+    return d;
+  };
+  var INTERVALO=null;
+  arrancarLatido=function(){
+    mandarLatido();
+    if(!INTERVALO) INTERVALO=setInterval(function(){ if(!document.hidden) mandarLatido(); },20000);
+  };
+  // el latido ya no se apaga al cerrar una sesión: el cadete sigue adentro
+  pararLatido=function(){};
+  // vuelve de segundo plano: se avisa ya, sin esperar 20 segundos
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden){ try{ mandarLatido(); }catch(e){} }
+  });
+  // al abrir la app
+  function alAbrir(){
+    var P2={}; try{ P2=hcmLoad().perfil||{}; }catch(e){}
+    if(P2.nombre) arrancarLatido();
+    else setTimeout(alAbrir,5000);       // todavía no se registra: se vuelve a ver
+  }
+  setTimeout(alAbrir,1500);
+  // el estudio para la evaluación dice versión y pregunta
+  function engancharEstudio(){
+    var E=window.__hcmEstudio;
+    if(!E || E._latido){ if(!E) setTimeout(engancharEstudio,1000); return; }
+    E._latido=true;
+    var correrBase=E.correr;
+    E.correr=function(n,v){
+      DONDE={leccion:'Estudio '+n, titulo:'Estudio para la evaluación · versión '+v, paso:'estudio', reactivo:''};
+      try{ arrancarLatido(); }catch(e){}
+      return correrBase.apply(this,arguments);
+    };
+  }
+  engancharEstudio();
+  // la pregunta del estudio en la que va (se lee de la pantalla)
+  setInterval(function(){
+    if(!DONDE) return;
+    var h=document.querySelector('.es-head'), q=document.querySelector('.es-run .qtxt');
+    if(!h){ DONDE=null; return; }        // ya salió del estudio
+    DONDE.paso=String(h.innerText||'').replace(/\s+/g,' ').trim().slice(0,60);
+    DONDE.reactivo=q ? String(q.innerText||'').slice(0,200) : '';
+  },3000);
+})();
+
 /* ═══════════ VOZ_VIVA_HCM ═══════════════════════════════════════════════
    Voz natural en vivo, dentro del teléfono del cadete.
    Motor: Kokoro-82M (código abierto, Apache-2.0) con kokoro-js. Se baja una
