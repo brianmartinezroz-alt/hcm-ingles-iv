@@ -6,7 +6,8 @@ sin servidor de voz, sin facturación y sin internet una vez guardados.
 
 Motores (los dos son de código abierto y gratuitos):
   chatterbox  Resemble AI · licencia MIT · la alternativa abierta a ElevenLabs
-  kokoro      hexgrad · Apache-2.0 · más rápido; voces de hombre y de mujer
+  kokoro      hexgrad · Apache-2.0 (kokoro-onnx) · la voz buena de lo grabado:
+              varias voces en inglés y voz de maestro en español
   dialogos    Kokoro (kokoro-onnx) para los audios de dos o más personas: una
               voz por persona y pausa entre turnos (ver dialogo.py)
   azure       voces neuronales de Microsoft Azure (cuenta gratis F0: 500 mil
@@ -43,7 +44,15 @@ from dialogo import turnos as _turnos
 def es_dialogo(f): return (not f.get('es')) and bool(_turnos(f['t']))
 if motor != 'dialogos':
     frases = [f for f in frases if not es_dialogo(f)]   # esos van con varias voces (motor dialogos)
-if motor == 'dialogos':
+if motor == 'kokoro':
+    hechas_k = set()
+    p_k = os.path.join(aqui, '..', 'voz', 'kokoro.json')
+    if os.path.exists(p_k) and os.environ.get('REHACER') != '1':
+        try: hechas_k = set(json.load(open(p_k)))
+        except Exception: hechas_k = set()
+    pend = [f for f in frases if f['h'] not in hechas_k]
+    mias = [f for i, f in enumerate(pend) if i % total == parte]
+elif motor == 'dialogos':
     ya_g = set()
     if os.path.exists(lista_vieja) and os.environ.get('REHACER') != '1':
         try: ya_g = set(json.load(open(lista_vieja)).get('g', []))
@@ -111,22 +120,33 @@ if motor == 'chatterbox':
             print(f'  {hechas + fallas}/{len(mias)} · {time.time() - t0:.0f}s', flush=True)
 
 elif motor == 'kokoro':
+    # Kokoro (kokoro-onnx, Apache-2.0): la voz buena de todo lo grabado.
+    # Inglés con varias voces de EE. UU.; las instrucciones en español con voz
+    # de maestro. Guarda voz/<llave>-g.mp3 y anota en voz/kokoro.json.
     import soundfile as sf
-    from kokoro import KPipeline
-    import numpy as np
-    tubo = KPipeline(lang_code='a')
-    voz = {'f': 'af_heart', 'm': 'am_michael'}
+    from kokoro_onnx import Kokoro
+    k = Kokoro(os.environ.get('KOKORO_MODELO', 'kokoro-v1.0.int8.onnx'),
+               os.environ.get('KOKORO_VOCES', 'voices-v1.0.bin'))
+    VOCES = {'m': ['am_michael', 'am_fenrir', 'am_eric', 'am_liam'],
+             'f': ['af_heart', 'af_bella', 'af_nicole', 'af_sarah'],
+             'es': ['em_alex']}
+    hechos_k = []
+    p_out = os.path.join(salida, f'kokoro_nuevas_{parte}.json')
     for f in mias:
         try:
-            trozos = [a for _, _, a in tubo(f['t'], voice=voz.get(f['s'], 'af_heart'), speed=0.95)]
-            tmp = os.path.join(salida, f['h'] + '.wav')
-            sf.write(tmp, np.concatenate(trozos), 24000)
-            a_mp3(tmp, os.path.join(salida, f['h'] + '.mp3')); os.remove(tmp)
-            hechas += 1
+            g = 'es' if f.get('es') else (f['s'] if f['s'] in ('m', 'f') else 'f')
+            voz = VOCES[g][int(f['h'], 16) % len(VOCES[g])]
+            audio, sr = k.create(f['t'], voice=voz, speed=1.0, lang='es' if g == 'es' else 'en-us')
+            tmp = os.path.join(salida, f['h'] + '.k.wav')
+            sf.write(tmp, audio, sr)
+            a_mp3(tmp, os.path.join(salida, f['h'] + '-g.mp3')); os.remove(tmp)
+            hechas += 1; hechos_k.append(f['h'])
         except Exception:
             fallas += 1; traceback.print_exc()
         if (hechas + fallas) % 25 == 0:
             print(f'  {hechas + fallas}/{len(mias)} · {time.time() - t0:.0f}s', flush=True)
+            json.dump(hechos_k, open(p_out, 'w'))
+    json.dump(hechos_k, open(p_out, 'w'))
 elif motor == 'dialogos':
     # audios con dos o más personas: una voz por persona y pausa entre turnos
     import dialogo
