@@ -66,8 +66,36 @@ jobs:
           if-no-files-found: ignore
           retention-days: 3
 
+  dialogos:
+    # audios de dos o más personas: Kokoro, una voz por persona
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Herramientas
+        timeout-minutes: 12
+        run: |
+          for i in 1 2 3; do
+            sudo timeout 180 apt-get update -qq && sudo timeout 180 apt-get install -y -qq ffmpeg && break
+            echo "apt tardó demasiado, otra vez ($i)"; sleep 5
+          done
+          pip install -q kokoro-onnx soundfile
+          curl -sL -o kokoro-v1.0.int8.onnx https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.int8.onnx
+          curl -sL -o voices-v1.0.bin https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
+      - name: Generar diálogos
+        run: python voces/generar.py dialogos 0 1 salida
+      - uses: actions/upload-artifact@v4
+        with:
+          name: voz-dialogos
+          path: salida/*.mp3
+          if-no-files-found: ignore
+          retention-days: 3
+
   guardar:
-    needs: generar
+    needs: [generar, dialogos]
     if: always()
     runs-on: ubuntu-latest
     steps:
