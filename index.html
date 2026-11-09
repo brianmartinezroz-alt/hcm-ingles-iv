@@ -16591,6 +16591,7 @@ function hcmTutorial(){
     document.getElementById('es-pista').onclick=function(){
       var r=document.getElementById('es-res');
       r.innerHTML='<div class="es-pis">💡 '+esc(x.pista||'Lee otra vez la pregunta con calma.')+'</div>';
+      if(x.pista) try{ say(x.pista,'es-MX'); }catch(e){}
       try{ say(x.pista||'','es-MX'); }catch(e){}
       C.pista=true;
     };
@@ -16615,13 +16616,19 @@ function hcmTutorial(){
     var tx=document.getElementById('es-tx'); if(tx) tx.hidden=false;
     var r=document.getElementById('es-res');
     r.innerHTML='<div class="fb '+(ok?'ok':'no')+'"><div class="fb-t">'+(ok?'Correcto':'Era: '+esc(bien))+'</div>'+
-        '<div class="fb-p">'+esc(x.porque||'')+'</div></div>'+
+        '<div class="fb-p">'+esc(x.porque||'')+'</div>'+
+        (x.porque?'<button class="es-mini" id="es-oirpq" style="margin-top:8px">🔊 Oír por qué</button>':'')+'</div>'+
       '<div class="es-post">'+
         '<button class="es-mini" id="es-porq">🤖 ¿Por qué? Explícame</button>'+
         '<button class="es-mini" id="es-voz2">🎙️ Pregúntale hablando</button></div>'+
       '<div id="es-ia"></div>'+
       '<button class="btn" id="es-sig" style="margin-top:12px">'+(C.i+1<C.fila.length?'Siguiente':'Ver mi resultado')+'</button>';
+    // el "por qué" ya viene grabado (voz Kokoro): suena al instante, sin gastar la voz en vivo.
+    // Si falló, se le explica solo; si acertó, se oye la respuesta en inglés.
+    var bpq=document.getElementById('es-oirpq');
+    if(bpq) bpq.onclick=function(){ try{ say(x.porque,'es-MX'); }catch(e){} };
     if(ok) try{ say(bien,'en-US'); }catch(e){}
+    else if(x.porque) setTimeout(function(){ try{ say(x.porque,'es-MX'); }catch(e){} }, 350);
     document.getElementById('es-porq').onclick=function(){ explicar(x, m.o, ''); };
     document.getElementById('es-voz2').onclick=function(){ preguntar(x, m.o); };
     document.getElementById('es-sig').onclick=function(){ C.i++; pintar(); };
@@ -16649,6 +16656,7 @@ function hcmTutorial(){
       if(listo) return; listo=true;
       caja.innerHTML='<div class="es-iab"><b>🤖 Tu asistente</b><span>'+esc(eligio?(x.porque||''):(x.pista||''))+'</span>'+
         '<em>Sin conexión con la IA: esta es la explicación del libro.</em></div>';
+      try{ say(eligio?(x.porque||''):(x.pista||''),'es-MX'); }catch(e){}
     }, 14000);
     try{
       pedirIA('ayuda',{pregunta:pide, leccion:C.n, carril:((hcmLoad().perfil||{}).carril||'medio'), idioma:'es'},
@@ -16666,6 +16674,7 @@ function hcmTutorial(){
           if(listo) return; listo=true; clearTimeout(corto);
           caja.innerHTML='<div class="es-iab"><b>🤖 Tu asistente</b><span>'+esc(eligio?(x.porque||''):(x.pista||''))+'</span>'+
             '<em>La IA no contestó: esta es la explicación del libro.</em></div>';
+      try{ say(eligio?(x.porque||''):(x.pista||''),'es-MX'); }catch(e){}
         });
     }catch(e){ clearTimeout(corto); }
   }
