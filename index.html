@@ -1905,7 +1905,7 @@ var VEL_PEDIDA=null;
 var VELS=[0.5,0.75,1,1.25,1.5];
 function barraVel(){
   var h='<div class="velbar" role="group" aria-label="Velocidad del audio">'+
-        '<span class="velbar-t">Velocidad</span>';
+        '<span class="velbar-t">🐢 Velocidad</span>';
   VELS.forEach(function(v){
     h+='<button type="button" class="velbar-b'+(Math.abs(v-(VEL_AUDIO||1))<0.01?' on':'')+
        '" data-vel="'+v+'" aria-label="Velocidad '+v+'">'+v+'×</button>';
@@ -1923,7 +1923,8 @@ function ponerVelocidad(v){
 }
 function engancharVelocidad(raiz){
   if(!raiz||raiz.querySelector('.velbar'))return;
-  var oir=raiz.querySelector('#oir');
+  // también en el estudio del examen (Escuchar y Oír el texto)
+  var oir=raiz.querySelector('#oir')||raiz.querySelector('#es-oir')||raiz.querySelector('#es-leer');
   if(!oir)return;
   var ancla=(oir.closest&&oir.closest('.oirfila'))||oir;
   ancla.insertAdjacentHTML('afterend',barraVel());
@@ -1936,7 +1937,7 @@ function engancharVelocidad(raiz){
     ponerVelocidad(parseFloat(b.getAttribute('data-vel')));
     var sonando=false;
     try{ sonando=!!(AUDIO_ACTUAL&&!AUDIO_ACTUAL.paused&&!AUDIO_ACTUAL.ended); }catch(e2){}
-    if(!sonando){ var o=document.getElementById('oir'); if(o)o.click(); }
+    if(!sonando){ var o=document.getElementById('oir')||document.getElementById('es-oir')||document.getElementById('es-leer'); if(o)o.click(); }
   });
 }
 (function(){
@@ -15437,6 +15438,7 @@ function hcmTutorial(){
     a.onended=null; a.onerror=null; a.oncanplaythrough=null;
     a.src=url;
     try{
+      a.defaultPlaybackRate=(vel||VEL_AUDIO||1);   // algunos navegadores regresan a esta al cargar
       a.playbackRate=(vel||VEL_AUDIO||1);
       if('preservesPitch' in a) a.preservesPitch=true;
       if('webkitPreservesPitch' in a) a.webkitPreservesPitch=true;
@@ -15542,9 +15544,10 @@ function hcmTutorial(){
   try{
     var vdsCaido=vozDelServidor;
     vozDelServidor=function(texto,lang,cb,onFalla){
-      if(VOZ_LOCAL && lang!=='es-MX'){
+      if(VOZ_LOCAL){
         var h=fnvVoz(clave(texto));
-        if(VOZ_LOCAL[h]){
+        // en español solo hay voz de Google (las de respaldo son en inglés)
+        if(VOZ_LOCAL[h] && (lang!=='es-MX' || VOZ_LOCAL[h]===2)){
           var args=arguments, yo=this, vel=VEL_PEDIDA;
           var respaldo=function(){ vdsCaido.apply(yo,args); };   // si el archivo falla, el camino de siempre
           var deGoogle=(VOZ_LOCAL[h]===2);
@@ -15971,17 +15974,17 @@ function hcmTutorial(){
    A:[
     {t:"oir",audio:"I'm going to the bank this afternoon. I'm depositing my paycheck.",q:"What is the speaker doing this afternoon?",ops:["He's depositing his paycheck.", "He's withdrawing money.", "He's asking for a loan.", "He's closing his account."],bien:0,
      pista:"deposit = meter dinero a la cuenta.",porque:"\"I'm depositing\" + \"this afternoon\": presente progresivo para un plan; va a depositar su sueldo."},
-    {t:"oir",audio:"Excuse me. Where can I open a checking account?",q:"Choose the best answer.",ops:["At the new accounts desk, sir.", "Yes, I opened it yesterday.", "Because I need money.", "It's two hundred pesos."],bien:0,
+    {t:"oir",audio:"Excuse me. Where can I open a checking account?",q:"Escoge la mejor respuesta a lo que oíste.",ops:["At the new accounts desk, sir.", "Yes, I opened it yesterday.", "Because I need money.", "It's two hundred pesos."],bien:0,
      pista:"Te preguntan DÓNDE.",porque:"\"Where\" pide un lugar: \"At the new accounts desk\"."},
     {t:"oir",audio:"What's the balance in my savings account, please?",q:"What does the customer want to know?",ops:["How much money is in the account", "Where the bank is", "When the bank opens", "Who the teller is"],bien:0,
      pista:"balance = saldo.",porque:"\"Balance\" es cuánto dinero hay en la cuenta."},
     {t:"oir",audio:"This milk smells sour. Don't drink it.",q:"What's wrong with the milk?",ops:["It's bad.", "It's too hot.", "It's too sweet.", "It's fresh."],bien:0,
      pista:"smell + adjetivo: ¿cómo huele?",porque:"\"Smells sour\" = huele agrio: la leche está echada a perder."},
-    {t:"oir",audio:"How does the soup taste?",q:"Choose the best answer.",ops:["It tastes delicious.", "It tastes deliciously.", "It's tasting.", "Yes, I taste it."],bien:0,
+    {t:"oir",audio:"How does the soup taste?",q:"Escoge la mejor respuesta a lo que oíste.",ops:["It tastes delicious.", "It tastes deliciously.", "It's tasting.", "Yes, I taste it."],bien:0,
      pista:"taste va con ADJETIVO, no con adverbio.",porque:"Los verbos copulativos (taste, smell, look) van con adjetivo: \"tastes delicious\"."},
     {t:"oir",audio:"I didn't buy the jacket because it looked too small.",q:"Why didn't he buy the jacket?",ops:["It looked too small.", "It was too expensive.", "It was the wrong color.", "The store was closed."],bien:0,
      pista:"Escucha lo que va después de \"because\".",porque:"\"because it looked too small\": la razón va después de because."},
-    {t:"oir",audio:"What were you doing at eight o'clock last night?",q:"Choose the best answer.",ops:["I was studying in my room.", "I study every night.", "I'm going to study.", "I studied tomorrow."],bien:0,
+    {t:"oir",audio:"What were you doing at eight o'clock last night?",q:"Escoge la mejor respuesta a lo que oíste.",ops:["I was studying in my room.", "I study every night.", "I'm going to study.", "I studied tomorrow."],bien:0,
      pista:"Pregunta en pasado progresivo.",porque:"\"What were you doing…?\" se contesta con was/were + -ing: \"I was studying\"."},
     {t:"oir",audio:"While the private was crossing the street, a car hit him.",q:"What happened to the private?",ops:["A car hit him.", "He hit a car.", "He was driving a car.", "He fixed a car."],bien:0,
      pista:"¿Quién le pegó a quién?",porque:"\"a car hit him\": el carro le pegó a él mientras cruzaba."},
@@ -15997,13 +16000,13 @@ function hcmTutorial(){
      pista:"repair = reparar.",porque:"Si el mecánico repara los frenos, el problema son los frenos."},
     {t:"oir",audio:"I have a terrible headache. — You should take an aspirin and lie down.",q:"What does the second speaker do?",ops:["Gives advice", "Gives an order", "Apologizes", "Asks for help"],bien:0,
      pista:"Fíjate en el modal.",porque:"\"Should\" sirve para aconsejar."},
-    {t:"oir",audio:"How does Sergeant Ruiz drive?",q:"Choose the best answer.",ops:["Very carefully.", "Very careful.", "A blue truck.", "Every day."],bien:0,
+    {t:"oir",audio:"How does Sergeant Ruiz drive?",q:"Escoge la mejor respuesta a lo que oíste.",ops:["Very carefully.", "Very careful.", "A blue truck.", "Every day."],bien:0,
      pista:"\"How\" pregunta el MODO.",porque:"El modo se contesta con un adverbio en -ly: \"carefully\"."},
     {t:"oir",audio:"Why don't you ask Lieutenant Clark for help?",q:"What is the speaker doing?",ops:["Making a suggestion", "Asking about the time", "Giving an order", "Complaining"],bien:0,
      pista:"\"Why don't you…?\"",porque:"\"Why don't you…?\" no pregunta un motivo: es una sugerencia."},
     {t:"oir",audio:"I didn't know that the meeting was at seven.",q:"What does the speaker mean?",ops:["He didn't know the time of the meeting.", "He knew about the meeting.", "The meeting was canceled.", "He was early for the meeting."],bien:0,
      pista:"know + that + oración.",porque:"\"I didn't know that…\" = no sabía a qué hora era la junta."},
-    {t:"oir",audio:"Do you think that it's going to rain today?",q:"Choose the best answer.",ops:["Yes, I think so.", "Yes, I think it.", "No, I don't think.", "I think yesterday."],bien:0,
+    {t:"oir",audio:"Do you think that it's going to rain today?",q:"Escoge la mejor respuesta a lo que oíste.",ops:["Yes, I think so.", "Yes, I think it.", "No, I don't think.", "I think yesterday."],bien:0,
      pista:"Respuesta corta con think.",porque:"La respuesta corta es \"I think so\" / \"I don't think so\"."},
     {t:"oir",audio:"I apologize for being late, sir.",q:"Why is the speaker apologizing?",ops:["He arrived late.", "He broke something.", "He lost a book.", "He forgot his ID."],bien:0,
      pista:"apologize for + -ing.",porque:"\"for being late\": se disculpa por llegar tarde."},
@@ -16071,7 +16074,7 @@ function hcmTutorial(){
    B:[
     {t:"oir",audio:"I'm flying to Monterrey on Friday.",q:"When is the speaker traveling?",ops:["On Friday", "Today", "Last Friday", "Every Friday"],bien:0,
      pista:"Presente progresivo con fecha.",porque:"\"I'm flying … on Friday\": plan para el viernes."},
-    {t:"oir",audio:"Can I cash this check here?",q:"Choose the best answer.",ops:["Yes. Please sign the back of it.", "Yes, I'm saving money.", "No, I don't have a car.", "It's on Friday."],bien:0,
+    {t:"oir",audio:"Can I cash this check here?",q:"Escoge la mejor respuesta a lo que oíste.",ops:["Yes. Please sign the back of it.", "Yes, I'm saving money.", "No, I don't have a car.", "It's on Friday."],bien:0,
      pista:"cash a check = cambiar un cheque.",porque:"La respuesta lógica le dice que firme el cheque por detrás."},
     {t:"oir",audio:"I'd like to borrow some money to buy a house.",q:"What does the customer want?",ops:["A loan", "A new account", "A checkbook", "A job at the bank"],bien:0,
      pista:"borrow money = pedir prestado.",porque:"Pedir dinero prestado al banco es pedir un \"loan\"."},
@@ -16081,7 +16084,7 @@ function hcmTutorial(){
      pista:"Escucha después de \"because\".",porque:"\"Because it feels cold outside\"."},
     {t:"oir",audio:"The music sounds too loud.",q:"What's the problem?",ops:["The music is loud.", "The music is soft.", "The radio is broken.", "There's no music."],bien:0,
      pista:"sound + adjetivo.",porque:"\"sounds too loud\" = suena muy fuerte."},
-    {t:"oir",audio:"Were you sleeping when I called?",q:"Choose the best answer.",ops:["No, I was taking a shower.", "No, I sleep at ten.", "Yes, I'm going to sleep.", "Yes, I called you."],bien:0,
+    {t:"oir",audio:"Were you sleeping when I called?",q:"Escoge la mejor respuesta a lo que oíste.",ops:["No, I was taking a shower.", "No, I sleep at ten.", "Yes, I'm going to sleep.", "Yes, I called you."],bien:0,
      pista:"Contesta con was + -ing.",porque:"Pregunta en pasado progresivo: \"I was taking a shower\"."},
     {t:"oir",audio:"It was raining hard, and the driver was going too fast.",q:"Why did the accident probably happen?",ops:["The driver was speeding in the rain.", "The driver was sleeping.", "The road was dry.", "The truck had no gas."],bien:0,
      pista:"Junta las dos ideas.",porque:"Llovía y manejaba muy rápido: iba con exceso de velocidad bajo la lluvia."},
@@ -16099,7 +16102,7 @@ function hcmTutorial(){
      pista:"You should…",porque:"El consejo es reportarla en la oficina."},
     {t:"oir",audio:"The driver answered the officer's questions politely.",q:"How did the driver answer?",ops:["Politely", "Angrily", "Quickly", "Loudly"],bien:0,
      pista:"Adverbio en -ly.",porque:"\"politely\" = con educación."},
-    {t:"oir",audio:"How did the cadets march today?",q:"Choose the best answer.",ops:["Perfectly.", "Perfect.", "At nine.", "On the field."],bien:0,
+    {t:"oir",audio:"How did the cadets march today?",q:"Escoge la mejor respuesta a lo que oíste.",ops:["Perfectly.", "Perfect.", "At nine.", "On the field."],bien:0,
      pista:"\"How\" pide el modo.",porque:"El modo va con adverbio en -ly: \"Perfectly\"."},
     {t:"oir",audio:"I believe that he's telling the truth.",q:"What does the speaker think?",ops:["The man is honest.", "The man is lying.", "The man is late.", "The man is sick."],bien:0,
      pista:"believe that…",porque:"Cree que dice la verdad: es honesto."},
@@ -16171,7 +16174,7 @@ function hcmTutorial(){
    C:[
     {t:"oir",audio:"We're having a meeting at the bank tomorrow morning.",q:"When is the meeting?",ops:["Tomorrow morning", "This morning", "Yesterday", "Next month"],bien:0,
      pista:"Escucha la palabra de tiempo.",porque:"\"tomorrow morning\": presente progresivo para un plan."},
-    {t:"oir",audio:"How much money do you want to deposit?",q:"Choose the best answer.",ops:["Five hundred pesos.", "At the bank.", "Yes, I do.", "Tomorrow morning."],bien:0,
+    {t:"oir",audio:"How much money do you want to deposit?",q:"Escoge la mejor respuesta a lo que oíste.",ops:["Five hundred pesos.", "At the bank.", "Yes, I do.", "Tomorrow morning."],bien:0,
      pista:"\"How much\" pide una cantidad.",porque:"La respuesta es una cantidad: \"Five hundred pesos\"."},
     {t:"oir",audio:"Please show me some identification before you withdraw the money.",q:"What does the teller want to see?",ops:["An ID", "A check", "A form", "A loan"],bien:0,
      pista:"identification = ?",porque:"\"Identification\" es una identificación (ID)."},
@@ -16181,7 +16184,7 @@ function hcmTutorial(){
      pista:"Después de \"because\".",porque:"\"because the room was hot\"."},
     {t:"oir",audio:"The new cadet seems nervous.",q:"How does the cadet look?",ops:["Nervous", "Happy", "Tired", "Angry"],bien:0,
      pista:"seem + adjetivo.",porque:"\"seems nervous\" = se ve nervioso."},
-    {t:"oir",audio:"What was the driver doing when he crashed?",q:"Choose the best answer.",ops:["He was looking at his phone.", "He crashes every day.", "He will look at his phone.", "He looks at his phone."],bien:0,
+    {t:"oir",audio:"What was the driver doing when he crashed?",q:"Escoge la mejor respuesta a lo que oíste.",ops:["He was looking at his phone.", "He crashes every day.", "He will look at his phone.", "He looks at his phone."],bien:0,
      pista:"Pasado progresivo.",porque:"\"What was … doing\" se contesta con was + -ing."},
     {t:"oir",audio:"I was walking to class when I saw the accident.",q:"When did he see the accident?",ops:["While he was walking to class", "While he was driving", "After class", "In the hospital"],bien:0,
      pista:"was walking… when…",porque:"Lo vio mientras caminaba a clase."},
