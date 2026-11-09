@@ -50,7 +50,22 @@ if motor == 'kokoro':
     if os.path.exists(p_k) and os.environ.get('REHACER') != '1':
         try: hechas_k = set(json.load(open(p_k)))
         except Exception: hechas_k = set()
-    pend = [f for f in frases if f['h'] not in hechas_k]
+    import re as _re
+    _COM = _re.compile(r'["“”]([^"“”]{1,140})["“”]|(?<![A-Za-zÁÉÍÓÚáéíóúñ])\'([A-Za-z][^\'\n]{0,80}?)\'(?![A-Za-z])')
+    def partes_mixtas(t):
+        """Español con ejemplos en inglés entre comillas → [('es'|'en', texto)]."""
+        out, i = [], 0
+        for m in _COM.finditer(t):
+            dentro = m.group(1) or m.group(2)
+            if _re.search(r'[áéíóúñ¿¡ÁÉÍÓÚÑ]', dentro):
+                continue                      # comillas, pero en español
+            if m.start() > i: out.append(('es', t[i:m.start()]))
+            out.append(('en', dentro)); i = m.end()
+        if i < len(t): out.append(('es', t[i:]))
+        return [(l, x.strip(' ,;:')) for l, x in out if _re.search(r'[A-Za-zÁÉÍÓÚáéíóúñ]', x)]
+    def llave_k(f):
+        return f['h'] + ('#m' if f.get('es') and any(l == 'en' for l, _ in partes_mixtas(f['t'])) else '')
+    pend = [f for f in frases if llave_k(f) not in hechas_k]
     mias = [f for i, f in enumerate(pend) if i % total == parte]
 elif motor == 'dialogos':
     ya_g = set()
@@ -136,11 +151,20 @@ elif motor == 'kokoro':
         try:
             g = 'es' if f.get('es') else (f['s'] if f['s'] in ('m', 'f') else 'f')
             voz = VOCES[g][int(f['h'], 16) % len(VOCES[g])]
-            audio, sr = k.create(f['t'], voice=voz, speed=1.0, lang='es' if g == 'es' else 'en-us')
+            import numpy as np
+            trozos, sr = [], 24000
+            segs = partes_mixtas(f['t']) if g == 'es' else [('en', f['t'])]
+            if g == 'es' and not any(l == 'en' for l, _ in segs): segs = [('es', f['t'])]
+            for l, x in segs:
+                # en las explicaciones en español, los ejemplos en inglés van con voz en inglés
+                a, sr = k.create(x, voice=(voz if l == g or (g != 'es') else 'am_michael'),
+                                 speed=1.0, lang='es' if l == 'es' else 'en-us')
+                if trozos: trozos.append(np.zeros(int(0.12 * sr), dtype=np.float32))
+                trozos.append(np.asarray(a, dtype=np.float32))
             tmp = os.path.join(salida, f['h'] + '.k.wav')
-            sf.write(tmp, audio, sr)
+            sf.write(tmp, np.concatenate(trozos), sr)
             a_mp3(tmp, os.path.join(salida, f['h'] + '-g.mp3')); os.remove(tmp)
-            hechas += 1; hechos_k.append(f['h'])
+            hechas += 1; hechos_k.append(llave_k(f))
         except Exception:
             fallas += 1; traceback.print_exc()
         if (hechas + fallas) % 25 == 0:
