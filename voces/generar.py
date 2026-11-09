@@ -125,6 +125,13 @@ elif motor == 'gemini':
 
     def grupo(f): return 'es' if f.get('es') else (f['s'] if f['s'] in ('m', 'f') else 'f')
     # tandas: frases seguidas del mismo grupo de voz, respetando el orden de prioridad
+    # dentro de cada prioridad se juntan las de la misma voz (hombre / mujer / español)
+    # para que cada petición lleve muchas frases
+    pri = {f['h']: k for k, f in enumerate(mias)}
+    def gprio(f):
+        p = f.get('por', '')
+        return 0 if p.startswith('E') else 1 if f.get('es') else 2 if (p.startswith('L') or p.startswith('boca')) else 3 if (p.startswith('B') or p.startswith('P')) else 4
+    mias = sorted(mias, key=lambda f: (gprio(f), grupo(f), pri[f['h']]))
     tandas, actual = [], []
     for f in mias:
         if actual and (grupo(f) != grupo(actual[0]) or len(actual) >= POR_TANDA or
