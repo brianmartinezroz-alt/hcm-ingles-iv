@@ -1,0 +1,71 @@
+# Voces de Microsoft Azure (cuenta gratis F0: 500 mil caracteres al mes, no cobra).
+# Necesita dos secretos del repositorio (los pone Brian; nadie más los ve):
+#   AZURE_SPEECH_KEY     la "Clave 1" del recurso de Voz
+#   AZURE_SPEECH_REGION  su región (ej. eastus)
+# Corre solo cuando cambian las frases, o a mano desde Actions.
+name: Voces Azure
+
+on:
+  workflow_dispatch:
+    inputs:
+      rehacer:
+        description: 'Rehacer todas (no solo las nuevas)'
+        type: boolean
+        default: false
+  push:
+    paths: ['voces/frases.json']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: voces-azure
+  cancel-in-progress: false
+
+jobs:
+  generar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Herramientas
+        timeout-minutes: 12
+        run: |
+          for i in 1 2 3; do
+            sudo timeout 180 apt-get update -qq && sudo timeout 180 apt-get install -y -qq ffmpeg && break
+            echo "apt tardó demasiado, otra vez ($i)"; sleep 5
+          done
+          command -v ffmpeg
+          pip install -q requests
+      - name: Generar con Azure
+        env:
+          AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
+          AZURE_SPEECH_REGION: ${{ secrets.AZURE_SPEECH_REGION }}
+          REHACER: ${{ inputs.rehacer && '1' || '' }}
+        run: python voces/generar.py azure 0 1 salida
+      - name: Guardar en el repositorio
+        if: always()
+        run: |
+          mkdir -p voz
+          cp salida/*-g.mp3 voz/ 2>/dev/null || true
+          python - <<'PY'
+          import json, os
+          p = 'voz/azure.json'
+          viejas = set(json.load(open(p))) if os.path.exists(p) else set()
+          nuevas = set(json.load(open('salida/azure_nuevas.json'))) if os.path.exists('salida/azure_nuevas.json') else set()
+          json.dump(sorted(viejas | nuevas), open(p, 'w'))
+          f = [x[:-4] for x in os.listdir('voz') if x.endswith('.mp3')]
+          h = sorted(x for x in f if not x.endswith('-g'))
+          g = sorted(x[:-2] for x in f if x.endswith('-g'))
+          json.dump({'v': 1, 'h': h, 'g': g}, open('voz/lista.json', 'w'))
+          print(len(nuevas), 'nuevas con Azure ·', len(g), 'con voz buena en total')
+          PY
+          git config user.name  "voces-app"
+          git config user.email "voces-app@users.noreply.github.com"
+          git add voz
+          if git diff --cached --quiet; then echo "nada nuevo"; exit 0; fi
+          git commit -q -m "Voces Azure: $(python -c "import json;print(len(json.load(open('voz/azure.json'))))") frases"
+          for i in 1 2 3 4; do git pull -q --rebase && git push -q && break; sleep 5; done

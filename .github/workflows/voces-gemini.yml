@@ -12,8 +12,7 @@ on:
         description: 'Prueba sin gastar lo gratis (voz de espeak, no guarda nada)'
         type: boolean
         default: false
-  schedule:
-    - cron: '17 8 * * *'      # justo después de que Google reinicia lo gratis del día
+  # (sin horario: ahora las voces las hace Azure; esta queda solo a mano)
 
 permissions:
   contents: write
