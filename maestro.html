@@ -967,7 +967,10 @@ function pintarVivo(c){
     '<b id="vcuenta">Preguntando…</b>' +
     '<span class="es" style="font-size:13px">se actualiza solo cada 15 segundos</span>' +
     '<button class="bt claro" id="vavisos" style="margin-left:auto">Avisarme aquí también</button></div>' +
-    '<div id="vlista"></div>';
+    '<div id="vlista"></div>' +
+    '<div id="vtg"></div>' +
+    '<h3 style="margin:22px 0 8px;font-size:15px">Hoy entraron <span id="vhoyn" class="es"></span></h3>' +
+    '<div id="vhoy"><p class="vacio">Cargando…</p></div>';
 
   var bAv = document.getElementById('vavisos');
   function pintaBotonAvisos(){
@@ -983,7 +986,7 @@ function pintarVivo(c){
     try{
       if(!('Notification' in window) || Notification.permission !== 'granted') return;
       var nt = new Notification('🎖️ ' + x.nombre + ' entró', {
-        body: 'Grupo ' + x.grupo + ' · Lección ' + x.leccion + (x.titulo ? ' · ' + x.titulo : ''),
+        body: 'Grupo ' + x.grupo + ' · ' + lecTxt_(x.leccion) + (x.titulo ? ' · ' + x.titulo : ''),
         tag: 'hcm-' + x.nombre
       });
       nt.onclick = function(){ window.focus(); nt.close(); };
@@ -1028,7 +1031,7 @@ function pintarVivo(c){
       lista.innerHTML = dentro.length ? dentro.map(function(x){
         return '<div class="vcard' + (x.nombre === destacado ? ' nuevo' : '') + '" data-n="' + esc(x.nombre) + '">' +
           '<div><span class="n">' + esc(x.nombre) + '</span><span class="g">grupo ' + esc(x.grupo) + '</span></div>' +
-          '<div class="l">Lección ' + esc(x.leccion) + (x.titulo ? ' · ' + esc(x.titulo) : '') +
+          '<div class="l">' + esc(lecTxt_(x.leccion)) + (x.titulo ? ' · ' + esc(x.titulo) : '') +
             (x.paso ? ' — <b>' + esc(TIPOS_EJ[x.paso] || x.paso) + '</b>' : '') + '</div>' +
           (x.reactivo ? '<div class="r">' + esc(x.reactivo) + '</div>' : '') +
           '<div class="t">' + esc(haceTxt_(x.hace)) +
@@ -1043,6 +1046,28 @@ function pintarVivo(c){
           vista = 'grupos'; pintar();
         };
       });
+
+      // aviso si Telegram rechaza los mensajes (llave vencida, chat equivocado)
+      var tg = document.getElementById('vtg');
+      if(tg){
+        var t = d.telegram || {};
+        tg.innerHTML = (t.error ? '<p class="nota" style="border-color:#c0392b"><b>Los avisos de Telegram no están saliendo.</b> ' +
+          esc(t.error) + '</p>' : (t.configurado === false ? '<p class="nota"><b>Falta configurar Telegram</b> en el servidor.</p>' : ''));
+      }
+      // los que entraron hoy, aunque ya hayan salido
+      var hz = document.getElementById('vhoy'), hn = document.getElementById('vhoyn');
+      if(hz){
+        if(!d.hoy){
+          hz.innerHTML = '<p class="nota">Para ver aquí a todos los que entraron hoy falta publicar la versión nueva del servidor (HCM-Datos → Implementar → Gestionar implementaciones → editar → Nueva versión).</p>';
+        } else {
+          if(hn) hn.textContent = '· ' + d.hoy.length;
+          hz.innerHTML = d.hoy.length ? '<table class="mini"><tr><th>Cadete</th><th>Grupo</th><th>Entró</th><th>Última vez</th><th>Dónde</th></tr>' +
+            d.hoy.map(function(x){
+              return '<tr><td>' + esc(x.nombre) + '</td><td>' + esc(x.grupo) + '</td><td>' + esc(x.desde || '') + '</td><td>' +
+                esc(x.ultima || '') + '</td><td>' + esc(lecTxt_(x.leccion)) + (x.titulo ? ' · ' + esc(x.titulo) : '') + '</td></tr>';
+            }).join('') + '</table>' : '<p class="vacio">Hoy todavía no entra nadie.</p>';
+        }
+      }
 
       if(!primera) dentro.forEach(function(x){
         if(!VIVO_VISTOS[x.nombre]) avisar(x);
@@ -1060,6 +1085,13 @@ function pintarVivo(c){
     if(vista !== 'vivo'){ clearInterval(VIVO_T); VIVO_T = null; return; }
     refrescar(false);
   }, 15000);
+}
+
+// "3" → "Lección 3"; "Estudio 9" se queda igual; vacío → "En la app"
+function lecTxt_(l){
+  l = String(l == null ? '' : l).trim();
+  if(!l) return 'En la app';
+  return /^\d+$/.test(l) ? 'Lección ' + l : l;
 }
 
 function pintarGrupos(c){
