@@ -7,6 +7,11 @@ sin servidor de voz, sin facturación y sin internet una vez guardados.
 Motores (los dos son de código abierto y gratuitos):
   chatterbox  Resemble AI · licencia MIT · la alternativa abierta a ElevenLabs
   kokoro      hexgrad · Apache-2.0 · más rápido; voces de hombre y de mujer
+  azure       voces neuronales de Microsoft Azure (cuenta gratis F0: 500 mil
+              caracteres al mes, no cobra). Llave en los secretos del repositorio
+              AZURE_SPEECH_KEY y AZURE_SPEECH_REGION. Inglés con varias voces de
+              EE. UU.; las instrucciones en español con voces de México.
+              Guarda voz/<llave>-g.mp3 (la voz buena) y anota en voz/azure.json.
   gemini      la voz nueva de Google (Gemini TTS), capa GRATIS de Google AI
               Studio. Usa la llave GEMINI_API_KEY que Brian guarda como secreto
               del repositorio (nadie más la ve). La capa gratis da pocas frases
@@ -31,7 +36,17 @@ if os.path.exists(lista_vieja):
     except Exception: ya = set()
 
 rehacer = motor == 'google' or os.environ.get('REHACER') == '1'
-if motor == 'gemini':
+if motor == 'azure':
+    hechas_az = set()
+    p_az = os.path.join(aqui, '..', 'voz', 'azure.json')
+    if os.path.exists(p_az) and os.environ.get('REHACER') != '1':
+        try: hechas_az = set(json.load(open(p_az)))
+        except Exception: hechas_az = set()
+    def orden_az(f):
+        p = f.get('por', '')
+        return (0 if p.startswith('E') else 1 if f.get('es') else 2, p)
+    mias = sorted([f for f in frases if f['h'] not in hechas_az], key=orden_az)
+elif motor == 'gemini':
     ya_g = set()
     if os.path.exists(lista_vieja):
         try: ya_g = set(json.load(open(lista_vieja)).get('g', []))
@@ -99,6 +114,56 @@ elif motor == 'kokoro':
             fallas += 1; traceback.print_exc()
         if (hechas + fallas) % 25 == 0:
             print(f'  {hechas + fallas}/{len(mias)} · {time.time() - t0:.0f}s', flush=True)
+elif motor == 'azure':
+    import requests, html
+    KEY = os.environ.get('AZURE_SPEECH_KEY', '').strip()
+    REGION = os.environ.get('AZURE_SPEECH_REGION', '').strip()
+    if not KEY or not REGION:
+        print('Faltan los secretos AZURE_SPEECH_KEY y AZURE_SPEECH_REGION: no se genera nada.'); sys.exit(0)
+    VOCES = {'m': ['en-US-AndrewNeural', 'en-US-BrianNeural', 'en-US-GuyNeural'],
+             'f': ['en-US-AvaNeural', 'en-US-EmmaNeural', 'en-US-JennyNeural'],
+             'es': ['es-MX-JorgeNeural']}
+    URL = f'https://{REGION}.tts.speech.microsoft.com/cognitiveservices/v1'
+    PAUSA = float(os.environ.get('AZURE_PAUSA', '3.3'))     # F0: 20 peticiones por minuto
+    hechos_az = []
+    p_az = os.path.join(salida, 'azure_nuevas.json')
+    ultimo = 0.0
+    for f in mias:
+        g = 'es' if f.get('es') else (f['s'] if f['s'] in ('m', 'f') else 'f')
+        voz = VOCES[g][int(f['h'], 16) % len(VOCES[g])]
+        lang = '-'.join(voz.split('-')[:2])
+        ssml = (f"<speak version='1.0' xml:lang='{lang}'><voice name='{voz}'>"
+                f"{html.escape(f['t'], quote=True)}</voice></speak>")
+        ok = False
+        for intento in range(5):
+            espera = PAUSA - (time.time() - ultimo)
+            if espera > 0: time.sleep(espera)
+            ultimo = time.time()
+            try:
+                r = requests.post(URL, data=ssml.encode('utf-8'), timeout=60, headers={
+                    'Ocp-Apim-Subscription-Key': KEY, 'Content-Type': 'application/ssml+xml',
+                    'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3', 'User-Agent': 'hcm-voces'})
+            except Exception as e:
+                print('  red:', repr(e)[:120], flush=True); time.sleep(5); continue
+            if r.status_code == 200 and len(r.content) > 800:
+                crudo = os.path.join(salida, f['h'] + '.az.mp3')
+                open(crudo, 'wb').write(r.content)
+                a_mp3(crudo, os.path.join(salida, f['h'] + '-g.mp3')); os.remove(crudo)
+                ok = True; break
+            if r.status_code in (401, 403):
+                sys.exit('La llave de Azure no sirve (' + str(r.status_code) + '): ' + r.text[:200])
+            if r.status_code == 429:
+                print('  429: espero', flush=True); time.sleep(20 * (intento + 1)); continue
+            print(f'  {r.status_code}: {r.text[:160]}', flush=True); time.sleep(5)
+        if ok:
+            hechas += 1; hechos_az.append(f['h'])
+        else:
+            fallas += 1
+        if (hechas + fallas) % 25 == 0:
+            print(f'  {hechas + fallas}/{len(mias)} · {time.time() - t0:.0f}s', flush=True)
+            json.dump(hechos_az, open(p_az, 'w'))
+    json.dump(hechos_az, open(p_az, 'w'))
+
 elif motor == 'gemini':
     # Lo gratis de Google da ~10 peticiones al día por modelo. Para rendirlas,
     # cada petición lleva VARIAS frases seguidas (una por renglón) y luego se
