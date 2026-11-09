@@ -7,6 +7,11 @@ name: Voces Google (Gemini)
 
 on:
   workflow_dispatch:
+    inputs:
+      prueba:
+        description: 'Prueba sin gastar lo gratis (voz de espeak, no guarda nada)'
+        type: boolean
+        default: false
   schedule:
     - cron: '17 8 * * *'      # justo después de que Google reinicia lo gratis del día
 
@@ -30,16 +35,18 @@ jobs:
         timeout-minutes: 12
         run: |
           for i in 1 2 3; do
-            sudo timeout 180 apt-get update -qq && sudo timeout 180 apt-get install -y -qq ffmpeg && break
+            sudo timeout 180 apt-get update -qq && sudo timeout 180 apt-get install -y -qq ffmpeg espeak-ng && break
             echo "apt tardó demasiado, otra vez ($i)"; sleep 5
           done
           command -v ffmpeg
-          pip install -q requests
+          pip install -q requests faster-whisper
       - name: Generar con la voz de Google
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_PRUEBA: ${{ inputs.prueba && '1' || '' }}
         run: python voces/generar.py gemini 0 1 salida
       - name: Guardar en el repositorio
+        if: ${{ !inputs.prueba }}
         run: |
           mkdir -p voz
           cp salida/*-g.mp3 voz/ 2>/dev/null || true
