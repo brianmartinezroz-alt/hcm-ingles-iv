@@ -36,13 +36,20 @@ if motor == 'gemini':
     if os.path.exists(lista_vieja):
         try: ya_g = set(json.load(open(lista_vieja)).get('g', []))
         except Exception: ya_g = set()
-    # primero lo del estudio para el examen, luego las lecciones, luego lo demás
+    # Brian: español en las instrucciones, inglés en los ejercicios. Orden:
+    # estudio del examen (inglés) → instrucciones en español → lecciones → banco → lo demás
     def orden(f):
         p = f.get('por', '')
-        return (0 if p.startswith('E') else 1 if p.startswith('L') else 2 if p.startswith('B') else 3, p)
+        if p.startswith('E'): g = 0
+        elif f.get('es'): g = 1
+        elif p.startswith('L') or p.startswith('boca'): g = 2
+        elif p.startswith('B') or p.startswith('P'): g = 3
+        else: g = 4
+        return (g, p)
     mias = sorted([f for f in frases if f['h'] not in ya_g], key=orden)
 else:
-    mias = [f for i, f in enumerate(frases) if i % total == parte and (rehacer or f['h'] not in ya)]
+    # Chatterbox y Kokoro no hablan español: esas frases solo las hace la voz de Google
+    mias = [f for i, f in enumerate(frases) if i % total == parte and not f.get('es') and (rehacer or f['h'] not in ya)]
 print(f'parte {parte}/{total}: {len(mias)} frases nuevas ({len(frases)} en total)', flush=True)
 
 def a_mp3(wav_path, mp3_path):
@@ -93,64 +100,81 @@ elif motor == 'kokoro':
         if (hechas + fallas) % 25 == 0:
             print(f'  {hechas + fallas}/{len(mias)} · {time.time() - t0:.0f}s', flush=True)
 elif motor == 'gemini':
-    import base64, re, requests
+    # Lo gratis de Google da ~10 peticiones al día por modelo. Para rendirlas,
+    # cada petición lleva VARIAS frases seguidas (una por renglón) y luego se
+    # cortan: un reconocedor de voz (faster-whisper) marca dónde empieza y
+    # acaba cada frase. La que no se reconoce bien no se guarda.
+    import base64, re, difflib, requests
     LLAVE = os.environ.get('GEMINI_API_KEY', '').strip()
     if not LLAVE:
         print('Falta el secreto GEMINI_API_KEY en el repositorio: no se genera nada.'); sys.exit(0)
     MODELOS = [m for m in os.environ.get('GEMINI_MODELOS',
                'gemini-3.1-flash-tts-preview,gemini-2.5-flash-preview-tts').split(',') if m]
     VOCES = {'m': ['Charon', 'Orus', 'Iapetus', 'Algieba'],
-             'f': ['Kore', 'Aoede', 'Erinome', 'Despina']}
-    PAUSA = float(os.environ.get('GEMINI_PAUSA', '7'))      # segundos entre peticiones
+             'f': ['Kore', 'Aoede', 'Erinome', 'Despina'],
+             'es': ['Charon']}                     # una sola voz de maestro para las instrucciones
+    POR_TANDA = int(os.environ.get('GEMINI_POR_TANDA', '20'))
+    CHARS_TANDA = int(os.environ.get('GEMINI_CHARS_TANDA', '1000'))
+    PAUSA = float(os.environ.get('GEMINI_PAUSA', '25'))
     TOPE_MIN = float(os.environ.get('GEMINI_MINUTOS', '110'))
     agotados, ultimo = set(), 0.0
+    from faster_whisper import WhisperModel
+    oido = WhisperModel(os.environ.get('WHISPER', 'base'), device='cpu', compute_type='int8')
 
     class Agotado(Exception): pass
 
-    def voz_de(f):
-        lista = VOCES.get(f['s'], VOCES['f'])
-        return lista[int(f['h'], 16) % len(lista)]
+    def grupo(f): return 'es' if f.get('es') else (f['s'] if f['s'] in ('m', 'f') else 'f')
+    # tandas: frases seguidas del mismo grupo de voz, respetando el orden de prioridad
+    tandas, actual = [], []
+    for f in mias:
+        if actual and (grupo(f) != grupo(actual[0]) or len(actual) >= POR_TANDA or
+                       sum(len(x['t']) for x in actual) + len(f['t']) > CHARS_TANDA):
+            tandas.append(actual); actual = []
+        actual.append(f)
+    if actual: tandas.append(actual)
+    print(f'{len(tandas)} tandas', flush=True)
 
     def audio_de(d):
-        # generateContent: candidates[].content.parts[].inlineData
         for c in d.get('candidates', []) or []:
             for pz in (c.get('content') or {}).get('parts', []) or []:
                 dato = pz.get('inlineData') or pz.get('inline_data')
                 if dato and dato.get('data'):
                     return base64.b64decode(dato['data']), dato.get('mimeType', '')
-        # interactions: steps[].content[] type audio
         for st in d.get('steps', []) or []:
             for c in st.get('content', []) or []:
                 if c.get('type') == 'audio' and c.get('data'):
                     return base64.b64decode(c['data']), c.get('mime_type', 'audio/wav')
         return None, ''
 
-    def pedir(modelo, f):
+    def pedir(modelo, texto, voz):
         global ultimo
         espera = PAUSA - (time.time() - ultimo)
         if espera > 0: time.sleep(espera)
         ultimo = time.time()
         cab = {'x-goog-api-key': LLAVE, 'Content-Type': 'application/json'}
         url = f'https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent'
-        cuerpo = {'contents': [{'parts': [{'text': f['t']}]}],
+        cuerpo = {'contents': [{'parts': [{'text': texto}]}],
                   'generationConfig': {'responseModalities': ['AUDIO'],
-                      'speechConfig': {'voiceConfig': {'prebuiltVoiceConfig': {'voiceName': voz_de(f)}}}}}
-        r = requests.post(url, json=cuerpo, headers=cab, timeout=120)
-        if r.status_code == 404 or (r.status_code == 400 and 'interactions' in r.text.lower()):
-            url = 'https://generativelanguage.googleapis.com/v1beta/interactions'
-            cuerpo = {'model': modelo,
-                      'input': [{'type': 'user_input', 'content': [{'type': 'text', 'text': f['t']}]}],
-                      'response_format': {'type': 'audio'},
-                      'generation_config': {'speech_config': [{'voice': voz_de(f)}]}}
-            r = requests.post(url, json=cuerpo, headers=cab, timeout=120)
-        return r
+                      'speechConfig': {'voiceConfig': {'prebuiltVoiceConfig': {'voiceName': voz}}}}}
+        return requests.post(url, json=cuerpo, headers=cab, timeout=300)
 
-    def generar(f):
+    PRUEBA = os.environ.get('GEMINI_PRUEBA') == '1'
+    if PRUEBA:
+        tandas = [t for t in tandas if grupo(t[0]) == 'es'][:1] + [t for t in tandas if grupo(t[0]) != 'es'][:2]
+        print('PRUEBA: voz de espeak en lugar de Google, sin gastar lo gratis', flush=True)
+
+    def generar(texto, voz):
+        if PRUEBA:
+            es = any(ch in texto for ch in 'áéíóúñ¿¡')
+            tmp = os.path.join(salida, 'prueba.wav')
+            subprocess.run(['espeak-ng', '-v', 'es-419' if es else 'en-us', '-s', '150', '-g', '8', '-w', tmp, texto], check=True)
+            b = open(tmp, 'rb').read(); os.remove(tmp)
+            return b, 'audio/wav', 'prueba'
         for intento in range(6):
             vivos = [m for m in MODELOS if m not in agotados]
             if not vivos: raise Agotado()
             modelo = vivos[0]
-            r = pedir(modelo, f)
+            r = pedir(modelo, texto, voz)
             if r.status_code == 200:
                 crudo, tipo = audio_de(r.json())
                 if crudo: return crudo, tipo, modelo
@@ -167,36 +191,83 @@ elif motor == 'gemini':
                 if r.status_code == 403 or 'API key' in txt or 'API_KEY' in txt:
                     sys.exit('La llave GEMINI_API_KEY no sirve: ' + txt[:200])
                 if r.status_code == 404: agotados.add(modelo); continue
-                raise RuntimeError('Google no aceptó esta frase: ' + txt[:200])
+                raise RuntimeError('Google no aceptó esta tanda: ' + txt[:200])
             time.sleep(10 * (intento + 1))
         raise RuntimeError('no salió')
 
+    def palabras(t):
+        return re.findall(r"[a-záéíóúüñ0-9']+", t.lower())
+
+    def cortar(wav, tanda, idioma):
+        """Devuelve [(frase, inicio, fin)] para las frases que se reconocieron bien."""
+        segs, _ = oido.transcribe(wav, language=idioma, word_timestamps=True, beam_size=1,
+                                  vad_filter=False, condition_on_previous_text=False)
+        oidas = [(w.word, w.start, w.end) for s_ in segs for w in (s_.words or [])]
+        o_pal = [re.sub(r"[^a-záéíóúüñ0-9']", '', w.lower()) for w, _, _ in oidas]
+        meta, de = [], []
+        for k, f in enumerate(tanda):
+            for p_ in palabras(f['t']): meta.append(p_); de.append(k)
+        sm = difflib.SequenceMatcher(None, meta, o_pal, autojunk=False)
+        mapa = {}
+        for a, b, n in sm.get_matching_blocks():
+            for q in range(n): mapa[a + q] = b + q
+        res = []
+        for k, f in enumerate(tanda):
+            idx = [i for i, d in enumerate(de) if d == k]
+            hechos = [mapa[i] for i in idx if i in mapa]
+            if not idx or len(hechos) < max(1, 0.6 * len(idx)): res.append((f, None, None)); continue
+            res.append((f, oidas[min(hechos)][1], oidas[max(hechos)][2]))
+        # bordes: a medio camino entre una frase y la siguiente
+        buenos = [(k, a, b) for k, (f, a, b) in enumerate(res) if a is not None]
+        cortes = []
+        for n_, (k, a, b) in enumerate(buenos):
+            ini = a - 0.25 if n_ == 0 else (buenos[n_ - 1][2] + a) / 2
+            fin = b + 0.35 if n_ == len(buenos) - 1 else (b + buenos[n_ + 1][1]) / 2
+            # si la frase de al lado no se reconoció, no se corta hacia ella
+            if n_ > 0 and buenos[n_ - 1][0] != k - 1: ini = a - 0.25
+            if n_ < len(buenos) - 1 and buenos[n_ + 1][0] != k + 1: fin = b + 0.35
+            cortes.append((res[k][0], max(0, ini), fin))
+        return cortes
+
     usados = {}
-    for f in mias:
+    for nt, tanda in enumerate(tandas):
         if time.time() - t0 > TOPE_MIN * 60:
             print('  se acabó el tiempo de hoy; mañana sigue', flush=True); break
+        g = grupo(tanda[0]); lista_v = VOCES[g]; voz = lista_v[nt % len(lista_v)]
+        texto = '\n\n'.join(f['t'] for f in tanda)
         try:
-            crudo, tipo, modelo = generar(f)
-            base = os.path.join(salida, f['h'] + '-g')
-            if crudo[:4] == b'RIFF':
-                open(base + '.wav', 'wb').write(crudo); a_mp3(base + '.wav', base + '.mp3'); os.remove(base + '.wav')
-            else:
-                tasa = re.search(r'rate=(\d+)', tipo); tasa = tasa.group(1) if tasa else '24000'
-                open(base + '.pcm', 'wb').write(crudo)
-                subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-f', 's16le', '-ar', tasa, '-ac', '1',
-                                '-i', base + '.pcm', base + '.wav'], check=True)
-                os.remove(base + '.pcm'); a_mp3(base + '.wav', base + '.mp3'); os.remove(base + '.wav')
-            usados[modelo] = usados.get(modelo, 0) + 1
-            hechas += 1
+            crudo, tipo, modelo = generar(texto, voz)
         except Agotado:
             print('  todos los modelos gratis se acabaron por hoy; mañana sigue', flush=True); break
         except SystemExit:
             raise
         except Exception:
-            fallas += 1; traceback.print_exc()
-        if (hechas + fallas) % 10 == 0:
-            print(f'  {hechas + fallas}/{len(mias)} · {time.time() - t0:.0f}s · {usados}', flush=True)
-    print('modelos usados:', usados, '| faltan', len(mias) - hechas, flush=True)
+            fallas += len(tanda); traceback.print_exc(); continue
+        usados[modelo] = usados.get(modelo, 0) + 1
+        base = os.path.join(salida, f'tanda{nt}')
+        try:
+            if crudo[:4] == b'RIFF':
+                open(base + '.wav', 'wb').write(crudo)
+            else:
+                tasa = re.search(r'rate=(\d+)', tipo); tasa = tasa.group(1) if tasa else '24000'
+                open(base + '.pcm', 'wb').write(crudo)
+                subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-f', 's16le', '-ar', tasa, '-ac', '1',
+                                '-i', base + '.pcm', base + '.wav'], check=True)
+                os.remove(base + '.pcm')
+            cortes = cortar(base + '.wav', tanda, 'es' if g == 'es' else 'en')
+            for f, a, b in cortes:
+                pza = os.path.join(salida, f['h'] + '-g.cut.wav')
+                subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', base + '.wav',
+                                '-ss', f'{a:.2f}', '-to', f'{b:.2f}', pza], check=True)
+                a_mp3(pza, os.path.join(salida, f['h'] + '-g.mp3')); os.remove(pza)
+                if PRUEBA: print(f'     {b - a:5.2f}s  {f["t"][:70]}', flush=True)
+                hechas += 1
+            fallas += len(tanda) - len(cortes)
+            os.remove(base + '.wav')
+            print(f'  tanda {nt + 1}/{len(tandas)} ({g}, {voz}, {modelo}): {len(cortes)}/{len(tanda)} frases', flush=True)
+        except Exception:
+            fallas += len(tanda); traceback.print_exc()
+    print('peticiones por modelo:', usados, '| frases que faltan', len(mias) - hechas, flush=True)
 
 elif motor == 'google':
     import base64, requests
