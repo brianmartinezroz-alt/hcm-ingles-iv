@@ -7,6 +7,8 @@ sin servidor de voz, sin facturación y sin internet una vez guardados.
 Motores (los dos son de código abierto y gratuitos):
   chatterbox  Resemble AI · licencia MIT · la alternativa abierta a ElevenLabs
   kokoro      hexgrad · Apache-2.0 · más rápido; voces de hombre y de mujer
+  dialogos    Kokoro (kokoro-onnx) para los audios de dos o más personas: una
+              voz por persona y pausa entre turnos (ver dialogo.py)
   azure       voces neuronales de Microsoft Azure (cuenta gratis F0: 500 mil
               caracteres al mes, no cobra). Llave en los secretos del repositorio
               AZURE_SPEECH_KEY y AZURE_SPEECH_REGION. Inglés con varias voces de
@@ -36,7 +38,18 @@ if os.path.exists(lista_vieja):
     except Exception: ya = set()
 
 rehacer = motor == 'google' or os.environ.get('REHACER') == '1'
-if motor == 'azure':
+sys.path.insert(0, aqui)
+from dialogo import turnos as _turnos
+def es_dialogo(f): return (not f.get('es')) and bool(_turnos(f['t']))
+if motor != 'dialogos':
+    frases = [f for f in frases if not es_dialogo(f)]   # esos van con varias voces (motor dialogos)
+if motor == 'dialogos':
+    ya_g = set()
+    if os.path.exists(lista_vieja) and os.environ.get('REHACER') != '1':
+        try: ya_g = set(json.load(open(lista_vieja)).get('g', []))
+        except Exception: ya_g = set()
+    mias = [f for f in frases if es_dialogo(f) and f['h'] not in ya_g]
+elif motor == 'azure':
     hechas_az = set()
     p_az = os.path.join(aqui, '..', 'voz', 'azure.json')
     if os.path.exists(p_az) and os.environ.get('REHACER') != '1':
@@ -114,6 +127,23 @@ elif motor == 'kokoro':
             fallas += 1; traceback.print_exc()
         if (hechas + fallas) % 25 == 0:
             print(f'  {hechas + fallas}/{len(mias)} · {time.time() - t0:.0f}s', flush=True)
+elif motor == 'dialogos':
+    # audios con dos o más personas: una voz por persona y pausa entre turnos
+    import dialogo
+    from kokoro_onnx import Kokoro
+    k = Kokoro(os.environ.get('KOKORO_MODELO', 'kokoro-v1.0.int8.onnx'),
+               os.environ.get('KOKORO_VOCES', 'voices-v1.0.bin'))
+    for f in mias:
+        try:
+            tmp = os.path.join(salida, f['h'] + '.dlg.wav')
+            voces = dialogo.generar(k, f['t'], f['s'], tmp)
+            a_mp3(tmp, os.path.join(salida, f['h'] + '.mp3'))
+            a_mp3(tmp, os.path.join(salida, f['h'] + '-g.mp3'))   # también como la voz buena
+            os.remove(tmp); hechas += 1
+            print(f'  {f["h"]} {voces} {f["t"][:60]}', flush=True)
+        except Exception:
+            fallas += 1; traceback.print_exc()
+
 elif motor == 'azure':
     import requests, html
     KEY = os.environ.get('AZURE_SPEECH_KEY', '').strip()
