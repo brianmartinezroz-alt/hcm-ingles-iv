@@ -970,7 +970,10 @@ function pintarVivo(c){
     '<div id="vlista"></div>' +
     '<div id="vtg"></div>' +
     '<h3 style="margin:22px 0 8px;font-size:15px">Hoy entraron <span id="vhoyn" class="es"></span></h3>' +
-    '<div id="vhoy"><p class="vacio">Cargando…</p></div>';
+    '<div id="vhoy"><p class="vacio">Cargando…</p></div>' +
+    '<h3 style="margin:26px 0 8px;font-size:15px">Días anteriores <span class="es" style="font-size:12px">· últimas dos semanas</span></h3>' +
+    '<div id="vhist"><p class="vacio">Cargando…</p></div>';
+  pintarHistorial_();
 
   var bAv = document.getElementById('vavisos');
   function pintaBotonAvisos(){
@@ -1085,6 +1088,43 @@ function pintarVivo(c){
     if(vista !== 'vivo'){ clearInterval(VIVO_T); VIVO_T = null; return; }
     refrescar(false);
   }, 15000);
+}
+
+// Quién entró cada día (ayer y antes). Sale de la hoja Entradas (cada vez
+// que abren la app, desde el 9 nov) y de Sesiones (lo que han guardado).
+function pintarHistorial_(){
+  var caja = document.getElementById('vhist');
+  if(!caja) return;
+  var DIAS = ['dom','lun','mar','mié','jue','vie','sáb'], MES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  function bonito(d){
+    var p = String(d).split('-'), f = new Date(+p[0], +p[1] - 1, +p[2]);
+    return DIAS[f.getDay()] + ' ' + f.getDate() + ' ' + MES[f.getMonth()];
+  }
+  pedirHCM_({accion:'historial', pase:paseHCM_(), dias:14}).then(function(d){
+    caja = document.getElementById('vhist'); if(!caja) return;
+    if(!d || !d.ok){
+      caja.innerHTML = /desconocida/.test(String(d && d.error || '')) || !d
+        ? '<p class="nota">Para ver los días anteriores falta publicar la versión nueva del servidor (HCM-Datos → Implementar → Gestionar implementaciones → editar → Nueva versión).</p>'
+        : '<p class="nota">No pude leer el historial (' + esc(d.error || '') + ').</p>';
+      return;
+    }
+    var hoy = new Date(), hoyTxt = hoy.getFullYear() + '-' + ('0' + (hoy.getMonth() + 1)).slice(-2) + '-' + ('0' + hoy.getDate()).slice(-2);
+    var dias = (d.dias || []).filter(function(x){ return x.dia !== hoyTxt; });
+    if(!dias.length){ caja.innerHTML = '<p class="vacio">Sin entradas en los días anteriores.</p>'; return; }
+    caja.innerHTML = dias.map(function(x, i){
+      return '<details' + (i === 0 ? ' open' : '') + ' style="margin:0 0 8px">' +
+        '<summary style="cursor:pointer;font-weight:700;padding:6px 0">' + esc(bonito(x.dia)) +
+        ' · ' + x.cadetes.length + (x.cadetes.length === 1 ? ' cadete' : ' cadetes') + '</summary>' +
+        '<table class="mini"><tr><th>Cadete</th><th>Grupo</th><th>Horario</th><th>Dónde</th><th>Min</th></tr>' +
+        x.cadetes.map(function(c){
+          return '<tr><td>' + esc(c.nombre) + '</td><td>' + esc(c.grupo) + '</td><td>' +
+            esc(c.primera + (c.ultima && c.ultima !== c.primera ? '–' + c.ultima : '')) + '</td><td>' +
+            esc((c.donde || []).join(', ')) + '</td><td>' + (c.minutos ? Math.round(c.minutos) : '') + '</td></tr>';
+        }).join('') + '</table></details>';
+    }).join('');
+  }).catch(function(){
+    var c2 = document.getElementById('vhist'); if(c2) c2.innerHTML = '<p class="nota">Sin conexión con el servidor.</p>';
+  });
 }
 
 // "3" → "Lección 3"; "Estudio 9" se queda igual; vacío → "En la app"
