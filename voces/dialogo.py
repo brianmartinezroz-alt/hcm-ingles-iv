@@ -10,7 +10,6 @@ Cada persona tiene su propia voz y entre turno y turno hay una pausa (Brian:
 ritmo natural, con pausas entre hablantes; no bajar la velocidad).
 """
 import os, re, subprocess
-import numpy as np
 
 SEP = re.compile(r'(?<=[.?!])\s+[—–]\s+')
 ETQ = re.compile(r"^([A-Z][A-Za-zÁÉÍÓÚáéíóúñ'. ]{0,24}):\s+")
@@ -56,7 +55,7 @@ def reparto(ts, sexo_frase='m'):
 
 def generar(kokoro, texto, sexo, wav_salida, idioma='en-us'):
     """Arma el diálogo completo en un .wav. Devuelve las voces usadas."""
-    import soundfile as sf
+    import numpy as np, soundfile as sf
     ts = turnos(texto)
     voces = reparto(ts, sexo)
     sr, trozos = 24000, []
