@@ -13813,6 +13813,11 @@ function hcmTutorial(){
   }
   function evaluar(Ph){
     var nv = niveles(), lista = leerJ(K_CONST, []), nuevas = [];
+    /* Brian (10 nov): del 1er parcial solo cuenta el banco nuevo de 50 con más de 50 %.
+       Las constancias P1 que se dieron con el banco viejo de 15 se retiran. */
+    var antes = lista.length;
+    lista = lista.filter(function(x){ return x.p !== 'P1' || x.reg === 2; });
+    if(lista.length !== antes) guardarJ(K_CONST, lista);
     PARCIALES.forEach(function(pa){
       var lecs = BLOQUES_HCM[pa.ex] || [];
       if(!lecs.length) return;
@@ -13830,13 +13835,17 @@ function hcmTutorial(){
       var ya = lista.some(function(x){ return x.p === pa.id && x.niv === niv; });
       if(ya) return;
       var f = hoy();
-      var cst = {p:pa.id, niv:niv, fecha:f, nombre:Ph.nombre || '', grupo:Ph.grupo || '',
+      var cst = {p:pa.id, niv:niv, fecha:f, nombre:Ph.nombre || '', grupo:Ph.grupo || '', reg:2,
+        pct: est.mejor ? est.mejor.pct : null, ver: est.mejor ? est.mejor.v : '',
         folio: folioDe(Ph.nombre, Ph.grupo || '', pa.id, niv, f)};
       lista.push(cst); nuevas.push(cst);
     });
     if(nuevas.length) guardarJ(K_CONST, lista);
     return {lista:lista, nuevas:nuevas};
   }
+  // al abrir: las constancias P1 del banco viejo de 15 se retiran (Brian, 10 nov)
+  try{ var l0 = leerJ(K_CONST, []), l1 = l0.filter(function(x){ return x.p !== 'P1' || x.reg === 2; });
+       if(l1.length !== l0.length) guardarJ(K_CONST, l1); }catch(e){}
   function resumenPerfil(Ph){
     var nv = niveles(), letras = {1:'B', 2:'I', 3:'A'}, partes = [];
     Object.keys(nv).map(Number).sort(function(a, b){ return a - b; }).forEach(function(n){
@@ -13885,7 +13894,7 @@ function hcmTutorial(){
     var h = '<div class="card"><button class="volver" id="const-volver" style="background:none;border:0;font:inherit;color:#6E5716;cursor:pointer;padding:0;margin-bottom:10px">← Más</button>' +
       '<div class="qlbl">Comprobante de tu trabajo</div><h2 class="met-t">Mis constancias</h2>' +
       '<p class="qsub">Es tu <b>constancia de trabajo extraclase</b>. Se gana terminando el <b>estudio para la evaluación</b> de cada parcial: ' +
-      'contestar las 50 preguntas de una versión. Tu maestro la ve en su panel, con el mismo folio.</p><div class="const-lista">';
+      'contestar las 50 preguntas de la versión A, B o C con más de 50 % de aciertos. Tu maestro la ve en su panel, con el mismo folio.</p><div class="const-lista">';
     PARCIALES.forEach(function(pa){
       var lecs = BLOQUES_HCM[pa.ex] || [], hechas = 0, chips = '';
       lecs.forEach(function(n, i){
@@ -13900,7 +13909,7 @@ function hcmTutorial(){
         (pa.id !== 'CF' ? '<div class="const-lec">' + chips + '</div>' : '') +
         (gan.length ? '<div class="const-gan">' + gan.map(function(x){
           return '<button type="button" data-folio="' + esc(x.folio) + '">🎖 ' + NOMBRE_NIV[x.niv] + ' · ver</button>';
-        }).join('') + '</div>' : '<div class="s" style="margin-top:6px">' + (est.completo ? '' : 'Te faltan ' + ((est.de||50) - (est.respondidas||0)) + ' preguntas del estudio.') + '</div>') +
+        }).join('') + '</div>' : '<div class="s" style="margin-top:6px">' + (est.completo ? '' : (est.mejor ? 'Llevas ' + est.mejor.pct + ' % en la versión ' + est.mejor.v + '; necesitas más de 50 %.' : 'Te faltan ' + ((est.de||50) - (est.respondidas||0)) + ' preguntas del estudio (necesitas más de 50 %).')) + '</div>') +
         '</div>';
     });
     h += '</div><p class="tiny" style="margin-top:14px">B = Básico · I = Intermedio · A = Avanzado. Los exámenes parciales los aplica tu maestro en clase; esto comprueba tu práctica.</p></div>';
@@ -13923,7 +13932,7 @@ function hcmTutorial(){
       '<div class="lema">Heroico Colegio Militar · Idioma Extranjero IV</div>' +
       '<h1>Constancia de trabajo extraclase</h1><p>Se hace constar que el cadete</p>' +
       '<div class="quien">' + esc(x.nombre || '') + '</div>' +
-      '<p>completó en la app de práctica de inglés el estudio para la evaluación del <b>' + esc(pa.nombre) + '</b> (' + esc(pa.det) + '): contestó las preguntas de práctica tipo examen, ' +
+      '<p>completó en la app de práctica de inglés el estudio para la evaluación del <b>' + esc(pa.nombre) + '</b> (' + esc(pa.det) + '): contestó las 50 preguntas de práctica tipo examen' + (x.pct ? ' (versión ' + esc(x.ver || '') + ', ' + x.pct + ' % de aciertos)' : '') + ', ' +
       'en el nivel <b>' + esc(NOMBRE_NIV[x.niv]) + '</b>.</p>' +
       '<div class="datos"><div><b>Grupo</b>' + esc(x.grupo || '—') + '</div><div><b>Nivel</b>' + esc(NOMBRE_NIV[x.niv]) + '</div>' +
       '<div><b>Fecha</b>' + esc(x.fecha) + '</div><div><b>Tiempo de práctica</b>' + Math.round(min / 60) + ' min</div>' +
@@ -16486,17 +16495,25 @@ function hcmTutorial(){
   }
   function guardar(o){ try{ localStorage.setItem(K_EST, JSON.stringify(o)); }catch(e){} }
   function cuenta(v){ return v.reduce(function(s,x){ return s+(x.t==='lectura'?x.preg.length:1); },0); }
+  var MINIMO=50;     // Brian (10 nov): se acepta con MÁS de 50 % en la versión A, B o C del banco nuevo
   function estado(n){
-    /* completo = contestó las 50 de una versión (Brian: la constancia se da
-       nada más con completar el estudio) */
-    var e=leer()[n]||{}, hechas=0, ok=0, tot=0, resp=0;
+    /* completo = terminó las 50 de cualquier versión del banco nuevo con más de 50 %.
+       Lo hecho con el banco viejo de 15 ya no está (leer() lo quita por bv). */
+    var e=leer()[n]||{}, hechas=0, ok=0, tot=0, resp=0, mejor=null, ultima=null;
     var de=(EX[n]&&EX[n].A)?cuenta(EX[n].A):50;
     ['A','B','C'].forEach(function(v){
       var x=e[v]; if(!x) return;
-      if(x.fin){ hechas++; ok+=x.ok||0; tot+=x.n||0; }
-      var c=x.fin?de:(x.r||[]).filter(Boolean).length; if(c>resp) resp=c;
+      var c=(x.r||[]).filter(Boolean).length;
+      if(x.fin && (x.n||0)>=de){
+        hechas++; ok+=x.ok||0; tot+=x.n||0;
+        var pct=Math.round((x.ok||0)/x.n*100);
+        if(!mejor || pct>mejor.pct) mejor={v:v, pct:pct, ok:x.ok||0, n:x.n};
+        ultima=mejor;
+      }
+      if(c>resp) resp=c;
     });
-    return {hechas:hechas, total:3, completo:hechas>=1, respondidas:Math.min(resp,de), de:de,
+    var pasa=!!(mejor && mejor.pct>MINIMO);
+    return {hechas:hechas, total:3, completo:pasa, mejor:mejor, respondidas:Math.min(resp,de), de:de,
             aciertos:ok, preguntas:tot, versiones:e};
   }
 
@@ -16560,7 +16577,7 @@ function hcmTutorial(){
         '<button class="es-rep" data-rep="'+n+'">Repasar las lecciones del bloque</button>'+
         '<p class="es-con">🎖 '+(est.completo
           ? 'Ya ganaste tu constancia de trabajo extraclase. Está en Más → Mis constancias.'
-          : 'Contesta las '+est.de+' preguntas de una versión y ganas tu constancia de trabajo extraclase.')+'</p>'+
+          : 'Contesta las '+est.de+' preguntas de la versión A, B o C con más de '+MINIMO+' % de aciertos y ganas tu constancia de trabajo extraclase.')+'</p>'+
       '</div>';
     caja.querySelectorAll('.es-v').forEach(function(b){
       b.onclick=function(){ hub(+b.dataset.ev, b.dataset.v); };
@@ -16640,7 +16657,9 @@ function hcmTutorial(){
     var L=LECCIONES_HCM[n]||{}, fila=filaDe(n,v), tot=fila.length;
     var e=(leer()[n]||{})[v]||{}, r=e.r||[];
     var hechas=contadas(r), ok=0; r.forEach(function(x){ if(x&&x.ok) ok++; });
+    if(e.fin && !hechas){ hechas=tot; ok=e.ok||0; }     // terminada con la app anterior (no guardaba cada respuesta)
     var sig=primeraSin(r,tot), est=estado(n);
+    if(e.fin && !contadas(r)) sig=-1;
     var f=fechaDe(n), dias=f?Math.ceil((f.getTime()-Date.now())/864e5):null;
     var cuando = dias===null?'':(dias>1?('Faltan '+dias+' días'):dias===1?'Es mañana':dias===0?'Es hoy':'');
     var todas=leer()[n]||{};
@@ -16707,10 +16726,14 @@ function hcmTutorial(){
   var YA_RECORDO=false;
   function engancharCert(n, est){
     var caja=document.getElementById('eh-cert'); if(!caja) return;
-    var yaGanada=miConstancia(n);
-    if(!est.completo && !yaGanada){
-      caja.innerHTML='<div class="eh-cert-no">🎖 Contesta las '+est.de+' preguntas de una versión y ganas tu <b>constancia de trabajo extraclase</b> en PDF. '+
-        'Llevas '+est.respondidas+'.</div>';
+    var yaGanada=est.completo ? miConstancia(n) : null;
+    if(!est.completo){
+      caja.innerHTML='<div class="eh-cert-no">'+(est.mejor
+        ? '🎖 Terminaste la versión '+est.mejor.v+' con <b>'+est.mejor.pct+' %</b>. Para que te cuente necesitas <b>más de '+MINIMO+' %</b>: '+
+          'toca las preguntas en rosa y vuelve a intentarlas, o haz otra versión.'
+        : '🎖 Para que te cuente: contesta las '+est.de+' preguntas de la versión A, B o C con <b>más de '+MINIMO+' % de aciertos</b>. '+
+          'Así ganas tu <b>constancia de trabajo extraclase</b> en PDF. Llevas '+est.respondidas+'.')+'</div>';
+      if(!YA_RECORDO){ YA_RECORDO=true; setTimeout(function(){ mensajeTeacher(n, est); }, 700); }
       return;
     }
     var x=yaGanada;
@@ -16749,6 +16772,22 @@ function hcmTutorial(){
       YA_RECORDO=true;
       setTimeout(function(){ recordatorio(n, x); }, 700);
     }
+  }
+  function mensajeTeacher(n, est){
+    if(document.getElementById('eh-rec') || C) return;
+    var L=LECCIONES_HCM[n]||{};
+    var d=document.createElement('div'); d.id='eh-rec';
+    d.innerHTML='<div class="eh-rec-c"><div class="eh-rec-ic">📢</div>'+
+      '<b>Mensaje de tu teacher</b>'+
+      '<p>Para que te acepte el estudio de la '+esc(L.titulo||'evaluación')+', contesta las <b>'+est.de+' preguntas</b> de la '+
+        '<b>versión A, B o C</b> con <b>más de '+MINIMO+' % de aciertos</b>. Lo que hiciste con las versiones viejas de 15 preguntas ya no cuenta.'+
+        (est.mejor?' Llevas '+est.mejor.pct+' % en la versión '+est.mejor.v+'.':'')+
+        (L.fecha?' Tu evaluación es el '+esc(L.fecha)+'.':'')+'</p>'+
+      '<button class="eh-cb oro" id="eh-rec-si">Entendido, voy</button></div>';
+    document.body.appendChild(d);
+    function cerrar(){ try{ d.remove(); }catch(e){} }
+    d.onclick=function(ev){ if(ev.target===d) cerrar(); };
+    document.getElementById('eh-rec-si').onclick=cerrar;
   }
   function recordatorio(n, x){
     if(document.getElementById('eh-rec')) return;
@@ -16883,16 +16922,22 @@ function hcmTutorial(){
     var res={ok:ok, e:m.o, p:!!C.pista}; C.pista=false;
     C.r[C.i]=res;
     C.ints.push({tipo:'ex-'+x.t, meta:(x.audio?('🔊 '+x.audio+' · '):'')+x.q+' → '+bien, oido:m.o, pct:ok?100:0});
+    var pasabaAntes=estado(C.n).completo;
     var recien=salvar();
     mostrarRes(x, res, false);
     if(C.ints.length>=10) mandarAvance();
-    if(recien){
+    var est=estado(C.n), finV=contadas(C.r)>=C.fila.length;
+    if(recien || (finV && est.completo && !pasabaAntes)){
       mandarAvance();
       try{ if(typeof window.__hcmConstanciaRevisa==='function') window.__hcmConstanciaRevisa(); }catch(e){}
-      var est=estado(C.n);
+      var okV=C.r.filter(function(y){ return y&&y.ok; }).length, pctV=Math.round(okV/C.fila.length*100);
       document.getElementById('es-res').insertAdjacentHTML('beforeend',
-        '<div class="es-medal">🎖 ¡Contestaste las '+C.fila.length+'! '+(est.completo?'Ya ganaste tu constancia: está arriba en la pantalla del estudio.':'')+
-        '<button class="eh-cb oro" id="es-vercert" style="margin-top:10px">Ver mi constancia</button></div>');
+        '<div class="es-medal">'+(est.completo
+          ? '🎖 ¡Listo! Versión '+C.v+' con '+pctV+' %. Ya ganaste tu constancia: está arriba en la pantalla del estudio.'+
+            '<button class="eh-cb oro" id="es-vercert" style="margin-top:10px">Ver mi constancia</button>'
+          : 'Terminaste la versión '+C.v+' con <b>'+pctV+' %</b>. Necesitas <b>más de '+MINIMO+' %</b> para que cuente: '+
+            'vuelve a intentar las que quedaron en rosa.'+
+            '<button class="eh-cb oro" id="es-vercert" style="margin-top:10px">Ver las 50</button>')+'</div>');
       document.getElementById('es-vercert').onclick=function(){ hub(C.n, C.v); };
     }
   }
