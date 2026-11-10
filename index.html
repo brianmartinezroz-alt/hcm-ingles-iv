@@ -13836,7 +13836,7 @@ function hcmTutorial(){
       if(ya) return;
       var f = hoy();
       var cst = {p:pa.id, niv:niv, fecha:f, nombre:Ph.nombre || '', grupo:Ph.grupo || '', reg:2,
-        pct: est.mejor ? est.mejor.pct : null, ver: est.mejor ? est.mejor.v : '',
+        pct: est.mejor ? est.mejor.pct : null, ver: est.mejor ? est.mejor.v : '', otorgada: (est.mejor && est.mejor.otorgada) ? 1 : 0,
         folio: folioDe(Ph.nombre, Ph.grupo || '', pa.id, niv, f)};
       lista.push(cst); nuevas.push(cst);
     });
@@ -13932,7 +13932,7 @@ function hcmTutorial(){
       '<div class="lema">Heroico Colegio Militar · Idioma Extranjero IV</div>' +
       '<h1>Constancia de trabajo extraclase</h1><p>Se hace constar que el cadete</p>' +
       '<div class="quien">' + esc(x.nombre || '') + '</div>' +
-      '<p>completó en la app de práctica de inglés el estudio para la evaluación del <b>' + esc(pa.nombre) + '</b> (' + esc(pa.det) + '): contestó las 50 preguntas de práctica tipo examen' + (x.pct ? ' del examen guía, con ' + x.pct + ' % de aciertos' : '') + ', ' +
+      '<p>completó en la app de práctica de inglés el estudio para la evaluación del <b>' + esc(pa.nombre) + '</b> (' + esc(pa.det) + ')' + (x.otorgada ? ': hizo el estudio de práctica tipo examen' : ': contestó las 50 preguntas de práctica tipo examen') + (x.pct ? (x.otorgada ? ' (validado por el docente, ' + x.pct + ' % de aciertos)' : ' del examen guía, con ' + x.pct + ' % de aciertos') : '') + ', ' +
       'en el nivel <b>' + esc(NOMBRE_NIV[x.niv]) + '</b>.</p>' +
       '<div class="datos"><div><b>Grupo</b>' + esc(x.grupo || '—') + '</div><div><b>Nivel</b>' + esc(NOMBRE_NIV[x.niv]) + '</div>' +
       '<div><b>Fecha</b>' + esc(x.fecha) + '</div><div><b>Tiempo de práctica</b>' + Math.round(min / 60) + ' min</div>' +
@@ -16497,6 +16497,19 @@ function hcmTutorial(){
   function cuenta(v){ return v.reduce(function(s,x){ return s+(x.t==='lectura'?x.preg.length:1); },0); }
   var MINIMO=50;     // Brian (10 nov): se acepta con MÁS de 50 % en el examen guía (una sola versión, 50 preguntas)
   var UNICA='A';     // Brian (10 nov): "solo una versión de examen guía con 50 preguntas, nada más"
+  /* Brian (10 nov): "dale el certificado a Amastal, y a los demás que tengan más de la mitad".
+     Cadetes que hicieron el estudio viejo (versiones de 15) con más de 50 %: su constancia
+     la otorga el docente. La llave es el FNV del nombre normalizado (no van nombres aquí). */
+  var OTORGADAS={"6335c284": 88, "93f53c91": 63, "033edd94": 67, "466edcd2": 64, "699c6d55": 66, "f9418d17": 53};
+  function otorgada(n){
+    if(n!==9) return 0;
+    try{
+      var t=String((hcmLoad().perfil||{}).nombre||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+              .replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+      var h=0x811c9dc5; for(var i=0;i<t.length;i++){ h^=t.charCodeAt(i); h=Math.imul(h,16777619)>>>0; }
+      return OTORGADAS[('0000000'+h.toString(16)).slice(-8)]||0;
+    }catch(e){ return 0; }
+  }
   function estado(n){
     /* completo = terminó las 50 de cualquier versión del banco nuevo con más de 50 %.
        Lo hecho con el banco viejo de 15 ya no está (leer() lo quita por bv). */
@@ -16514,6 +16527,8 @@ function hcmTutorial(){
       if(c>resp) resp=c;
     });
     var pasa=!!(mejor && mejor.pct>MINIMO);
+    var ot=otorgada(n);
+    if(!pasa && ot){ pasa=true; mejor={v:UNICA, pct:ot, ok:null, n:null, otorgada:true}; }
     return {hechas:hechas, total:3, completo:pasa, mejor:mejor, respondidas:Math.min(resp,de), de:de,
             aciertos:ok, preguntas:tot, versiones:e};
   }
