@@ -17224,6 +17224,15 @@ function hcmTutorial(){
     document.getElementById('es-bn-go').onclick=function(){ hub(t.n); };
   }
 
+  /* Brian (10 nov): al tocar "Mapa" abajo, que lo lleve a los temas (no al estudio).
+     Al abrir la app sigue entrando directo al estudio. */
+  try{
+    document.addEventListener('click', function(e){
+      var b=e.target && e.target.closest && e.target.closest('.tabb[data-t="mapa"]');
+      if(b) VER_TEMAS=true;
+    }, true);
+  }catch(e){}
+
   try{ window.__hcmEstudio={tarjeta:tarjeta, estado:estado, abierto:abierto, correr:correr, banco:EX,
                             hub:hub, presentacion:presentacion,
                             guiaOtraVez:function(){ hub(EXAMEN_HUB); }}; }catch(e){}
