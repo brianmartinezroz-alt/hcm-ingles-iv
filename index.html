@@ -13817,6 +13817,12 @@ function hcmTutorial(){
        Las constancias P1 que se dieron con el banco viejo de 15 se retiran. */
     var antes = lista.length;
     lista = lista.filter(function(x){ return x.p !== 'P1' || x.reg === 2; });
+    /* Brian (11 nov): solo se queda con constancia quien cumple el 50 %.
+       Una constancia "otorgada" que ya no cumple se retira. */
+    PARCIALES.forEach(function(pa){
+      var e0 = (window.__hcmEstudio && window.__hcmEstudio.estado) ? window.__hcmEstudio.estado(pa.ex) : null;
+      if(e0 && !e0.completo) lista = lista.filter(function(x){ return !(x.p === pa.id && x.otorgada); });
+    });
     if(lista.length !== antes) guardarJ(K_CONST, lista);
     PARCIALES.forEach(function(pa){
       var lecs = BLOQUES_HCM[pa.ex] || [];
@@ -16500,7 +16506,7 @@ function hcmTutorial(){
   /* Brian (10 nov): "dale el certificado a Amastal, y a los demás que tengan más de la mitad".
      Cadetes que hicieron el estudio viejo (versiones de 15) con más de 50 %: su constancia
      la otorga el docente. La llave es el FNV del nombre normalizado (no van nombres aquí). */
-  var OTORGADAS={"6335c284": 88, "93f53c91": 63, "033edd94": 67, "466edcd2": 64, "699c6d55": 66, "f9418d17": 53, "e8939669": 40};
+  var OTORGADAS={"6335c284": 88, "93f53c91": 63, "033edd94": 67, "466edcd2": 64, "699c6d55": 66, "f9418d17": 53};
   function otorgada(n){
     if(n!==9) return 0;
     try{
@@ -16742,6 +16748,7 @@ function hcmTutorial(){
   var YA_RECORDO=false;
   function engancharCert(n, est){
     var caja=document.getElementById('eh-cert'); if(!caja) return;
+    if(!est.completo){ try{ if(typeof window.__hcmConstanciaRevisa==='function') window.__hcmConstanciaRevisa(); }catch(e){} }
     var yaGanada=est.completo ? miConstancia(n) : null;
     if(!est.completo){
       caja.innerHTML='<div class="eh-cert-no">'+(est.mejor
