@@ -16704,7 +16704,7 @@ function hcmTutorial(){
         '<button class="btn'+(hechas && sig>=0?' ghost':'')+'" id="eh-inicio">▶ '+(sig<0?'Repasar desde la 1':'Empezar desde la 1')+'</button>'+
       '</div>'+
       '<div id="eh-cert"></div>'+
-      '<div class="eh-ley"><span><i class="ok"></i>Bien</span><span><i class="no"></i>Repásala</span><span><i></i>Sin contestar</span></div>'+
+      '<div class="eh-ley"><span><i class="ok"></i>Bien</span><span><i class="no"></i>Corrígela</span><span><i></i>Sin contestar</span></div>'+
       '<div class="eh-grid">'+celdas+'</div>'+
       '<button class="eh-lec" id="eh-lec">📚 Ver las lecciones del curso</button>'+
     '</div>';
@@ -16745,8 +16745,8 @@ function hcmTutorial(){
     var yaGanada=est.completo ? miConstancia(n) : null;
     if(!est.completo){
       caja.innerHTML='<div class="eh-cert-no">'+(est.mejor
-        ? '🎖 Terminaste el examen guía con <b>'+est.mejor.pct+' %</b>. Para que te cuente necesitas <b>más de '+MINIMO+' %</b>: '+
-          'toca las preguntas en rosa y vuelve a intentarlas.'
+        ? '❌ <b>No puedes entregar tu extraclase.</b> Sacaste '+est.mejor.pct+' % y necesitas más de '+MINIMO+' %. '+
+          '<b>Corrige</b>: toca las preguntas en rosa y escoge otra opción.'
         : '🎖 Para que te cuente: contesta las '+est.de+' preguntas del examen guía con <b>más de '+MINIMO+' % de aciertos</b>. '+
           'Así ganas tu <b>constancia de trabajo extraclase</b> en PDF. Llevas '+est.respondidas+'.')+'</div>';
       if(!YA_RECORDO){ YA_RECORDO=true; setTimeout(function(){ mensajeTeacher(n, est); }, 700); }
@@ -16906,36 +16906,40 @@ function hcmTutorial(){
   }
   // pinta la respuesta (al contestar o al volver a una ya contestada)
   function mostrarRes(x, res, yaEstaba){
-    var k=-1; x.mix.forEach(function(m,j){ if(m.o===res.e) k=j; });
-    var bien=x.ops[x.bien], ok=!!res.ok;
+    /* Brian (10 nov): "déjales corregir sus opciones erróneas". Si falla, no se le
+       enseña la buena: la que escogió queda en rosa y las demás siguen abiertas
+       para que corrija. Cuando acierta, sale el por qué. */
+    var bien=x.ops[x.bien], ok=!!res.ok, malas=res.malas||(ok?[]:[res.e]);
     app().querySelectorAll('#es-ops .opt').forEach(function(b,j){
-      b.disabled=true;
-      if(x.mix[j].i===x.bien) b.classList.add('ok');
-      else if(j===k) b.classList.add('no');
+      var o=x.mix[j].o;
+      b.classList.remove('ok','no');
+      if(ok){ b.disabled=true; if(x.mix[j].i===x.bien) b.classList.add('ok'); else if(malas.indexOf(o)>=0) b.classList.add('no'); }
+      else if(malas.indexOf(o)>=0){ b.disabled=true; b.classList.add('no'); }
+      else b.disabled=false;
     });
-    var tx=document.getElementById('es-tx'); if(tx) tx.hidden=false;
+    if(ok){ var tx=document.getElementById('es-tx'); if(tx) tx.hidden=false; }
     var r=document.getElementById('es-res');
-    r.innerHTML='<div class="fb '+(ok?'ok':'no')+'"><div class="fb-t">'+(ok?'Correcto':'Era: '+esc(bien))+'</div>'+
-        '<div class="fb-p">'+esc(x.porque||'')+'</div></div>'+
+    r.innerHTML=(ok
+        ? '<div class="fb ok"><div class="fb-t">'+(res.corregida?'Correcto · ¡la corregiste!':'Correcto')+'</div>'+
+            '<div class="fb-p">'+esc(x.porque||'')+'</div></div>'
+        : '<div class="fb no"><div class="fb-t">No es esa. Corrígela: escoge otra opción.</div>'+
+            '<div class="fb-p">💡 '+esc(x.pista||'Lee otra vez la pregunta con calma.')+'</div></div>')+
       '<div class="es-post">'+
         '<button class="es-mini es-pres-b" id="es-pres2">📖 Ver la explicación</button>'+
         '<button class="es-mini" id="es-porq">🤖 Explícame con la IA</button>'+
-        '<button class="es-mini" id="es-voz2">🎙️ Pregúntale hablando</button>'+
-        '<button class="es-mini" id="es-otra">↺ Volver a intentar</button></div>';
+        '<button class="es-mini" id="es-voz2">🎙️ Pregúntale hablando</button></div>';
     document.getElementById('es-pres2').onclick=function(){ presentacion(x); };
     document.getElementById('es-porq').onclick=function(){ explicar(x, res.e, ''); };
     document.getElementById('es-voz2').onclick=function(){ preguntar(x, res.e); };
-    document.getElementById('es-otra').onclick=function(){ C.r[C.i]=null; salvar(); pintar(); };
     if(!yaEstaba){
-      // el "por qué" ya viene grabado (voz Kokoro): si falló, se le explica solo;
-      // si acertó, se oye la respuesta en inglés.
       if(ok) try{ say(bien,'en-US'); }catch(e){}
-      else if(x.porque) setTimeout(function(){ try{ say(x.porque,'es-MX'); }catch(e){} }, 350);
+      else if(x.pista) setTimeout(function(){ try{ say(x.pista,'es-MX'); }catch(e){} }, 350);
     }
   }
   function contestar(x, k){
     var m=x.mix[k], ok=(m.i===x.bien), bien=x.ops[x.bien];
-    var res={ok:ok, e:m.o, p:!!C.pista}; C.pista=false;
+    var prev=C.r[C.i], malas=(prev&&!prev.ok)?(prev.malas||[prev.e]):[];
+    var res={ok:ok, e:m.o, p:!!C.pista, malas:ok?malas:malas.concat([m.o]), corregida:ok&&malas.length>0}; C.pista=false;
     C.r[C.i]=res;
     C.ints.push({tipo:'ex-'+x.t, meta:(x.audio?('🔊 '+x.audio+' · '):'')+x.q+' → '+bien, oido:m.o, pct:ok?100:0});
     var pasabaAntes=estado(C.n).completo;
@@ -16951,8 +16955,8 @@ function hcmTutorial(){
         '<div class="es-medal">'+(est.completo
           ? '🎖 ¡Listo! Examen guía con '+pctV+' %. Ya ganaste tu constancia: está arriba en la pantalla del estudio.'+
             '<button class="eh-cb oro" id="es-vercert" style="margin-top:10px">Ver mi constancia</button>'
-          : 'Terminaste el examen guía con <b>'+pctV+' %</b>. Necesitas <b>más de '+MINIMO+' %</b> para que cuente: '+
-            'vuelve a intentar las que quedaron en rosa.'+
+          : '❌ <b>No puedes entregar tu extraclase.</b> Sacaste '+pctV+' % y necesitas más de '+MINIMO+' %. '+
+            '<b>Corrige</b> las preguntas en rosa.'+
             '<button class="eh-cb oro" id="es-vercert" style="margin-top:10px">Ver las 50</button>')+'</div>');
       document.getElementById('es-vercert').onclick=function(){ hub(C.n, C.v); };
     }
@@ -17223,6 +17227,38 @@ function hcmTutorial(){
       '</div>');
     document.getElementById('es-bn-go').onclick=function(){ hub(t.n); };
   }
+
+  /* Brian (10 nov): "regresar a la pantalla anterior con nada más el touch".
+     Deslizar el dedo de lado (a la derecha o a la izquierda) = Atrás:
+     explicación → se cierra · pregunta → las 50 · temas → estudio ·
+     lección → lo que haga su botón "← Atrás".                        */
+  function atras(){
+    if(document.getElementById('tutor')) return;
+    var ov=document.getElementById('es-pres-ov'); if(ov){ var cx=document.getElementById('xp-x'); if(cx) cx.click(); else ov.remove(); return; }
+    var rec=document.getElementById('eh-rec'); if(rec){ rec.remove(); return; }
+    if(document.getElementById('hcm-hoja')){ try{ hcmCerrarHoja(); }catch(e){} return; }
+    if(document.querySelector('.es-run')){ var sl=document.getElementById('es-salir'); if(sl) sl.click(); return; }
+    if(document.querySelector('.eh')) return;                       // ya está en la principal
+    if(document.querySelector('.tm-lista')){ hub(EXAMEN_HUB); return; }
+    var v=document.getElementById('volver'); if(v && v.offsetParent){ v.click(); return; }
+    try{ VER_TEMAS=true; mostrarMapa(); }catch(e){}
+  }
+  try{
+    var sx=null, sy=0, st0=0;
+    document.addEventListener('touchstart', function(e){
+      sx=null;
+      if(!e.touches || e.touches.length!==1) return;
+      var el=e.target;
+      if(el && el.closest && el.closest('input,textarea,select,.velbar,[data-noswipe]')) return;
+      sx=e.touches[0].clientX; sy=e.touches[0].clientY; st0=Date.now();
+    }, {passive:true});
+    document.addEventListener('touchend', function(e){
+      if(sx===null || !e.changedTouches || !e.changedTouches[0]) return;
+      var t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy; sx=null;
+      if(Date.now()-st0>900 || Math.abs(dx)<80 || Math.abs(dy)>Math.abs(dx)*0.55) return;
+      atras();
+    }, {passive:true});
+  }catch(e){}
 
   /* Brian (10 nov): al tocar "Mapa" abajo, que lo lleve a los temas (no al estudio).
      Al abrir la app sigue entrando directo al estudio. */
