@@ -12709,7 +12709,7 @@ function hcmPanelMaestro() {
   APP.innerHTML = '<div style="padding:20px"><h2 style="font-family:var(--display);margin-bottom:4px">Panel del Maestro</h2>'+
     '<p style="font-size:12px;color:var(--tenue);margin-bottom:16px">Ingresa tu clave para ver los datos</p>'+
     '<div style="display:flex;gap:8px">'+
-    '<input type="password" id="jefe-clave" placeholder="Clave del maestro" style="flex:1;padding:10px;border:1.5px solid var(--linea);border-radius:8px;font-family:var(--body)">'+
+    '<input type="password" id="jefe-clave" placeholder="Clave del maestro" style="flex:1;min-width:0;padding:10px;border:1.5px solid var(--linea);border-radius:8px;font-family:var(--body)">'+
     '<button id="jefe-ok" style="background:var(--verde);color:#fff;border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer">Ver</button>'+
     '</div><div id="jefe-datos" style="margin-top:16px"></div></div>';
 
@@ -14789,6 +14789,7 @@ function hcmTutorial(){
          if(typeof P!=='undefined'&&P) P.parada_actual=n; }catch(e){}
     try{ hcmGuardarAvance(n,[],0); }catch(e){}
     try{ HCM_MIN=0; }catch(e){}          // un ejercicio suelto no lleva reloj
+    try{ YA_AVISE_FINAL=true; }catch(e){} // ni la despedida de "te faltan dos": abrió uno, no la lección
     try{ soltarMapa(); }catch(e){}
     try{ paso(); }catch(e){ console.error('temas',e); try{ mostrarMapa(); }catch(x){} }
   }
@@ -16493,7 +16494,7 @@ function hcmTutorial(){
   function leer(){
     var o; try{ o=JSON.parse(localStorage.getItem(K_EST)||'{}'); }catch(e){ o={}; }
     Object.keys(o).forEach(function(n){
-      ['A','B','C'].forEach(function(v){
+      ['A','B','C','M'].forEach(function(v){
         if(o[n] && o[n][v] && (o[n][v].bv||1)!==(BV[n]||1)) delete o[n][v];
       });
     });
@@ -16502,7 +16503,64 @@ function hcmTutorial(){
   function guardar(o){ try{ localStorage.setItem(K_EST, JSON.stringify(o)); }catch(e){} }
   function cuenta(v){ return v.reduce(function(s,x){ return s+(x.t==='lectura'?x.preg.length:1); },0); }
   var MINIMO=50;     // Brian (10 nov): se acepta con MÁS de 50 % en el examen guía (una sola versión, 50 preguntas)
-  var UNICA='A';     // Brian (10 nov): "solo una versión de examen guía con 50 preguntas, nada más"
+  var UNICA='A';     // la de antes (igual para todos). Ya no se abre: solo queda guardada la evaluación de quien la terminó
+  /* Brian (18 nov): "las preguntas de estudio son parecidas, no iguales... gramaticalmente
+     parecidas. NO IGUALES" → "que a cada cadete le salgan distintas" → "cambia todas, pero
+     si ya acabaron solo consérvales su evaluación".
+     Cada cadete tiene SU examen guía ('M'): en cada lugar le toca la pregunta hermana de la
+     versión B o de la C (mismo tema de gramática, otra oración), en otro orden y con las
+     opciones en otro orden. Sale de su nombre, así que es el mismo en cualquier teléfono,
+     y se guarda para que no cambie aunque corrija su nombre. Nadie vuelve a ver las de la A. */
+  var MIX='M';
+  var K_MZ='hcm_estudio_mezcla';
+  var SIN_VOZ={9:{C:[10,14]}};      // dictados que todavía no tienen voz grabada: ahí toca el de la B
+  function nombreLlave(){
+    try{
+      return String((hcmLoad().perfil||{}).nombre||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(Boolean).sort().join(' ');
+    }catch(e){ return ''; }
+  }
+  function mezcla(n){
+    var todo={}; try{ todo=JSON.parse(localStorage.getItem(K_MZ)||'{}')||{}; }catch(e){ todo={}; }
+    var B=(EX[n]&&EX[n].B)||[], Cv=(EX[n]&&EX[n].C)||[], L=Math.min(B.length, Cv.length);
+    var m=todo[n];
+    if(m && m.bv===(BV[n]||1) && typeof m.p==='string' && m.p.length===L && /^[BC]*$/.test(m.p) &&
+       m.o && m.o.length===L) return m;
+    var nom=nombreLlave();
+    var sd = nom ? semilla('mezcla|'+n+'|'+nom) : ((Math.random()*4294967296)>>>0);
+    var x=sd||1, azar=function(){ x=(x+0x6D2B79F5)>>>0; var t=x; t=Math.imul(t^(t>>>15), t|1);
+      t^=t+Math.imul(t^(t>>>7), t|61); return ((t^(t>>>14))>>>0)/4294967296; };
+    var sinC=(SIN_VOZ[n]&&SIN_VOZ[n].C)||[], p='', j;
+    for(j=0;j<L;j++){
+      var c = azar()<0.5 ? 'B' : 'C';
+      if(c==='C' && (sinC.indexOf(j)>=0 || Cv[j].t!==B[j].t)) c='B';
+      p+=c;
+    }
+    // el orden: se revuelve dentro de cada parte (Listening, Reading, Grammar), nunca entre partes
+    var o=[], a=0;
+    while(a<L){
+      var b=a; while(b<L && B[b].t===B[a].t) b++;
+      var tramo=[]; for(j=a;j<b;j++) tramo.push(j);
+      for(j=tramo.length-1;j>0;j--){ var k=Math.floor(azar()*(j+1)), t2=tramo[j]; tramo[j]=tramo[k]; tramo[k]=t2; }
+      o=o.concat(tramo); a=b;
+    }
+    m={bv:BV[n]||1, s:sd, p:p, o:o};
+    todo[n]=m;
+    try{ localStorage.setItem(K_MZ, JSON.stringify(todo)); }catch(e){}
+    return m;
+  }
+  /* la evaluación que ya quedó: quien terminó la guía de antes la conserva */
+  function guardada(n){
+    var x=(leer()[n]||{})[UNICA], de=(EX[n]&&EX[n].A)?cuenta(EX[n].A):50;
+    return (x && x.fin && (x.n||0)>=de) ? x : null;
+  }
+  function yaPasoAntes(n){ var g=guardada(n); return !!(g && Math.round((g.ok||0)/g.n*100)>MINIMO); }
+  /* de cuál sale "cómo le fue": la guardada, salvo que termine la nueva con más aciertos */
+  function verEval(n){
+    var g=guardada(n); if(!g) return MIX;
+    var m=(leer()[n]||{})[MIX];
+    return (m && m.fin && (m.ok||0)>(g.ok||0)) ? MIX : UNICA;
+  }
   /* Brian (10 nov): "dale el certificado a Amastal, y a los demás que tengan más de la mitad".
      Cadetes que hicieron el estudio viejo (versiones de 15) con más de 50 %: su constancia
      la otorga el docente. La llave es el FNV del nombre normalizado (no van nombres aquí). */
@@ -16521,9 +16579,11 @@ function hcmTutorial(){
        Lo hecho con el banco viejo de 15 ya no está (leer() lo quita por bv). */
     var e=leer()[n]||{}, hechas=0, ok=0, tot=0, resp=0, mejor=null, ultima=null;
     var de=(EX[n]&&EX[n].A)?cuenta(EX[n].A):50;
-    [UNICA].forEach(function(v){
+    [UNICA, MIX].forEach(function(v){
       var x=e[v]; if(!x) return;
+      if(v===UNICA && !(x.fin && (x.n||0)>=de)) return;     // la de antes sin terminar ya no cuenta: empieza con las nuevas
       var c=(x.r||[]).filter(Boolean).length;
+      if(v===UNICA) c=Math.max(c, de);
       if(x.fin && (x.n||0)>=de){
         hechas++; ok+=x.ok||0; tot+=x.n||0;
         var pct=Math.round((x.ok||0)/x.n*100);
@@ -16534,7 +16594,7 @@ function hcmTutorial(){
     });
     var pasa=!!(mejor && mejor.pct>MINIMO);
     var ot=otorgada(n);
-    if(!pasa && ot){ pasa=true; mejor={v:UNICA, pct:ot, ok:null, n:null, otorgada:true}; }
+    if(!pasa && ot){ pasa=true; mejor={v:MIX, pct:ot, ok:null, n:null, otorgada:true}; }
     return {hechas:hechas, total:3, completo:pasa, mejor:mejor, respondidas:Math.min(resp,de), de:de,
             aciertos:ok, preguntas:tot, versiones:e};
   }
@@ -16549,7 +16609,12 @@ function hcmTutorial(){
     return a;
   }
   function filaDe(n,v){
-    var out=[], src=(EX[n]&&EX[n][v])||[];
+    var out=[], src=(EX[n]&&EX[n][v])||[], sal=n+v;
+    if(v===MIX){
+      var mz=mezcla(n);
+      src=mz.o.map(function(j){ return EX[n][mz.p.charAt(j)][j]; });
+      sal=n+v+mz.s;
+    }
     src.forEach(function(x){
       if(x.t==='lectura'){
         x.preg.forEach(function(p,k){
@@ -16560,7 +16625,7 @@ function hcmTutorial(){
     });
     return out.map(function(x){
       var y={}; for(var k in x) y[k]=x[k];
-      y.mix=barajar(x.ops, semilla(n+v+(x.q||'')+(x.audio||'')));
+      y.mix=barajar(x.ops, semilla(sal+(x.q||'')+(x.audio||'')));
       return y;
     });
   }
@@ -16576,12 +16641,12 @@ function hcmTutorial(){
         '<span>Dos semanas antes de tu evaluación ('+esc(L.fecha)+'). Mientras, sigue con las lecciones.</span></div>';
       return;
     }
-    var vs=[UNICA].map(function(v){
-      var e=est.versiones[v]||{}, n15=cuenta(EX[n][v]);
+    var vs=[MIX].map(function(v){
+      var e=est.versiones[v]||{}, n15=est.de;
       var lleva=(e.r||[]).filter(Boolean).length;
       var et = e.fin ? ('✓ '+e.ok+' de '+e.n) : (lleva ? ('va en '+lleva+' de '+n15) : (n15+' preguntas'));
       return '<button class="es-v'+(e.fin?' hecha':'')+'" data-ev="'+n+'" data-v="'+v+'">'+
-        '<span class="es-vl">'+v+'</span>'+
+        '<span class="es-vl">★</span>'+
         '<span class="es-vt"><b>Examen guía</b><span>'+et+'</span></span>'+
         '<span class="es-go">'+(e.fin?'otra vez':'▶')+'</span></button>';
     }).join('');
@@ -16622,6 +16687,7 @@ function hcmTutorial(){
   function contadas(r){ var c=0; for(var k=0;k<(r||[]).length;k++) if(r[k]) c++; return c; }
   function primeraSin(r, tot){ for(var k=0;k<tot;k++) if(!(r&&r[k])) return k; return -1; }
   function correr(n, v, i){
+    v=MIX;
     var todo=leer(); todo[n]=todo[n]||{};
     var prev=todo[n][v]||{};
     var fila=filaDe(n,v);
@@ -16645,20 +16711,65 @@ function hcmTutorial(){
     guardar(todo);
     return fin && !prev.fin;      // true solo la vez que la termina
   }
+  /* Cómo le fue de verdad: cuántas sacó a la primera y cuántas tuvo que corregir.
+     (Lo contestado con la app de antes del 11 nov no guardaba eso: sale "sin dato".) */
+  function resumen(n, v){
+    n=n||EXAMEN_HUB; v=v||verEval(n);
+    var e=(leer()[n]||{})[v]||{}, r=e.r||[], tot=(EX[n]&&EX[n][UNICA])?cuenta(EX[n][UNICA]):50;
+    var o={de:tot, contestadas:0, bien:0, primera:0, corregidas:0, mal:0, conDato:true, fin:!!e.fin};
+    r.forEach(function(x){
+      if(!x) return;
+      o.contestadas++;
+      if(x.ok){ o.bien++; if(x.corregida) o.corregidas++; else o.primera++; } else o.mal++;
+      if(x.malas===undefined) o.conDato=false;
+    });
+    if(e.fin && !o.contestadas){ o.contestadas=tot; o.bien=e.ok||0; o.conDato=false; }
+    o.texto=o.contestadas+'/'+tot+' contestadas · '+o.bien+' bien'+
+      (o.conDato && o.contestadas ? ' · a la primera '+o.primera+' · corregidas '+o.corregidas : '');
+    return o;
+  }
+  // el resumen viaja en el perfil: así el maestro lo ve en su hoja aunque se pierda una respuesta
+  function perfilConResumen(){
+    try{
+      var Dh=hcmLoad(), Ph=Dh.perfil||{}, R=resumen(EXAMEN_HUB);
+      if(R.contestadas){ Ph.estudio_guia=R.texto+' · '+new Date().toISOString().slice(0,10); Dh.perfil=Ph; hcmSave(Dh); }
+      return perfilParaMaestro(Ph);
+    }catch(e){ return undefined; }
+  }
   function mandarAvance(){
     if(!C || !C.ints || !C.ints.length) return;
     try{
       hcmGuardarAvance(C.n, C.ints, Math.round((Date.now()-C.t0)/1000),
-        {titulo:'Estudio para la evaluación · Examen guía', items_total:C.fila.length});
+        {titulo: yaPasoAntes(C.n) ? 'Estudio para la evaluación · Práctica con preguntas nuevas'
+                                  : 'Estudio para la evaluación · Examen guía',
+         items_total:C.fila.length, perfil:perfilConResumen()});
     }catch(e){}
     C.ints=[]; C.t0=Date.now();
   }
+  /* Quien ya terminó y no se le había mandado su resumen (ni su constancia): se manda una vez. */
+  var K_RES='hcm_estudio_resumen';
+  function mandarResumenSiFalta(n){
+    try{
+      var R=resumen(n); if(!R.fin && R.contestadas<R.de) return;
+      var prev={}; try{ prev=JSON.parse(localStorage.getItem(K_RES)||'{}')||{}; }catch(e){}
+      if(prev.t===R.texto) return;
+      if(prev.at && Date.now()-prev.at < 10*60*1000) return;      // a lo más uno cada diez minutos
+      localStorage.setItem(K_RES, JSON.stringify({t:R.texto, at:Date.now()}));
+      hcmGuardarAvance(n, [{tipo:'resumen', meta:'Examen guía · resumen', oido:R.texto, pct:Math.round(R.bien/R.de*100)}], 0,
+        {titulo:'Estudio para la evaluación · Resumen', items_total:R.de, perfil:perfilConResumen()});
+    }catch(e){}
+  }
+  // si deja la app en segundo plano, lo contestado sale en ese momento (antes se podía perder)
+  try{
+    document.addEventListener('visibilitychange', function(){ if(document.hidden && C) mandarAvance(); });
+    window.addEventListener('pagehide', function(){ if(C) mandarAvance(); });
+  }catch(e){}
   function app(){ return document.getElementById('app'); }
   // en la cuadrícula se ven la barra de arriba y la de abajo; dentro de la pregunta, no (para que no tape Anterior / Siguiente)
   function barras(si){
     try{
       var t=document.getElementById('topbar'), b=document.getElementById('barrabaja'), f=document.getElementById('btnayuda');
-      if(t) t.style.display='';
+      if(t) t.style.display=si?'':'none';
       if(b) b.style.display=si?'':'none';
       if(f) f.style.display=si?'':'none';
       if(si) document.querySelectorAll('.tabb').forEach(function(x){ x.classList.toggle('on', x.dataset.t==='mapa'); });
@@ -16674,13 +16785,15 @@ function hcmTutorial(){
     try{ soltarMapa(); }catch(e){}
     try{ quitarFoco(); }catch(e){}
     barras(true);
-    v=UNICA;
+    v=MIX;
     guardarVer(n,v);
     var L=LECCIONES_HCM[n]||{}, fila=filaDe(n,v), tot=fila.length;
     var e=(leer()[n]||{})[v]||{}, r=e.r||[];
     var hechas=contadas(r), ok=0; r.forEach(function(x){ if(x&&x.ok) ok++; });
     if(e.fin && !hechas){ hechas=tot; ok=e.ok||0; }     // terminada con la app anterior (no guardaba cada respuesta)
-    var sig=primeraSin(r,tot), est=estado(n);
+    var sig=primeraSin(r,tot), est=estado(n), RS=resumen(n,v);
+    var vieja=guardada(n), RV=vieja?resumen(n,UNICA):null;
+    var dejo=(!vieja && !hechas) ? contadas((((leer()[n]||{})[UNICA])||{}).r) : 0;    // llevaba de las de antes, sin terminar
     if(e.fin && !contadas(r)) sig=-1;
     var f=fechaDe(n), dias=f?Math.ceil((f.getTime()-Date.now())/864e5):null;
     var cuando = dias===null?'':(dias>1?('Faltan '+dias+' días'):dias===1?'Es mañana':dias===0?'Es hoy':'');
@@ -16693,24 +16806,37 @@ function hcmTutorial(){
     var celdas='', parte='';
     fila.forEach(function(x,k){
       if(x.t!==parte){ parte=x.t; celdas+='<div class="eh-parte">'+esc(PARTE[x.t]||'')+'</div>'; }
-      var c=r[k]?(r[k].ok?' ok':' no'):'';
+      var c=r[k]?(r[k].ok?(r[k].corregida?' ok eh-cg':' ok'):' no'):'';
       celdas+='<button class="eh-c'+c+(k===sig?' sig':'')+'" data-i="'+k+'" aria-label="Pregunta '+(k+1)+'">'+(k+1)+'</button>';
     });
     var h='<div class="eh">'+
-      '<div class="eh-k">📝 Estudio para tu evaluación</div>'+
+      '<div class="eh-k">📝 Estudio para tu evaluación<button class="eh-ayuda" id="eh-ayuda" aria-label="Pregúntale a tu maestro">?</button></div>'+
       '<h2 class="eh-t">'+esc(L.titulo||'Evaluación')+'</h2>'+
       '<div class="eh-s">'+(n===9?'ALC Book 9 · lecciones 1 a 8':'')+(L.fecha?' · '+esc(L.fecha):'')+(cuando?' · <b>'+cuando+'</b>':'')+'</div>'+
-      '<p class="eh-d"><b>Examen guía</b>: '+tot+' preguntas parecidas a las del examen, en inglés. Toca cualquier número para ir a esa pregunta. '+
+      (vieja ? '<div class="eh-guard">✓ <b>Tu examen guía ya quedó guardado</b>: '+(vieja.ok||0)+' de '+vieja.n+' bien'+
+          (RV && RV.conDato ? ' (a la primera '+RV.primera+' · corregidas '+RV.corregidas+')' : '')+'. Ese resultado no cambia.</div>'+
+          '<p class="eh-d">Estas son <b>preguntas nuevas</b>, parecidas a las de antes pero no iguales'+
+          (est.completo ? ', para seguir practicando. Toca cualquier número.' : '. Contéstalas para alcanzar más de '+MINIMO+' % de aciertos.')+'</p>'
+        : est.completo ? '<p class="eh-d"><b>Examen guía</b> · ya lo terminaste. Puedes repasar cualquier pregunta tocando su número.</p>'
+        : '<p class="eh-d"><b>Examen guía</b>: '+tot+' preguntas parecidas a las del examen, en inglés. <b>A cada cadete le tocan preguntas distintas.</b> '+
+        'Toca cualquier número para ir a esa pregunta. '+
         'En cada una tienes pista y explicación. Para que te cuente necesitas más de '+MINIMO+' % de aciertos.</p>'+
+        (dejo ? '<p class="eh-d eh-camb">📢 Las preguntas cambiaron: ahora cada cadete tiene las suyas. Las '+dejo+
+          ' que ya habías contestado le llegaron a tu teacher; aquí empiezas con las nuevas.</p>' : ''))+
 
       '<div class="eh-pr"><div class="eh-bar"><i style="width:'+Math.round(hechas/tot*100)+'%"></i></div>'+
-        '<span>'+hechas+' de '+tot+' contestadas'+(hechas?' · '+ok+' bien':'')+'</span></div>'+
+        '<span>'+hechas+' de '+tot+' contestadas'+(hechas?' · '+ok+' bien':'')+'</span>'+
+        (RS.conDato && RS.contestadas>=5 ? '<div class="eh-res"><div><b>'+RS.primera+'</b><span>a la primera</span></div>'+
+          '<div><b>'+RS.corregidas+'</b><span>corregidas</span></div><div><b>'+RS.mal+'</b><span>por corregir</span></div></div>'+
+          (RS.contestadas>=tot ? '<p class="eh-res-n">En el examen de verdad no hay segunda oportunidad: lo que cuenta es lo que sacas <b>a la primera</b> ('+
+            Math.round(RS.primera/tot*100)+' %). Repasa las que corregiste.</p>' : '') : '')+
+        '</div>'+
       '<div class="eh-acc">'+
         (hechas && sig>=0 ? '<button class="btn" id="eh-seguir">Seguir en la '+(sig+1)+' →</button>' : '')+
         '<button class="btn'+(hechas && sig>=0?' ghost':'')+'" id="eh-inicio">▶ '+(sig<0?'Repasar desde la 1':'Empezar desde la 1')+'</button>'+
       '</div>'+
       '<div id="eh-cert"></div>'+
-      '<div class="eh-ley"><span><i class="ok"></i>Bien</span><span><i class="no"></i>Corrígela</span><span><i></i>Sin contestar</span></div>'+
+      '<div class="eh-ley"><span><i class="ok"></i>Bien a la primera</span><span><i class="ok eh-cg"></i>Corregida</span><span><i class="no"></i>Corrígela</span><span><i></i>Sin contestar</span></div>'+
       '<div class="eh-grid">'+celdas+'</div>'+
       '<button class="eh-lec" id="eh-lec">📚 Ver las lecciones del curso</button>'+
     '</div>';
@@ -16721,7 +16847,9 @@ function hcmTutorial(){
     var bs=document.getElementById('eh-seguir'); if(bs) bs.onclick=function(){ abrir(n, v, sig); };
     document.getElementById('eh-inicio').onclick=function(){ abrir(n, v, 0); };
     document.getElementById('eh-lec').onclick=function(){ VER_TEMAS=true; barras(true); try{ mostrarMapa(); }catch(e){} };
+    document.getElementById('eh-ayuda').onclick=function(){ var f=document.getElementById('btnayuda'); if(f) f.click(); };
     engancharCert(n, est);
+    mandarResumenSiFalta(n);
   }
 
   /* ══════ la constancia y el aviso al teacher ══════ */
@@ -16745,7 +16873,7 @@ function hcmTutorial(){
     if(typeof mandarHCM_!=='function' || !HCM_DATOS_ENDPOINT){ fin(false); return; }
     mandarHCM_(cuerpo).then(fin, function(){ fin(false); });
   }
-  var YA_RECORDO=false;
+  var YA_RECORDO=false, YA_RECORDO_CERT=false;
   function engancharCert(n, est){
     var caja=document.getElementById('eh-cert'); if(!caja) return;
     if(!est.completo){ try{ if(typeof window.__hcmConstanciaRevisa==='function') window.__hcmConstanciaRevisa(); }catch(e){} }
@@ -16753,7 +16881,8 @@ function hcmTutorial(){
     if(!est.completo){
       caja.innerHTML='<div class="eh-cert-no">'+(est.mejor
         ? '❌ <b>No puedes entregar tu extraclase.</b> Sacaste '+est.mejor.pct+' % y necesitas más de '+MINIMO+' %. '+
-          '<b>Corrige</b>: toca las preguntas en rosa y escoge otra opción.'
+          (est.mejor.v===MIX ? '<b>Corrige</b>: toca las preguntas en rosa y escoge otra opción.'
+                             : 'Contesta las <b>preguntas nuevas</b> de abajo para alcanzarlo.')
         : '🎖 Para que te cuente: contesta las '+est.de+' preguntas del examen guía con <b>más de '+MINIMO+' % de aciertos</b>. '+
           'Así ganas tu <b>constancia de trabajo extraclase</b> en PDF. Llevas '+est.respondidas+'.')+'</div>';
       if(!YA_RECORDO){ YA_RECORDO=true; setTimeout(function(){ mensajeTeacher(n, est); }, 700); }
@@ -16791,8 +16920,8 @@ function hcmTutorial(){
       });
     };
     // cada vez que entra, mientras no le haya avisado: se le recuerda (una vez por visita)
-    if(!ya && !YA_RECORDO){
-      YA_RECORDO=true;
+    if(!ya && !YA_RECORDO_CERT){
+      YA_RECORDO_CERT=true;
       setTimeout(function(){ recordatorio(n, x); }, 700);
     }
   }
@@ -16802,10 +16931,10 @@ function hcmTutorial(){
     var d=document.createElement('div'); d.id='eh-rec';
     d.innerHTML='<div class="eh-rec-c"><div class="eh-rec-ic">📢</div>'+
       '<b>Mensaje de tu teacher</b>'+
-      '<p>Para que te acepte el estudio de la '+esc(L.titulo||'evaluación')+', contesta las <b>'+est.de+' preguntas</b> de la '+
-        '<b>examen guía</b> con <b>más de '+MINIMO+' % de aciertos</b>. Lo que hiciste con las versiones viejas de 15 preguntas ya no cuenta.'+
+      '<p>Para que te acepte el estudio de la '+esc(L.titulo||'evaluación')+', contesta las <strong>'+est.de+' preguntas</strong> del '+
+        '<strong>examen guía</strong> con <strong>más de '+MINIMO+' % de aciertos</strong>. Las preguntas cambiaron: ahora a cada cadete le tocan las suyas, parecidas pero no iguales.'+
         (est.mejor?' Llevas '+est.mejor.pct+' %.':'')+
-        (L.fecha?' Tu evaluación es el '+esc(L.fecha)+'.':'')+'</p>'+
+        ((L.fecha && fechaDe(n) && fechaDe(n).getTime()>Date.now()-864e5)?' Tu evaluación es el '+esc(L.fecha)+'.':'')+'</p>'+
       '<button class="eh-cb oro" id="eh-rec-si">Entendido, voy</button></div>';
     document.body.appendChild(d);
     function cerrar(){ try{ d.remove(); }catch(e){} }
@@ -16886,7 +17015,24 @@ function hcmTutorial(){
     document.getElementById('es-sig').onclick=irSiguiente;
     app().querySelectorAll('.es-prog i').forEach(function(p){ p.onclick=function(){ C.i=+p.dataset.i; salvar(); pintar(); }; });
     var o=document.getElementById('es-oir');
-    if(o){ o.onclick=function(){ say(x.audio,'en-US'); }; if(!ya) setTimeout(function(){ try{ if(C&&C.fila[C.i]===x) say(x.audio,'en-US'); }catch(e){} },500); }
+    if(o){
+      o.onclick=function(){ say(x.audio,'en-US'); };
+      if(!ya){
+        /* Brian vio cadetes acabar las 50 en 12 minutos: contestaban sin oír. Las opciones se
+           abren cuando el audio termina (o a los pocos segundos, por si el teléfono está en silencio). */
+        var caja=document.getElementById('es-ops'), abierto2=false;
+        var abre=function(){
+          if(abierto2 || !C || C.fila[C.i]!==x) return; abierto2=true;
+          caja.classList.remove('espera'); var av=document.getElementById('es-esp'); if(av) av.remove();
+          if(!C.r[C.i]) caja.querySelectorAll('.opt').forEach(function(b){ b.disabled=false; });
+        };
+        caja.classList.add('espera');
+        caja.querySelectorAll('.opt').forEach(function(b){ b.disabled=true; });
+        caja.insertAdjacentHTML('beforebegin','<div class="es-esp" id="es-esp">🔊 Escucha primero · las opciones se abren al terminar el audio</div>');
+        setTimeout(function(){ try{ if(C&&C.fila[C.i]===x) say(x.audio,'en-US',abre); }catch(e){ abre(); } },500);
+        setTimeout(abre, Math.min(7000, 1600+String(x.audio||'').length*45));
+      }
+    }
     var lr=document.getElementById('es-leer');
     if(lr) lr.onclick=function(){ say(x.texto,'en-US'); };
     document.getElementById('es-pista').onclick=function(){
@@ -16895,8 +17041,8 @@ function hcmTutorial(){
       if(x.pista) try{ say(x.pista,'es-MX'); }catch(e){}
       C.pista=true;
     };
-    document.getElementById('es-pres').onclick=function(){ presentacion(x); };
-    document.getElementById('es-voz').onclick=function(){ preguntar(x, C.r[C.i]?C.r[C.i].e:null); };
+    document.getElementById('es-pres').onclick=function(){ presentacion(x, !(C.r[C.i]&&C.r[C.i].ok)); };
+    document.getElementById('es-voz').onclick=function(){ preguntar(x, (C.r[C.i]&&C.r[C.i].ok)?C.r[C.i].e:null); };
     app().querySelectorAll('#es-ops .opt').forEach(function(b){
       b.onclick=function(){ contestar(x, +b.dataset.k); };
     });
@@ -16935,9 +17081,12 @@ function hcmTutorial(){
         '<button class="es-mini es-pres-b" id="es-pres2">📖 Ver la explicación</button>'+
         '<button class="es-mini" id="es-porq">🤖 Explícame con la IA</button>'+
         '<button class="es-mini" id="es-voz2">🎙️ Pregúntale hablando</button></div>';
-    document.getElementById('es-pres2').onclick=function(){ presentacion(x); };
-    document.getElementById('es-porq').onclick=function(){ explicar(x, res.e, ''); };
-    document.getElementById('es-voz2').onclick=function(){ preguntar(x, res.e); };
+    document.getElementById('es-pres2').onclick=function(){ presentacion(x, !ok); };
+    document.getElementById('es-porq').onclick=function(){
+      if(ok) explicar(x, res.e, '');
+      else explicar(x, '', 'Escogí "'+res.e+'" y me dijeron que no es. Explícame por qué esa no va, sin decirme cuál es la correcta.');
+    };
+    document.getElementById('es-voz2').onclick=function(){ preguntar(x, ok?res.e:null); };
     if(!yaEstaba){
       if(ok) try{ say(bien,'en-US'); }catch(e){}
       else if(x.pista) setTimeout(function(){ try{ say(x.pista,'es-MX'); }catch(e){} }, 350);
@@ -16952,7 +17101,7 @@ function hcmTutorial(){
     var pasabaAntes=estado(C.n).completo;
     var recien=salvar();
     mostrarRes(x, res, false);
-    if(C.ints.length>=10) mandarAvance();
+    if(C.ints.length>=5) mandarAvance();
     var est=estado(C.n), finV=contadas(C.r)>=C.fila.length;
     if(recien || (finV && est.completo && !pasabaAntes)){
       mandarAvance();
@@ -16973,12 +17122,13 @@ function hcmTutorial(){
      Cuatro láminas que se pasan solas mientras la voz explica:
      la pregunta, la respuesta (se ilumina la buena), el por qué y el truco.
      Las voces son las grabadas: el inglés en inglés y el por qué en español. */
-  function presentacion(x){
+  function presentacion(x, soloPista){
     try{ callarTodo(); }catch(e){}
     var viejo=document.getElementById('es-pres-ov'); if(viejo) viejo.remove();
     var bien=x.ops[x.bien];
     var completa = (x.t==='gram' && /____/.test(x.q)) ? x.q.replace(/_{2,}/, bien) : '';
-    var que = x.t==='oir' ? '<div class="xp-oye">🔊 Se oye</div><div class="xp-cita">'+esc(x.audio).replace(/\s+[—–]\s+/g,'<br>')+'</div>'+
+    var que = x.t==='oir' ? (soloPista ? '<div class="xp-oye">🔊 Escucha otra vez con atención</div>'
+                                       : '<div class="xp-oye">🔊 Se oye</div><div class="xp-cita">'+esc(x.audio).replace(/\s+[—–]\s+/g,'<br>')+'</div>')+
                             '<div class="xp-q">'+esc(x.q)+'</div>'
             : x.t==='leer' ? '<div class="xp-oye">📄 '+esc(x.titulo||'Lectura')+'</div><div class="xp-q">'+esc(x.q)+'</div>'
             : '<div class="xp-q grande">'+esc(x.q).replace(/_{2,}/,'<span class="xp-h">____</span>')+'</div>';
@@ -16993,9 +17143,18 @@ function hcmTutorial(){
                   '<div class="xp-asi"><span>La correcta</span><b>'+esc(bien)+'</b></div>'),
         voz:[completa||bien, 'en-US']}
     ];
+    /* Antes de acertar no se enseña la respuesta: solo la pregunta, cómo pensarla y la pista.
+       La explicación completa (la buena iluminada y el porqué) sale cuando ya la contestó bien. */
+    if(soloPista){
+      L=[ L[0],
+          {t:'Cómo pensarla', h:'<div class="xp-ops">'+x.ops.map(function(o){ return '<div class="xp-op">'+esc(o)+'</div>'; }).join('')+'</div>'+
+            '<div class="xp-nota">Descarta primero las que seguro no van.</div>', voz:null},
+          {t:'La pista', h:'<div class="xp-tip">💡 '+esc(x.pista||'Lee con calma la pregunta antes de escoger.')+'</div>'+
+            '<div class="xp-nota">Contéstala tú. Cuando aciertes, aquí mismo te explico por qué.</div>', voz:[x.pista||'', 'es-MX']} ];
+    }
     var ov=document.createElement('div'); ov.id='es-pres-ov';
     ov.innerHTML='<div class="xp-caja">'+
-      '<div class="xp-top"><span>Explicación · pregunta '+(C?C.i+1:'')+'</span><button class="xp-x" id="xp-x" aria-label="Cerrar">✕</button></div>'+
+      '<div class="xp-top"><span>'+(soloPista?'Ayuda':'Explicación')+' · pregunta '+(C?C.i+1:'')+'</span><button class="xp-x" id="xp-x" aria-label="Cerrar">✕</button></div>'+
       '<div class="xp-esc" id="xp-esc"></div>'+
       '<div class="xp-pts">'+L.map(function(_,k){ return '<i data-k="'+k+'"></i>'; }).join('')+'</div>'+
       '<div class="xp-ctl"><button class="xp-b" id="xp-a">◀</button>'+
@@ -17180,13 +17339,6 @@ function hcmTutorial(){
         if(!VER_TEMAS && abierto(EXAMEN_HUB) && EX[EXAMEN_HUB]){ try{ hub(EXAMEN_HUB); return; }catch(e){ console.error('estudio',e); } }
         var r=pantallaBase.apply(this,arguments);
         try{
-          var tl=document.querySelector('.tm-lista');
-          if(tl && abierto(EXAMEN_HUB) && !document.getElementById('es-volver-hub')){
-            tl.insertAdjacentHTML('afterbegin','<button class="btn" id="es-volver-hub" style="margin:0 0 12px">📝 Volver al estudio para la evaluación</button>');
-            document.getElementById('es-volver-hub').onclick=function(){ hub(EXAMEN_HUB); };
-          }
-        }catch(e){}
-        try{
           [9,18,19].forEach(function(k){
             var c=document.querySelector('.tm-card[data-n="'+k+'"]');
             if(!c) return;
@@ -17197,6 +17349,11 @@ function hcmTutorial(){
             }
           });
           ponerBanner();
+          var tl=document.querySelector('.tm-lista');
+          if(tl && abierto(EXAMEN_HUB) && !document.getElementById('es-banner') && !document.getElementById('es-volver-hub')){
+            tl.insertAdjacentHTML('afterbegin','<button class="btn" id="es-volver-hub" style="margin:0 0 12px">📝 Volver al estudio para la evaluación</button>');
+            document.getElementById('es-volver-hub').onclick=function(){ hub(EXAMEN_HUB); };
+          }
         }catch(e){}
         return r;
       };
@@ -17267,6 +17424,30 @@ function hcmTutorial(){
     }, {passive:true});
   }catch(e){}
 
+  /* La pestaña Avance solo hablaba de lecciones: quien hizo las 50 del examen guía veía puros ceros. */
+  try{
+    if(typeof hcmAvance==='function'){
+      var avanceBase=hcmAvance;
+      hcmAvance=function(){
+        var r=avanceBase.apply(this,arguments);
+        try{
+          var R=resumen(EXAMEN_HUB), est=estado(EXAMEN_HUB), fila=document.querySelector('#app .qcard .mapfila');
+          if(fila && !document.getElementById('av-guia')){
+            fila.insertAdjacentHTML('afterend',
+              '<div class="av-guia" id="av-guia"><div class="av-k">📝 Examen guía · 1ª evaluación parcial</div>'+
+              '<div class="eh-bar"><i style="width:'+Math.round(R.contestadas/R.de*100)+'%"></i></div>'+
+              '<div class="av-t">'+R.contestadas+' de '+R.de+' contestadas · '+R.bien+' bien'+
+                (R.conDato&&R.contestadas?' · '+R.primera+' a la primera · '+R.corregidas+' corregidas':'')+'</div>'+
+              '<div class="av-t">'+(est.completo?'🎖 Extraclase cumplido: ya tienes tu constancia.':'Te falta terminarlo con más de '+MINIMO+' % para tu extraclase.')+'</div>'+
+              '<button class="btn" id="av-ir" style="margin-top:10px">'+(est.completo?'Repasar el examen guía':'Ir al examen guía')+'</button></div>');
+            document.getElementById('av-ir').onclick=function(){ hub(EXAMEN_HUB); };
+          }
+        }catch(e){}
+        return r;
+      };
+    }
+  }catch(e){}
+
   /* Brian (10 nov): al tocar "Mapa" abajo, que lo lleve a los temas (no al estudio).
      Al abrir la app sigue entrando directo al estudio. */
   try{
@@ -17277,7 +17458,7 @@ function hcmTutorial(){
   }catch(e){}
 
   try{ window.__hcmEstudio={tarjeta:tarjeta, estado:estado, abierto:abierto, correr:correr, banco:EX,
-                            hub:hub, presentacion:presentacion,
+                            hub:hub, presentacion:presentacion, resumen:resumen, mezcla:mezcla, fila:filaDe, guardada:guardada,
                             guiaOtraVez:function(){ hub(EXAMEN_HUB); }}; }catch(e){}
 
   /* ══════ el vestido ══════ */
@@ -17285,6 +17466,8 @@ function hcmTutorial(){
     var st=document.createElement('style');
     st.textContent=
     '.es-caja,.es-run *{box-sizing:border-box}'+
+    '.eh-guard{margin:8px 0 6px;padding:10px 12px;border-radius:12px;background:rgba(46,125,50,.10);border:1px solid rgba(46,125,50,.35);font-size:13.5px;line-height:1.4}'+
+    '.eh-camb{padding:9px 11px;border-radius:12px;background:rgba(143,115,32,.12);opacity:1}'+
     '.es-caja{padding:4px 3px 6px}'+
     '.es-k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--oro,#8F7320);margin:6px 0 4px}'+
     '.es-d{font-size:13.5px;line-height:1.45;opacity:.8;margin:0 0 10px}'+
@@ -17314,7 +17497,7 @@ function hcmTutorial(){
     '.es-bn-bar i{display:block;height:100%;background:#F2D58A}'+
     '.es-bn-go{width:100%;padding:13px;border:0;border-radius:13px;background:#F2D58A;color:#1C1510;font:inherit;font-weight:800;font-size:15.5px;cursor:pointer}'+
     '.es-chip{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:7px;background:#8C3A32;color:#fff;font-size:9.5px;letter-spacing:.05em}'+
-    '.es-run{padding:0 14px 110px}'+
+    '.es-run{padding:0 14px 24px}'+
     '.es-salir{background:none;border:0;font:inherit;font-size:13px;opacity:.7;padding:10px 0;cursor:pointer;color:inherit}'+
     '.es-head{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;letter-spacing:.05em;text-transform:uppercase;opacity:.75}'+
     '.es-prog{display:flex;gap:3px;margin:8px 0 12px}.es-prog i{flex:1;height:5px;border-radius:3px;background:rgba(0,0,0,.09)}'+
@@ -17338,7 +17521,24 @@ function hcmTutorial(){
     '.es-part b{display:block;font-size:11.5px;opacity:.7}.es-part span{font-size:17px;font-weight:800}'+
     '.es-medal{margin:10px 0;padding:12px;border-radius:13px;background:#F3E9CF;font-weight:700}'+
     /* la pantalla del estudio (cuadrícula) */
-    '.eh{box-sizing:border-box;padding:14px 16px 110px;max-width:640px;margin:0 auto}.eh *{box-sizing:border-box}'+
+    '.eh{box-sizing:border-box;padding:14px 16px 28px;max-width:640px;margin:0 auto}.eh *{box-sizing:border-box}'+
+    '.eh-k{display:flex;align-items:center;justify-content:space-between;gap:8px}'+
+    '.eh-ayuda{flex:none;width:34px;height:34px;border-radius:50%;border:1px solid #C9A84C;background:#1A150E;color:#C9A84C;font:700 17px Georgia,serif;cursor:pointer}'+
+    '.eh-res{display:flex;gap:8px;margin-top:10px}.eh-res div{flex:1;padding:9px 6px;border-radius:12px;background:#fff;border:1px solid var(--linea,#e4ded0);text-align:center}'+
+    '.eh-res b{display:block;font-size:20px;line-height:1.1}.eh-res span{display:block;font-size:11px;opacity:.65;margin-top:2px}'+
+    '.eh-res-n{font-size:12.5px;line-height:1.45;opacity:.8;margin:9px 2px 0}'+
+    '.eh-c.ok.eh-cg{background:#CFE6D5;color:#234F31;border-color:#8FC29C}.eh-ley i.ok.eh-cg{background:#CFE6D5;border-color:#8FC29C}'+
+    /* la barra de velocidad se encimaba en teléfonos angostos */
+    '@media (max-width:360px){.velbar{flex-wrap:wrap}.velbar-t{flex:1 0 100%;margin:0 0 2px}.velbar-b{font-size:12.5px}}'+
+    '.av-guia{margin:2px 0 16px;padding:13px;border-radius:14px;background:#F3E9CF}.av-k{font-weight:700;font-size:13.5px;margin-bottom:8px}'+
+    '.av-t{font-size:13px;margin-top:7px;opacity:.85}'+
+    '.es-esp{margin:10px 0 2px;padding:8px 11px;border-radius:10px;background:#FFF6DD;font-size:12.5px}'+
+    '#es-ops.espera .opt{opacity:.45}'+
+    '.xp-nota{font-size:13.5px;opacity:.7;margin-top:12px;line-height:1.4}'+
+    /* el botón "?" flotante tapaba "Empezar desde la 1" y la cuadrícula: en el estudio va arriba, dentro del título */
+    'body:has(.eh) #btnayuda,body:has(.es-run) #btnayuda{display:none!important}'+
+    /* y en las lecciones, aire abajo para que no tape el último botón */
+    '@media (max-width:760px){#app{padding-bottom:84px}body:has(.eh) #app{padding-bottom:18px}body:has(.es-run) #app{padding-bottom:0}}'+
     '.eh-k{font-size:11px;letter-spacing:.09em;text-transform:uppercase;font-weight:700;color:#8C3A32;margin:4px 0 6px}'+
     '.eh-t{font:700 24px/1.2 Georgia,serif;margin:0}'+
     '.eh-s{font-size:13px;opacity:.7;margin-top:4px}.eh-s b{opacity:1;color:#8C3A32}'+
@@ -17375,12 +17575,12 @@ function hcmTutorial(){
     '#eh-rec{position:fixed;inset:0;z-index:9995;background:rgba(10,8,5,.5);display:flex;align-items:center;justify-content:center;padding:18px;animation:xpEntra .25s ease}'+
     '.eh-rec-c{width:100%;max-width:380px;padding:22px 20px;border-radius:20px;background:#1C1510;color:#F7F0DC;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.4)}'+
     '.eh-rec-ic{font-size:44px}.eh-rec-c b{display:block;font-size:19px;color:#F2D58A;margin:6px 0}'+
-    '.eh-rec-c p{font-size:14.5px;line-height:1.45;opacity:.85;margin:0 0 14px}.eh-rec-c .eh-cb{margin-top:8px}.eh-rec-c .eh-cb.ghost{flex:none}'+
+    '.eh-rec-c p{font-size:14.5px;line-height:1.45;opacity:.85;margin:0 0 14px}.eh-rec-c p strong{color:#F2D58A}.eh-rec-c .eh-cb{margin-top:8px}.eh-rec-c .eh-cb.ghost{flex:none}'+
     /* adelante y atrás dentro de la pregunta */
     '.es-nav-top{display:flex;justify-content:space-between;align-items:center}.es-nav-top span{font-size:12px;opacity:.6}'+
     '.es-prog i{cursor:pointer}.es-prog i.aqui{outline:2px solid var(--oro,#B99A4B);outline-offset:1px}'+
     '.es-nav{position:sticky;bottom:0;display:flex;gap:10px;padding:12px 0 calc(12px + env(safe-area-inset-bottom));margin-top:12px;'+
-      'background:linear-gradient(rgba(250,247,239,0),var(--fondo,#faf7ef) 30%)}'+
+      'background:#F0EADB;box-shadow:0 -10px 14px -6px #F0EADB;z-index:5}'+
     '.es-nb{flex:1;padding:14px;border-radius:14px;border:1px solid var(--tenue,#d8d0bd);background:#fff;font:inherit;font-weight:700;font-size:15px;cursor:pointer;color:inherit}'+
     '.es-nb.sig{background:#1C1510;color:#F7F0DC;border-color:#1C1510}.es-nb:disabled{opacity:.35;cursor:default}'+
     '.es-pres-b{background:#FFF6DD!important;border-color:#E8D49A!important}'+
@@ -17413,7 +17613,7 @@ function hcmTutorial(){
     '.xp-pts i{width:8px;height:8px;border-radius:50%;background:rgba(0,0,0,.15);cursor:pointer;transition:all .3s}'+
     '.xp-pts i.ya{background:#B99A4B}.xp-pts i.on{background:#8C3A32;width:22px;border-radius:5px}'+
     '.xp-ctl{display:flex;gap:8px}'+
-    '.xp-b{flex:1;padding:12px;border-radius:12px;border:1px solid #E4DED0;background:#fff;font:inherit;font-weight:700;font-size:15px;cursor:pointer;color:inherit}'+
+    '.xp-b{flex:1;min-width:0;white-space:nowrap;padding:12px 6px;border-radius:12px;border:1px solid #E4DED0;background:#fff;font:inherit;font-weight:700;font-size:15px;cursor:pointer;color:inherit}'+
     '.xp-b:disabled{opacity:.35}#xp-s{background:#1C1510;color:#F7F0DC;border-color:#1C1510}'+
     /* los círculos */
     '#es-velo{position:fixed;inset:0;z-index:9990;background:rgba(10,8,5,.55);'+
