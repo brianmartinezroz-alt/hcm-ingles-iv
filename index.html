@@ -14119,6 +14119,208 @@ function hcmTutorial(){
   }
 })();
 
+/* ACCESOS_EFA_ACTIVIDADES_HCM ═══════════════════════════════════════
+   Brian (19 nov): dos entradas nuevas en la app.
+   1. "Inglés general" → abre EFA (English For All).
+   2. "Actividades" → abre tinyurl.com/actividadeshcm, y dentro de cada
+      lección, el enlace directo a la actividad de ese tema.
+   Las actividades se numeran con el LIBRO ("Lesson 9"); en la app la
+   parada 9 es el 1er parcial, así que del libro 9 en adelante la parada
+   de la app es una más (libro 9 → parada 10).
+   La lista se lee del índice del sitio de actividades cada vez que se
+   abre la app (mismo dominio de GitHub Pages), así las actividades
+   nuevas aparecen solas; si no hay internet, se usa la última que se
+   guardó o la que viene aquí escrita.                                  */
+(function(){
+  var EFA_URL  = 'https://english-for-all.brianmartinezroz.workers.dev/';
+  var ACT_URL  = 'https://tinyurl.com/actividadeshcm';
+  var ACT_BASE = 'https://brianmartinezroz-alt.github.io/actividadeshcm/';
+  var K_ACT    = 'hcm_actividades_v1';
+  // lo que hay en el sitio al 19 nov 2026 (parada de la app → actividades, de la primera a la última)
+  var FIJAS = {
+    4:  [['leccion-04-indirect-commands.html','','Indirect commands and requests — Ask / Tell + persona + infinitivo']],
+    5:  [['leccion-05-vocabulary.html','','Vocabulary — In the garage, My roommate, A little white lie']],
+    6:  [['leccion-06-should-could.html','','Should I ask Lt Clark for help? — consejos, sugerencias y adverbios'],
+         ['clase-29-oct.html','2026-10-29','Jueves 29 de octubre — Lesson 6, parte B: la gramática'],
+         ['clase-30-oct.html','2026-10-30','Viernes 30 de octubre — How: preguntar por el modo']],
+    7:  [['clase-03-nov.html','2026-11-03','Martes 3 de noviembre — Lesson 7: vocabulario de gasolinera y motel'],
+         ['clase-04-nov.html','2026-11-04','Miércoles 4 de noviembre — Lesson 7: verb + that noun clause'],
+         ['clase-05-nov.html','2026-11-05','Jueves 5 de noviembre — Lesson 7: cierre de la lección']],
+    8:  [['clase-06-nov.html','2026-11-06','Viernes 6 de noviembre — Lesson 8: vocabulario de disculpas'],
+         ['clase-09-nov.html','2026-11-09','Lunes 9 de noviembre — Lesson 8: apologize to / forgive me'],
+         ['clase-10-nov.html','2026-11-10','Martes 10 de noviembre — Lesson 8: adjetivo + that'],
+         ['clase-11-nov.html','2026-11-11','Miércoles 11 de noviembre — Lesson 8: cierre de la lección']],
+    10: [['clase-17-nov.html','2026-11-17','Martes 17 de noviembre — Lesson 9: vocabulario de las máquinas expendedoras'],
+         ['clase-18-nov.html','2026-11-18','Miércoles 18 de noviembre — Lesson 9: no + sustantivo y how to']]
+  };
+  // las que no dicen su lección en el título
+  var SIN_NUMERO = {'clase-30-oct.html':6};
+
+  function e(s){ try{ return esc(s); }catch(err){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); } }
+  function paradaDeLibro(n){ n=+n; return n>=9 ? n+1 : n; }
+  function abrirFuera(url){
+    try{ var w=window.open(url,'_blank','noopener'); if(w) return; }catch(err){}
+    try{ location.href=url; }catch(err){}
+  }
+
+  /* ── la lista: guardada, o la escrita aquí ── */
+  var MAPA = null;
+  function guardada(){
+    try{ var o=JSON.parse(localStorage.getItem(K_ACT)||'null'); if(o && o.m) return o.m; }catch(err){}
+    return null;
+  }
+  function lista(){ return MAPA || guardada() || FIJAS; }
+  function deParada(n){ return (lista()[n]||[]).slice(); }
+
+  /* ── se lee el índice del sitio: cada tarjeta trae su Lesson / Lección ── */
+  function leerSitio(){
+    if(typeof fetch!=='function' || typeof DOMParser==='undefined') return;
+    fetch(ACT_BASE+'index.html?d='+new Date().toISOString().slice(0,13),{cache:'no-cache'})
+      .then(function(r){ return r.ok ? r.text() : null; })
+      .then(function(t){
+        if(!t) return;
+        var doc=new DOMParser().parseFromString(t,'text/html'), m={}, vistas={};
+        var as=doc.querySelectorAll('a.act[href]');
+        for(var i=0;i<as.length;i++){
+          var a=as[i], f=a.getAttribute('href')||'';
+          if(!/^(clase|leccion)-[\w-]+\.html$/i.test(f) || vistas[f]) continue;
+          var h3=a.querySelector('h3'), tit=h3 ? h3.textContent.replace(/\s+/g,' ').trim() : '';
+          var nn=(a.querySelector('.n')||{}).textContent||'';
+          var k=(nn+' '+tit).match(/(?:Lesson|Lecci[oó]n)\s+(\d+)/i);
+          var p = k ? paradaDeLibro(k[1]) : SIN_NUMERO[f];
+          if(!p) continue;
+          vistas[f]=1;
+          (m[p]=m[p]||[]).push([f, a.getAttribute('data-f')||'', tit]);
+        }
+        var cuantas=0;
+        Object.keys(m).forEach(function(p){
+          cuantas+=m[p].length;
+          // primero la de la lección completa (sin fecha), luego por fecha
+          m[p].sort(function(x,y){ return (x[1]||'0') < (y[1]||'0') ? -1 : (x[1]||'0') > (y[1]||'0') ? 1 : 0; });
+        });
+        if(cuantas){
+          MAPA=m;
+          try{ localStorage.setItem(K_ACT, JSON.stringify({m:m, at:Date.now()})); }catch(err){}
+          try{ refrescar(); }catch(err){}
+        }
+      }).catch(function(){});
+  }
+
+  /* ── cómo se ve ── */
+  function corto(t){
+    // "Martes 17 de noviembre — Lesson 9: vocabulario…" → "Martes 17 de noviembre · vocabulario…"
+    return String(t||'').replace(/\s+—\s+(?:Lesson|Lecci[oó]n)\s+\d+[^:]*:\s*/i,' · ').replace(/\s+—\s+/,' · ');
+  }
+  function bloqueLeccion(n){
+    var L=(typeof LECCIONES_HCM!=='undefined')?LECCIONES_HCM[n]:null;
+    if(!L || L.examen) return '';
+    var xs=deParada(n), h='<div class="hcm-act" data-act="'+n+'">'+
+      '<div class="hcm-act-k">🧩 Actividades de este tema</div>';
+    if(xs.length){
+      h+=xs.map(function(x){
+        return '<button class="hcm-act-b" data-url="'+e(ACT_BASE+x[0])+'"><span>'+e(corto(x[2]))+'</span><i>↗</i></button>';
+      }).join('');
+    }else{
+      h+='<p class="hcm-act-no">Este tema todavía no tiene actividad en el sitio. Aquí aparecerá en cuanto la suba tu teacher.</p>'+
+         '<button class="hcm-act-b" data-url="'+e(ACT_URL)+'"><span>Ver todas las actividades</span><i>↗</i></button>';
+    }
+    return h+'</div>';
+  }
+  function ligar(raiz){
+    if(!raiz) return;
+    raiz.querySelectorAll('[data-url]').forEach(function(b){
+      if(b._lig) return; b._lig=1;
+      b.onclick=function(ev){ try{ev.stopPropagation();}catch(err){} abrirFuera(b.getAttribute('data-url')); };
+    });
+  }
+  function filaAccesos(id){
+    return '<div class="hcm-acc" id="'+id+'">'+
+      '<button class="hcm-acc-b" data-url="'+e(EFA_URL)+'"><span class="hcm-acc-ic">🌎</span>'+
+        '<span class="hcm-acc-tx"><b>Inglés general</b><small>English For All</small></span></button>'+
+      '<button class="hcm-acc-b" data-url="'+e(ACT_URL)+'"><span class="hcm-acc-ic">🧩</span>'+
+        '<span class="hcm-acc-tx"><b>Actividades</b><small>Las de cada clase</small></span></button>'+
+    '</div>';
+  }
+
+  /* ── dónde se ponen: se revisa la pantalla cada vez que cambia ── */
+  function refrescar(){
+    var app=document.getElementById('app'); if(!app) return;
+    // 1. pantalla del estudio (la que abre la app), arriba, debajo del título
+    var ehs=app.querySelector('.eh .eh-s');
+    if(ehs && !document.getElementById('hcm-acc-eh')){ ehs.insertAdjacentHTML('afterend', filaAccesos('hcm-acc-eh')); ligar(document.getElementById('hcm-acc-eh')); }
+    // 2. lista de temas, arriba
+    var cab=app.querySelector('.hcm-mapa-cab');
+    if(cab && !document.getElementById('hcm-acc-tm')){ cab.insertAdjacentHTML('beforeend', filaAccesos('hcm-acc-tm')); ligar(document.getElementById('hcm-acc-tm')); }
+    // 3. dentro de cada lección abierta, después de sus ejercicios
+    app.querySelectorAll('.tm-card.ab').forEach(function(card){
+      var n=+card.getAttribute('data-n'), cuerpo=card.querySelector('.tm-cuerpo');
+      if(!cuerpo || !cuerpo.querySelector('.tm-todo')) return;       // todavía cargando, o es un examen
+      var ya=cuerpo.querySelector('.hcm-act'), nuevo=bloqueLeccion(n);
+      if(ya && ya.outerHTML.length===nuevo.length) return;
+      if(ya) ya.remove();
+      if(nuevo){
+        // arriba, antes de los ejercicios, para que se vea sin bajar
+        var ancla=cuerpo.querySelector('.tm-fase');
+        if(ancla) ancla.insertAdjacentHTML('beforebegin', nuevo); else cuerpo.insertAdjacentHTML('beforeend', nuevo);
+        ligar(cuerpo.querySelector('.hcm-act'));
+      }
+    });
+    // 4. Más / Ajustes
+    var hoy=document.getElementById('hcm-hoy');
+    if(hoy && !document.getElementById('hcm-acc-menu')){ hoy.insertAdjacentHTML('afterend', filaAccesos('hcm-acc-menu')); ligar(document.getElementById('hcm-acc-menu')); }
+    var ml=app.querySelector('.maslista, .mas-lista');
+    if(ml && !ml.querySelector('[data-m="efa"]')){
+      ml.insertAdjacentHTML('afterbegin',
+        '<button class="masb" data-m="efa" data-url="'+e(EFA_URL)+'"><span class="mas-ic">🌎</span><span class="mas-tx"><b>Inglés general</b><small>English For All</small></span><span class="mas-fl">↗</span></button>'+
+        '<button class="masb" data-m="act" data-url="'+e(ACT_URL)+'"><span class="mas-ic">🧩</span><span class="mas-tx"><b>Actividades</b><small>Las de cada clase</small></span><span class="mas-fl">↗</span></button>');
+      ligar(ml);
+    }
+  }
+  var pend=false;
+  function pronto(){ if(pend) return; pend=true; setTimeout(function(){ pend=false; try{ refrescar(); }catch(err){} }, 60); }
+  try{
+    var obs=new MutationObserver(pronto);
+    var arrancar=function(){ var app=document.getElementById('app'); if(app){ obs.observe(app,{childList:true,subtree:true}); pronto(); } else setTimeout(arrancar,500); };
+    arrancar();
+  }catch(err){}
+
+  /* 5. al cerrar una lección, la actividad de ese tema */
+  if(typeof cierre === 'function'){
+    var cierreBase2 = cierre;
+    cierre = function(){
+      var n=0; try{ n=(hcmLoad().perfil||{}).parada||0; }catch(err){}
+      var r=cierreBase2.apply(this, arguments);
+      try{
+        var b=bloqueLeccion(n), caja=document.getElementById('extra') || document.getElementById('app');
+        if(b && caja && !document.getElementById('hcm-act-fin')){
+          var d=document.createElement('div'); d.className='card'; d.id='hcm-act-fin'; d.style.marginTop='12px';
+          d.innerHTML=b; caja.appendChild(d); ligar(d);
+        }
+      }catch(err){}
+      return r;
+    };
+  }
+
+  try{
+    var st=document.createElement('style');
+    st.textContent=
+      '.hcm-acc{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 4px}'+
+      '.hcm-acc-b{display:flex;align-items:center;gap:8px;min-width:0;padding:10px 11px;border-radius:14px;border:1px solid rgba(143,115,32,.35);'+
+        'background:rgba(143,115,32,.08);color:inherit;font:inherit;text-align:left;cursor:pointer}'+
+      '.hcm-acc-ic{font-size:22px;flex:none}.hcm-acc-tx{display:flex;flex-direction:column;min-width:0}'+
+      '.hcm-acc-tx b{font-size:14px;line-height:1.2}.hcm-acc-tx small{font-size:11.5px;opacity:.7;line-height:1.2}'+
+      '.hcm-act{margin:12px 0 4px;padding:10px 10px 4px;border-radius:14px;background:rgba(143,115,32,.08);border:1px dashed rgba(143,115,32,.4)}'+
+      '.hcm-act-k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--oro,#8F7320);margin:0 2px 8px}'+
+      '.hcm-act-b{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin:0 0 6px;padding:10px 12px;border-radius:12px;'+
+        'border:1px solid rgba(0,0,0,.12);background:rgba(255,255,255,.7);color:inherit;font:inherit;font-size:13.5px;text-align:left;cursor:pointer}'+
+      '.hcm-act-b i{font-style:normal;opacity:.6}.hcm-act-no{font-size:13px;opacity:.75;margin:0 2px 8px;line-height:1.4}';
+    document.head.appendChild(st);
+  }catch(err){}
+
+  setTimeout(leerSitio, 1200);
+  try{ window.__hcmAccesos={lista:lista, deParada:deParada, bloque:bloqueLeccion, efa:EFA_URL, actividades:ACT_URL}; }catch(err){}
+})();
+
 /* PRESENTE_PERFECTO_HCM ══════════════════════════════════════════════
    El presente perfecto no es una de las 19 paradas del ALC, así que no
    se mete al mapa ni mueve las fechas de los exámenes: vive aparte, en
