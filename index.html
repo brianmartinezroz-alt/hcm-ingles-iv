@@ -14324,6 +14324,7 @@ function hcmTutorial(){
       fr.title=titulo||''; fr.setAttribute('allowfullscreen','');
       fr.setAttribute('allow','microphone; camera; autoplay; clipboard-write; fullscreen; speaker-selection');
       fr.addEventListener('load',function(){ fr.setAttribute('data-listo','1'); if(fr.classList.contains('on')) VISOR.classList.add('listo'); });
+      if(clave==='act') fr.addEventListener('load',function(){ actividadAbierta(fr); });
       caja.appendChild(fr);
     }
     caja.querySelectorAll('iframe').forEach(function(x){ x.classList.toggle('on', x===fr); });
@@ -14332,6 +14333,49 @@ function hcmTutorial(){
     VISOR.querySelector('.hcm-vis-cargando').textContent = 'Cargando '+(clave==='efa'?'English For All':clave==='juego'?'el juego':'las actividades')+'…';
     VISOR.classList.add('on'); document.documentElement.classList.add('hcm-vis-abierto');
     try{ history.pushState({hcmVisor:1},''); }catch(err){}
+  }
+  /* ── registro de actividades (Brian, 20 nov): cuando el cadete entra a una
+        actividad desde la app, el servidor te avisa por Telegram que entró y
+        que le tocan 2 firmas, y la anota en la pestaña "Actividades". Mientras
+        siga adentro, cada 20 s se avisa que sigue ahí (para el panel en vivo).
+        El sitio es del mismo dominio que la app, así que se puede ver en qué
+        página va dentro del marco. ── */
+  var ACT_VIVA=null, ACT_RELOJ=null;
+  function datosActividad(){
+    if(!ACT_VIVA) return null;
+    var Pf={}; try{ Pf=hcmLoad().perfil||{}; }catch(err){}
+    if(!Pf.nombre) return null;
+    return {accion:'latido', nombre:Pf.nombre, grupo:Pf.grupo||'',
+            leccion:ACT_VIVA.parada||'', titulo:'Actividad · '+ACT_VIVA.titulo,
+            titulo_actividad:ACT_VIVA.titulo, paso:'actividad',
+            reactivo:ACT_VIVA.archivo, actividad:ACT_VIVA.archivo};
+  }
+  function latidoActividad(){
+    var d=datosActividad(); if(!d) return;
+    try{ if(typeof HCM_DATOS_ENDPOINT==='undefined' || !HCM_DATOS_ENDPOINT) return; }catch(err){ return; }
+    try{ fetch(HCM_DATOS_ENDPOINT,{method:'POST',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},
+           body:JSON.stringify(d)}).catch(function(){}); }catch(err){}
+  }
+  function pararActividad(){ if(ACT_RELOJ){ clearInterval(ACT_RELOJ); ACT_RELOJ=null; } ACT_VIVA=null; }
+  function actividadAbierta(fr){
+    var ruta=''; try{ ruta=fr.contentWindow.location.pathname||''; }catch(err){ return; }
+    var m=ruta.match(/\/((?:clase|leccion)-[\w-]+\.html)$/i);
+    if(!m){ pararActividad(); return; }
+    var archivo=m[1];
+    if(ACT_VIVA && ACT_VIVA.archivo===archivo) return;
+    var tit='', par='';
+    try{
+      var L=lista(); Object.keys(L).forEach(function(k){ (L[k]||[]).forEach(function(x){ if(x[0]===archivo){ tit=x[2]; par=k; } }); });
+    }catch(err){}
+    if(!tit){ try{ tit=String(fr.contentDocument.title||'').trim(); }catch(err){} }
+    pararActividad();
+    ACT_VIVA={archivo:archivo, titulo:(tit||archivo).slice(0,150), parada:par};
+    latidoActividad();
+    ACT_RELOJ=setInterval(function(){
+      if(!VISOR || !VISOR.classList.contains('on')) return;          // la ventana cerrada no cuenta
+      var f=VISOR.querySelector('iframe[data-k="act"]'); if(!f || !f.classList.contains('on')) return;
+      latidoActividad();
+    },20000);
   }
   function cerrarDentro(desdeBoton){
     if(!VISOR || !VISOR.classList.contains('on')) return;
@@ -14345,8 +14389,8 @@ function hcmTutorial(){
       // el cadete ya se registró aquí: EFA recibe su nombre y su grupo y no lo vuelve a registrar
       // (va después del #, así no viaja a ningún servidor)
       var Pf={}; try{ Pf=hcmLoad().perfil||{}; }catch(err){}
-      var nom=String(Pf.nombre||'').trim(), gr=String(Pf.grupo||'').trim();
-      var dest = nom ? u+'#hcm=1&n='+encodeURIComponent(nom)+'&g='+encodeURIComponent(gr) : u;
+      var nom=String(Pf.nombre||'').trim(), gr=String(Pf.grupo||'').trim(), ca=String(Pf.carril||'medio');
+      var dest = nom ? u+'#hcm=1&n='+encodeURIComponent(nom)+'&g='+encodeURIComponent(gr)+'&c='+encodeURIComponent(ca) : u;
       return abrirDentro(dest,'Inglés general','efa');
     }
     if(u===ACT_URL) return abrirDentro(ACT_BASE,'Actividades','act');
