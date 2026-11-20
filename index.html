@@ -14271,11 +14271,47 @@ function hcmTutorial(){
     }
     return h+'</div>';
   }
+  /* ── EFA vive dentro de la app (Brian, 20 nov): se abre en una pantalla
+        completa con su propia barra para regresar; no sale a otra pestaña.
+        El marco se queda vivo al cerrar, así al volver sigue donde iba. ── */
+  var VISOR=null;
+  function abrirDentro(url, titulo){
+    try{ if(typeof callarTodo==='function') callarTodo(); }catch(err){}
+    if(!VISOR){
+      VISOR=document.createElement('div'); VISOR.id='hcm-visor';
+      VISOR.innerHTML='<div class="hcm-vis-bar"><button class="hcm-vis-x" type="button">‹ Regresar</button>'+
+        '<span class="hcm-vis-t"></span><span class="hcm-vis-ic">'+icoEFA('hcm-vis-logo')+'</span></div>'+
+        '<div class="hcm-vis-cargando">Cargando English For All…</div>'+
+        '<iframe class="hcm-vis-f" title="English For All" allow="microphone; camera; autoplay; clipboard-write; fullscreen; speaker-selection" allowfullscreen></iframe>';
+      document.body.appendChild(VISOR);
+      VISOR.querySelector('.hcm-vis-x').onclick=function(){ cerrarDentro(true); };
+      var fr=VISOR.querySelector('iframe');
+      fr.addEventListener('load',function(){ VISOR.classList.add('listo'); });
+    }
+    VISOR.querySelector('.hcm-vis-t').textContent=titulo||'Inglés general';
+    var fr2=VISOR.querySelector('iframe');
+    if(fr2.getAttribute('data-u')!==url){ VISOR.classList.remove('listo'); fr2.setAttribute('data-u',url); fr2.src=url; }
+    VISOR.classList.add('on'); document.documentElement.classList.add('hcm-vis-abierto');
+    try{ history.pushState({hcmVisor:1},''); }catch(err){}
+  }
+  function cerrarDentro(desdeBoton){
+    if(!VISOR || !VISOR.classList.contains('on')) return;
+    VISOR.classList.remove('on'); document.documentElement.classList.remove('hcm-vis-abierto');
+    if(desdeBoton){ try{ if(history.state && history.state.hcmVisor) history.back(); }catch(err){} }
+  }
+  // el botón "atrás" del celular cierra EFA y regresa a la app
+  try{ window.addEventListener('popstate',function(){ cerrarDentro(false); }); }catch(err){}
+  try{ window.__hcmAbrirEFA=function(){ abrirDentro(EFA_URL,'Inglés general'); }; }catch(err){}
+
   function ligar(raiz){
     if(!raiz) return;
     raiz.querySelectorAll('[data-url]').forEach(function(b){
       if(b._lig) return; b._lig=1;
-      b.onclick=function(ev){ try{ev.stopPropagation();}catch(err){} abrirFuera(b.getAttribute('data-url')); };
+      b.onclick=function(ev){
+        try{ev.stopPropagation();}catch(err){}
+        var u=b.getAttribute('data-url');
+        if(u===EFA_URL) abrirDentro(u,'Inglés general'); else abrirFuera(u);
+      };
     });
   }
   function filaAccesos(id){
@@ -14317,7 +14353,7 @@ function hcmTutorial(){
     var ml=app.querySelector('.maslista, .mas-lista');
     if(ml && !ml.querySelector('[data-m="efa"]')){
       ml.insertAdjacentHTML('afterbegin',
-        '<button class="masb" data-m="efa" data-url="'+e(EFA_URL)+'"><span class="mas-ic">'+icoEFA('hcm-mas-ic')+'</span><span class="mas-tx"><b>Inglés general</b><small>English For All</small></span><span class="mas-fl">↗</span></button>'+
+        '<button class="masb" data-m="efa" data-url="'+e(EFA_URL)+'"><span class="mas-ic">'+icoEFA('hcm-mas-ic')+'</span><span class="mas-tx"><b>Inglés general</b><small>English For All</small></span><span class="mas-fl">›</span></button>'+
         '<button class="masb" data-m="act" data-url="'+e(ACT_URL)+'"><span class="mas-ic">'+icoLibro('hcm-mas-ic')+'</span><span class="mas-tx"><b>Actividades</b><small>Las de cada clase</small></span><span class="mas-fl">↗</span></button>');
       ligar(ml);
     }
@@ -14355,7 +14391,7 @@ function hcmTutorial(){
           '<button class="hcm-op" id="hcm-op-curso"><span class="hcm-op-ic">'+escChico+'</span>'+
             '<span class="hcm-op-tx"><b>Inglés IV</b><small>Las lecciones del curso · '+hechas+' de '+tot+'</small></span><span class="hcm-op-fl">›</span></button>'+
           '<button class="hcm-op" data-url="'+e(EFA_URL)+'">'+icoEFA('hcm-op-ic')+
-            '<span class="hcm-op-tx"><b>Inglés general</b><small>English For All</small></span><span class="hcm-op-fl">↗</span></button>'+
+            '<span class="hcm-op-tx"><b>Inglés general</b><small>English For All</small></span><span class="hcm-op-fl">›</span></button>'+
           '<button class="hcm-op" data-url="'+e(ACT_URL)+'">'+icoLibro('hcm-op-ic')+
             '<span class="hcm-op-tx"><b>Actividades</b><small>Las de cada clase</small></span><span class="hcm-op-fl">↗</span></button>'+
         '</div>'+
@@ -14391,6 +14427,17 @@ function hcmTutorial(){
     var st=document.createElement('style');
     st.textContent=
       '.hcm-ico-efa{display:block;object-fit:cover;border-radius:22%}'+
+      '#hcm-visor{position:fixed;inset:0;z-index:2147483000;display:none;flex-direction:column;background:#0E0C0A}'+
+      '#hcm-visor.on{display:flex}'+
+      '.hcm-vis-bar{flex:none;display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px;background:#1A1A1A;border-bottom:1.5px solid #C9A84C;color:#FDFBF6}'+
+      '.hcm-vis-x{flex:none;padding:8px 14px;border-radius:999px;border:1.5px solid #C9A84C;background:transparent;color:#F3E3A8;font:inherit;font-size:15px;font-weight:700;cursor:pointer}'+
+      '.hcm-vis-x:active{transform:scale(.97)}'+
+      '.hcm-vis-t{flex:1;min-width:0;font-family:var(--display,serif);font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+      '.hcm-vis-logo{width:30px;height:30px}'+
+      '.hcm-vis-cargando{position:absolute;z-index:2;left:0;right:0;top:45%;text-align:center;color:#C9A84C;font-size:15px;pointer-events:none}'+
+      '#hcm-visor.listo .hcm-vis-cargando{display:none}'+
+      '.hcm-vis-f{flex:1;width:100%;border:0;background:#0E0C0A;position:relative;z-index:1}'+
+      'html.hcm-vis-abierto,html.hcm-vis-abierto body{overflow:hidden}'+
       '.hcm-ico-libro{display:flex;align-items:center;justify-content:center;background:#1A1A1A;border:1.5px solid #C9A84C;border-radius:22%;padding:0;box-sizing:border-box;overflow:hidden}'+
       '.hcm-ico-libro svg{width:72%;height:72%;flex:none;display:block}'+
       '.hcm-acc-ic{width:30px;height:30px;flex:none}'+
