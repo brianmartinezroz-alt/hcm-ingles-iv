@@ -1626,9 +1626,10 @@ if('serviceWorker' in navigator){
   <nav class="cajon" id="cajon" aria-label="Menú"></nav>
   <div class="wrapc" id="app"></div>
   <nav class="barrabaja" id="barrabaja" aria-label="Secciones" style="display:none">
-    <button class="tabb on" data-t="mapa"><span class="ic">🗺</span>Mapa</button>
-    <button class="tabb" data-t="avance"><span class="ic">📊</span>Avance</button>
-    <button class="tabb maestro" data-t="maestro"><span class="fotomaestro" id="fotomaestro">🎖️</span>Maestro</button>
+    <button class="tabb on" data-t="mapa"><span class="ic">🏠</span>Inicio</button>
+    <button class="tabb" data-t="temas"><span class="ic">📚</span>Lecciones</button>
+    <button class="tabb" data-t="avance"><span class="ic">📊</span>Mi avance</button>
+    <button class="tabb maestro" data-t="maestro" style="display:none" aria-hidden="true"><span class="fotomaestro" id="fotomaestro">🎖️</span>Maestro</button>
     <button class="tabb" data-t="mas"><span class="ic">☰</span>Más</button>
   </nav>
   <button class="ayudafab" id="btnayuda" aria-label="Pedir ayuda" title="¿Qué hago?">?</button>
@@ -12799,6 +12800,7 @@ document.addEventListener('DOMContentLoaded',function(){
     var b=e.target.closest('[data-t]');if(!b)return;
     var t=b.dataset.t;
     if(t==='mapa')mostrarMapa();
+    else if(t==='temas'){try{ if(window.__hcmVerTemas) window.__hcmVerTemas(); else mostrarMapa(); }catch(e){console.error(e);}}
     else if(t==='maestro'){hcmPanelMaestro();}
     else if(t==='avance'){try{hcmAvance();}catch(e){console.error(e);}}
     else if(t==='mas'){try{menu();}catch(e){console.error(e);}}
@@ -13176,21 +13178,19 @@ document.addEventListener('DOMContentLoaded', function(){
 function pasosTutor(){
   return [
     {donde:null, titulo:'Esto es todo tu curso',
-     txt:'Diecisiete lecciones y los dos parciales. No hay que acabarlo hoy ni esta semana: es para todo el ciclo.'},
-    {donde:'.hcm-parada.sugerida', titulo:'Ésta es la que te toca',
-     txt:'Va marcada para que no tengas que pensarlo. Pero todas están abiertas: si quieres entrar a la última, entras.'},
-    {donde:'.hcm-parada.sugerida', titulo:'Tú dices cuánto tiempo traes',
-     txt:'Al tocar una lección te pregunta: un rato de cinco minutos, la lección completa de veinte, o una sesión larga de fin de semana.'},
-    {donde:'#hcm-bt-ritmo', titulo:'Y cada cuándo entras',
-     txt:'Diario, unos días, o solo los fines de semana. Si faltas una semana no pasa nada: retomas donde ibas.'},
+     txt:'Aquí están todas las lecciones y los parciales. No hay que acabarlo hoy: es para todo el ciclo.'},
+    {donde:(document.querySelector('.tm-card.enclase')?'.tm-card.enclase .tm-cab':'.tm-card.toca .tm-cab'), titulo:'Ésta es la de esta semana',
+     txt:'Va marcada y ya abierta. Toca un ejercicio y empiezas ahí, o el botón de abajo para hacer la lección completa.'},
     {donde:'#hcm-bt-carril', titulo:'Tu nivel, ajustable',
-     txt:'Si una lección se te hace fácil, súbete de nivel aquí. Si te está costando, bájate. No afecta tu calificación.'},
-    {donde:'#btnayuda', titulo:'Éste es tu maestro',
-     txt:'Pregúntale lo que sea, en español o en inglés, desde cualquier pantalla. Y si te queda sin señal, te da la regla de la lección completa.'},
-    {donde:'[data-t="avance"]', titulo:'Tu avance',
-     txt:'Aquí ves cuántas lecciones llevas cerradas y qué frases se te atoran.'},
-    {donde:'[data-t="maestro"]', titulo:'Y el profe',
-     txt:'Por aquí le escribes al profesor Brian si algo no se entiende. Contesta una persona, no la máquina.'}
+     txt:'Si se te hace fácil, súbete de nivel aquí. Si te cuesta, bájate. No afecta tu calificación.'},
+    {donde:'#btnayuda', titulo:'¿Te atoraste?',
+     txt:'Toca el signo de interrogación desde cualquier pantalla y pregunta lo que sea, en español o en inglés.'},
+    {donde:'[data-t="mapa"]', titulo:'Inicio',
+     txt:'Desde aquí eliges: Inglés IV, Inglés general (English For All) o las Actividades de cada clase.'},
+    {donde:'[data-t="avance"]', titulo:'Mi avance',
+     txt:'Cuántas lecciones llevas y cómo vas.'},
+    {donde:'[data-t="mas"]', titulo:'Más',
+     txt:'Juegos de repaso, tus constancias, la voz y el sonido, y salir de tu cuenta.'}
   ];
 }
 
@@ -14259,11 +14259,12 @@ function hcmTutorial(){
   function bloqueLeccion(n){
     var L=(typeof LECCIONES_HCM!=='undefined')?LECCIONES_HCM[n]:null;
     if(!L || L.examen) return '';
-    var xs=deParada(n), h='<div class="hcm-act" data-act="'+n+'" data-sig="'+e(firma(n))+'">'+
+    var xs=deParada(n); if(!xs.length) return '';
+    var h='<div class="hcm-act" data-act="'+n+'" data-sig="'+e(firma(n))+'">'+
       '<div class="hcm-act-k">'+icoLibro('hcm-act-ic')+'Actividades de este tema</div>';
     if(xs.length){
       h+=xs.map(function(x){
-        return '<button class="hcm-act-b" data-url="'+e(ACT_BASE+x[0])+'"><span>'+e(corto(x[2]))+'</span><i>↗</i></button>';
+        return '<button class="hcm-act-b" data-url="'+e(ACT_BASE+x[0])+'"><span>'+e(corto(x[2]))+'</span><i>›</i></button>';
       }).join('');
     }else{
       h+='<p class="hcm-act-no">Este tema todavía no tiene actividad en el sitio. Aquí aparecerá en cuanto la suba tu teacher.</p>'+
@@ -14275,22 +14276,31 @@ function hcmTutorial(){
         completa con su propia barra para regresar; no sale a otra pestaña.
         El marco se queda vivo al cerrar, así al volver sigue donde iba. ── */
   var VISOR=null;
-  function abrirDentro(url, titulo){
+  function abrirDentro(url, titulo, clave){
+    clave=clave||'efa';
     try{ if(typeof callarTodo==='function') callarTodo(); }catch(err){}
     if(!VISOR){
       VISOR=document.createElement('div'); VISOR.id='hcm-visor';
       VISOR.innerHTML='<div class="hcm-vis-bar"><button class="hcm-vis-x" type="button">‹ Regresar</button>'+
-        '<span class="hcm-vis-t"></span><span class="hcm-vis-ic">'+icoEFA('hcm-vis-logo')+'</span></div>'+
-        '<div class="hcm-vis-cargando">Cargando English For All…</div>'+
-        '<iframe class="hcm-vis-f" title="English For All" allow="microphone; camera; autoplay; clipboard-write; fullscreen; speaker-selection" allowfullscreen></iframe>';
+        '<span class="hcm-vis-t"></span><span class="hcm-vis-ic"></span></div>'+
+        '<div class="hcm-vis-cargando">Cargando…</div><div class="hcm-vis-marcos"></div>';
       document.body.appendChild(VISOR);
       VISOR.querySelector('.hcm-vis-x').onclick=function(){ cerrarDentro(true); };
-      var fr=VISOR.querySelector('iframe');
-      fr.addEventListener('load',function(){ VISOR.classList.add('listo'); });
     }
-    VISOR.querySelector('.hcm-vis-t').textContent=titulo||'Inglés general';
-    var fr2=VISOR.querySelector('iframe');
-    if(fr2.getAttribute('data-u')!==url){ VISOR.classList.remove('listo'); fr2.setAttribute('data-u',url); fr2.src=url; }
+    VISOR.querySelector('.hcm-vis-t').textContent=titulo||'';
+    VISOR.querySelector('.hcm-vis-ic').innerHTML = clave==='efa' ? icoEFA('hcm-vis-logo') : icoLibro('hcm-vis-logo');
+    var caja=VISOR.querySelector('.hcm-vis-marcos'), fr=caja.querySelector('iframe[data-k="'+clave+'"]');
+    if(!fr){
+      fr=document.createElement('iframe'); fr.className='hcm-vis-f'; fr.setAttribute('data-k',clave);
+      fr.title=titulo||''; fr.setAttribute('allowfullscreen','');
+      fr.setAttribute('allow','microphone; camera; autoplay; clipboard-write; fullscreen; speaker-selection');
+      fr.addEventListener('load',function(){ fr.setAttribute('data-listo','1'); if(fr.classList.contains('on')) VISOR.classList.add('listo'); });
+      caja.appendChild(fr);
+    }
+    caja.querySelectorAll('iframe').forEach(function(x){ x.classList.toggle('on', x===fr); });
+    if(fr.getAttribute('data-u')!==url){ fr.removeAttribute('data-listo'); fr.setAttribute('data-u',url); fr.src=url; }
+    VISOR.classList.toggle('listo', !!fr.getAttribute('data-listo'));
+    VISOR.querySelector('.hcm-vis-cargando').textContent = 'Cargando '+(clave==='efa'?'English For All':'las actividades')+'…';
     VISOR.classList.add('on'); document.documentElement.classList.add('hcm-vis-abierto');
     try{ history.pushState({hcmVisor:1},''); }catch(err){}
   }
@@ -14299,9 +14309,26 @@ function hcmTutorial(){
     VISOR.classList.remove('on'); document.documentElement.classList.remove('hcm-vis-abierto');
     if(desdeBoton){ try{ if(history.state && history.state.hcmVisor) history.back(); }catch(err){} }
   }
-  // el botón "atrás" del celular cierra EFA y regresa a la app
+  // el botón "atrás" del celular cierra la ventana y regresa a la app
   try{ window.addEventListener('popstate',function(){ cerrarDentro(false); }); }catch(err){}
-  try{ window.__hcmAbrirEFA=function(){ abrirDentro(EFA_URL,'Inglés general'); }; }catch(err){}
+  function abrirURL(u){
+    if(u===EFA_URL) return abrirDentro(u,'Inglés general','efa');
+    if(u===ACT_URL) return abrirDentro(ACT_BASE,'Actividades','act');
+    if(u.indexOf(ACT_BASE)===0) return abrirDentro(u,'Actividades','act');
+    abrirFuera(u);
+  }
+  try{ window.__hcmAbrirEFA=function(){ abrirURL(EFA_URL); }; window.__hcmAbrirAct=function(){ abrirURL(ACT_URL); }; }catch(err){}
+
+  /* ── la lección que van viendo en clase: la de la actividad más reciente del sitio ── */
+  function enClase(){
+    var hoy=new Date(), d=hoy.getFullYear()+'-'+('0'+(hoy.getMonth()+1)).slice(-2)+'-'+('0'+hoy.getDate()).slice(-2);
+    var L=lista(), mejor='', n=0;
+    Object.keys(L).forEach(function(k){
+      (L[k]||[]).forEach(function(x){ var f=x[1]||''; if(f && f<=d && f>=mejor){ mejor=f; n=+k; } });
+    });
+    return n;
+  }
+  try{ window.__hcmEnClase=enClase; }catch(err){}
 
   function ligar(raiz){
     if(!raiz) return;
@@ -14309,8 +14336,7 @@ function hcmTutorial(){
       if(b._lig) return; b._lig=1;
       b.onclick=function(ev){
         try{ev.stopPropagation();}catch(err){}
-        var u=b.getAttribute('data-url');
-        if(u===EFA_URL) abrirDentro(u,'Inglés general'); else abrirFuera(u);
+        abrirURL(b.getAttribute('data-url'));
       };
     });
   }
@@ -14347,17 +14373,67 @@ function hcmTutorial(){
         ligar(cuerpo.querySelector('.hcm-act'));
       }
     });
-    // 4. Más / Ajustes
-    var hoy=document.getElementById('hcm-hoy');
-    if(hoy && !document.getElementById('hcm-acc-menu')){ hoy.insertAdjacentHTML('afterend', filaAccesos('hcm-acc-menu')); ligar(document.getElementById('hcm-acc-menu')); }
+    // 4. Más / Ajustes: en grupos, cada opción con su icono y para qué sirve
+    ordenarMas(app);
+    // 5. la pestaña de abajo que corresponde a lo que se ve
+    try{
+      var tab = app.querySelector('.tm-lista') ? 'temas' : (app.querySelector('.hcm-ini') ? 'mapa' : null);
+      if(tab) document.querySelectorAll('.tabb').forEach(function(b){ b.classList.toggle('on', b.dataset.t===tab); });
+    }catch(err){}
     var ml=app.querySelector('.maslista, .mas-lista');
     if(ml && !ml.querySelector('[data-m="efa"]')){
       ml.insertAdjacentHTML('afterbegin',
         '<button class="masb" data-m="efa" data-url="'+e(EFA_URL)+'"><span class="mas-ic">'+icoEFA('hcm-mas-ic')+'</span><span class="mas-tx"><b>Inglés general</b><small>English For All</small></span><span class="mas-fl">›</span></button>'+
-        '<button class="masb" data-m="act" data-url="'+e(ACT_URL)+'"><span class="mas-ic">'+icoLibro('hcm-mas-ic')+'</span><span class="mas-tx"><b>Actividades</b><small>Las de cada clase</small></span><span class="mas-fl">↗</span></button>');
+        '<button class="masb" data-m="act" data-url="'+e(ACT_URL)+'"><span class="mas-ic">'+icoLibro('hcm-mas-ic')+'</span><span class="mas-tx"><b>Actividades</b><small>Las de cada clase</small></span><span class="mas-fl">›</span></button>');
       ligar(ml);
     }
   }
+  function ordenarMas(app){
+    var sal=app.querySelector('#hcm-sal'); if(!sal || app.querySelector('.hcm-mas')) return;
+    var card=sal.parentNode;
+    function fila(ic,t,sub,accion,cls){ return {ic:ic,t:t,sub:sub,a:accion,cls:cls||''}; }
+    function por(id){ var b=card.querySelector('#'+id); return b ? function(){ b.click(); } : null; }
+    var grupos=[
+      ['Practicar',[
+        fila('📖','Seguir donde me quedé','La siguiente lección que te falta',por('hcm-hoy')),
+        fila('🎮','Juegos de repaso','Repasa jugando',por('hcm-juegos')),
+        fila('🔁','Presente perfecto · verbos','Práctica de verbos',por('hcm-perfecto')),
+        fila(icoEFA('hcm-mas2-img'),'Inglés general','English For All, aquí mismo',function(){ abrirURL(EFA_URL); }),
+        fila(icoLibro('hcm-mas2-img'),'Actividades','Las de cada clase',function(){ abrirURL(ACT_URL); })
+      ]],
+      ['Mis logros',[
+        fila('🎖️','Mis constancias','Por parcial y por nivel',por('hcm-const')),
+        fila('🎚️','Cambiar mi nivel','Básico, intermedio o avanzado',por('hcm-niv'))
+      ]],
+      ['Sonido',[
+        fila('🗣️','Cambiar la voz','La voz que te lee en inglés',por('hcm-voz')),
+        fila('🔊','Probar el sonido','Si no oyes nada, empieza aquí',por('hcm-son'))
+      ]],
+      ['Cuenta',[
+        fila('🧑‍🏫','Panel del maestro','Solo para el profesor',function(){ try{ hcmPanelMaestro(); }catch(err){} }),
+        fila('🚪','Salir de mi cuenta','',por('hcm-sal'),'peligro')
+      ]]
+    ];
+    var div=document.createElement('div'); div.className='hcm-mas'; var acciones=[];
+    div.innerHTML=grupos.map(function(g){
+      var fs=g[1].filter(function(f){ return f.a; });
+      if(!fs.length) return '';
+      return '<div class="hcm-mas-g">'+e(g[0])+'</div><div class="hcm-mas-caja">'+fs.map(function(f){
+        acciones.push(f.a);
+        var ic = f.ic.charAt(0)==='<' ? f.ic : '<span class="hcm-mas2-em">'+f.ic+'</span>';
+        return '<button class="hcm-mas-f '+f.cls+'" data-i="'+(acciones.length-1)+'"><span class="hcm-mas-ic">'+ic+'</span>'+
+          '<span class="hcm-mas-tx"><b>'+e(f.t)+'</b>'+(f.sub?'<small>'+e(f.sub)+'</small>':'')+'</span><span class="hcm-mas-fl">›</span></button>';
+      }).join('')+'</div>';
+    }).join('');
+    // los botones de antes se quedan escondidos: las filas nuevas los tocan por dentro
+    Array.prototype.forEach.call(card.children, function(x){
+      if(x.classList.contains('qlbl')||x.classList.contains('qtxt')||x.classList.contains('qsub')||x.classList.contains('tiny')) return;
+      x.style.display='none';
+    });
+    var pie=card.querySelector('.tiny'); if(pie) card.insertBefore(div,pie); else card.appendChild(div);
+    div.querySelectorAll('.hcm-mas-f').forEach(function(b){ b.onclick=function(){ acciones[+b.dataset.i](); }; });
+  }
+
   var pend=false;
   function pronto(){ if(pend) return; pend=true; setTimeout(function(){ pend=false; try{ refrescar(); }catch(err){} }, 60); }
   try{
@@ -14379,6 +14455,7 @@ function hcmTutorial(){
     var Pf={}; try{ Pf=hcmLoad().perfil||{}; }catch(err){}
     var nom=String(Pf.nombre||'').trim().split(/\s+/)[0]||'cadete';
     var hechas=0, tot=19; try{ hechas=hcmCuantasHechas(); tot=PARADAS_HCM; }catch(err){}
+    var esc0=''; try{ var nc=enClase(), Lc=nc&&LECCIONES_HCM[nc]; if(Lc) esc0='<span class="hcm-op-clase">Esta semana: '+e(Lc.titulo)+'</span>'; }catch(err){}
     var escudo=''; try{ escudo=escudoHCM(88); }catch(err){}
     var escChico=''; try{ escChico=escudoHCM(56); }catch(err){}
     app.innerHTML=
@@ -14389,11 +14466,11 @@ function hcmTutorial(){
         '<div class="hcm-ini-s">Hola, '+e(nom)+(Pf.grupo?' · grupo '+e(Pf.grupo):'')+'</div>'+
         '<div class="hcm-ini-ops">'+
           '<button class="hcm-op" id="hcm-op-curso"><span class="hcm-op-ic">'+escChico+'</span>'+
-            '<span class="hcm-op-tx"><b>Inglés IV</b><small>Las lecciones del curso · '+hechas+' de '+tot+'</small></span><span class="hcm-op-fl">›</span></button>'+
+            '<span class="hcm-op-tx"><b>Inglés IV</b><small>Las lecciones del curso · '+hechas+' de '+tot+'</small>'+esc0+'</span><span class="hcm-op-fl">›</span></button>'+
           '<button class="hcm-op" data-url="'+e(EFA_URL)+'">'+icoEFA('hcm-op-ic')+
             '<span class="hcm-op-tx"><b>Inglés general</b><small>English For All</small></span><span class="hcm-op-fl">›</span></button>'+
           '<button class="hcm-op" data-url="'+e(ACT_URL)+'">'+icoLibro('hcm-op-ic')+
-            '<span class="hcm-op-tx"><b>Actividades</b><small>Las de cada clase</small></span><span class="hcm-op-fl">↗</span></button>'+
+            '<span class="hcm-op-tx"><b>Actividades</b><small>Las de cada clase</small></span><span class="hcm-op-fl">›</span></button>'+
         '</div>'+
         '<p class="hcm-ini-pie">Inglés IV · 3er año LAM · 2026–2027</p>'+
       '</div>';
@@ -14427,6 +14504,24 @@ function hcmTutorial(){
     var st=document.createElement('style');
     st.textContent=
       '.hcm-ico-efa{display:block;object-fit:cover;border-radius:22%}'+
+      '.hcm-vis-marcos{flex:1;display:flex;min-height:0}.hcm-vis-f{display:none}.hcm-vis-f.on{display:block}'+
+      '.hcm-op-clase{display:inline-block;align-self:flex-start;margin-top:7px;padding:4px 11px;border-radius:999px;background:#C9A84C;color:#1A1A1A !important;opacity:1 !important;font-size:12.5px;font-weight:700;line-height:1.3}'+
+      '.hcm-mas{margin-top:14px;text-align:left}'+
+      '.hcm-mas-g{font-family:var(--mono,monospace);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--oro,#8F7320);margin:16px 4px 6px}'+
+      '.hcm-mas-g:first-child{margin-top:4px}'+
+      '.hcm-mas-caja{border:1px solid var(--linea,#DDD5C4);border-radius:16px;overflow:hidden;background:var(--papel,#FDFBF6)}'+
+      '.hcm-mas-f{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;border:0;border-top:1px solid var(--linea,#E6DFCF);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}'+
+      '.hcm-mas-f:first-child{border-top:0}.hcm-mas-f:active{background:rgba(143,115,32,.08)}'+
+      '.hcm-mas-ic{flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center}'+
+      '.hcm-mas2-em{font-size:22px;line-height:1}.hcm-mas2-img{width:32px;height:32px}'+
+      '.hcm-mas-tx{flex:1;min-width:0;display:flex;flex-direction:column}'+
+      '.hcm-mas-tx b{font-size:15.5px;line-height:1.25}.hcm-mas-tx small{font-size:12.5px;opacity:.68;line-height:1.3}'+
+      '.hcm-mas-fl{flex:none;font-size:20px;opacity:.45}'+
+      '.hcm-mas-f.peligro b{color:#9B2C2C}'+
+      '.volver{display:inline-flex;align-items:center;font-family:inherit !important;font-size:14px !important;font-weight:600;letter-spacing:0 !important;text-transform:none !important;'+
+        'padding:6px 14px !important;border-radius:999px;border:1px solid var(--linea,#DDD5C4) !important;background:var(--papel,#FDFBF6) !important;color:var(--tinta,#2A2724) !important}'+
+      '#app{padding-bottom:150px !important}'+
+      '.tabb{font-size:11.5px}'+
       '#hcm-visor{position:fixed;inset:0;z-index:2147483000;display:none;flex-direction:column;background:#0E0C0A}'+
       '#hcm-visor.on{display:flex}'+
       '.hcm-vis-bar{flex:none;display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px;background:#1A1A1A;border-bottom:1.5px solid #C9A84C;color:#FDFBF6}'+
@@ -15194,6 +15289,7 @@ function hcmTutorial(){
     var nom=(Pf.nombre||'Cadete').split(' ')[0];
     var carril=Pf.carril||'medio';
     var h=hcmHechas(), hechas=hcmCuantasHechas(), sug=hcmSugerida();
+    var EN_CLASE=0; try{ EN_CLASE=(window.__hcmEnClase&&window.__hcmEnClase())||0; }catch(e){}
     var pct=Math.round((hechas/PARADAS_HCM)*100);
     var chips={bajo:'🟡 Básico',medio:'🟠 Intermedio',alto:'🔴 Avanzado'};
 
@@ -15201,15 +15297,17 @@ function hcmTutorial(){
     for(var i=1;i<=PARADAS_HCM;i++){
       var lec=LECCIONES_HCM[i]; if(!lec) continue;
       var esEx=!!lec.examen;
-      var cls='tm-card', eti='Lección '+i+' · '+lec.fecha, ic=String(i);
+      var cls='tm-card', eti='Lección '+i, ic=String(i);
       if(esEx){ cls+=' examen'; eti=lec.fecha; ic='⚑'; }
       else if(h[i]){ cls+=' hecha'; ic='✓'; }
       else if(i===sug){ cls+=' toca'; }
+      if(i===EN_CLASE && !esEx) cls+=' enclase';
       rows+='<div class="'+cls+'" data-n="'+i+'">'+
         '<button class="tm-cab" data-ab="'+i+'">'+
           '<span class="tm-ic">'+ic+'</span>'+
           '<span class="tm-tx">'+
-            '<span class="tm-eti">'+esc(eti)+(i===sug&&!esEx?' · te toca':'')+'</span>'+
+            (i===EN_CLASE&&!esEx?'<span class="tm-enclase">En clase esta semana</span>':'')+
+            '<span class="tm-eti">'+esc(eti)+(i===sug&&!esEx&&i!==EN_CLASE?' · te toca':'')+'</span>'+
             '<b>'+esc(lec.titulo)+'</b>'+
             '<span class="tm-sub">'+esc(lec.sub)+'</span>'+
           '</span>'+
@@ -15241,8 +15339,9 @@ function hcmTutorial(){
     try{ if(!Pf.tutorHCM) setTimeout(hcmTutorial,700); }catch(e){}
 
     /* se vuelve a abrir la que estaba abierta, o la que le toca */
-    var abrir = (ABIERTA && LECCIONES_HCM[ABIERTA]) ? ABIERTA : sug;
-    if(abrir) setTimeout(function(){ alternar(abrir,true); },120);
+    var abrir = (ABIERTA && LECCIONES_HCM[ABIERTA]) ? ABIERTA : (EN_CLASE || sug);
+    var bajar = !(ABIERTA && LECCIONES_HCM[ABIERTA]) && abrir===EN_CLASE && EN_CLASE>1;
+    if(abrir) setTimeout(function(){ alternar(abrir,!bajar); },120);
   }
 
   function alternar(n,sinScroll){
@@ -15298,6 +15397,8 @@ function hcmTutorial(){
     '.tm-card{background:var(--tarjeta,#fffdf7);border:1px solid var(--tenue,#e4ded0);'+
       'border-radius:16px;margin-bottom:10px;overflow:hidden;transition:border-color .15s}'+
     '.tm-card.toca{border-color:var(--oro,#b99a4b);box-shadow:0 2px 10px rgba(185,154,75,.14)}'+
+    '.tm-card.enclase{border:2px solid var(--oro,#b99a4b);box-shadow:0 4px 16px rgba(185,154,75,.22)}'+
+    '.tm-enclase{display:inline-block;margin:0 0 4px;padding:2px 9px;border-radius:999px;background:#1A1A1A;color:#F3E3A8;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}'+
     '.tm-card.ab{border-color:var(--oro,#b99a4b)}'+
     '.tm-card.hecha .tm-ic{background:var(--verde,#3f7d52);color:#fff;border-color:transparent}'+
     '.tm-card.examen .tm-ic{background:#7a2b2b;color:#fff;border-color:transparent}'+
