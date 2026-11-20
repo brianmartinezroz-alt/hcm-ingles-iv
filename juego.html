@@ -13530,6 +13530,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
   SHOT_TRAIL.rapid = "#FF5A1F";
   BOOM_COLS.rapid = ["#FF3D1F", "#FFD21A", "#FFFFFF"];
   const TKX_NUKE_EVERY = 240;
+  const TKX_NUKE_OFF = true;
   const RP_END = 380;
   const BD_NAMES = { hcm: "Campus HCM", plaza: "Plaza de honor HCM", puerta: "Puerta de Honor HCM", cdmx: "CDMX \xB7 Reforma", centro: "CDMX \xB7 Centro", nature: "Bosque" };
   const SEASON_ES = { spring: "Primavera", summer: "Verano", autumn: "Oto\xF1o", winter: "Invierno" };
@@ -13553,7 +13554,9 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
     const now = performance.now(), dt = tk._tt ? Math.min(0.25, (now - tk._tt) / 1e3) : 0;
     tk._tt = now;
     if (game.nukeLeft == null) game.nukeLeft = TKX_NUKE_EVERY;
-    if (game.phase !== "over" && !tk.nukeEv && !tk.replay) {
+    // Brian (20 nov): fuera la nuke con reloj en medio de la pantalla
+    if (TKX_NUKE_OFF) game.nukeLeft = TKX_NUKE_EVERY;
+    if (!TKX_NUKE_OFF && game.phase !== "over" && !tk.nukeEv && !tk.replay) {
       game.nukeLeft -= dt;
       const s = Math.ceil(game.nukeLeft);
       if (s !== tk._ns) {
@@ -13561,7 +13564,7 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
         if (s <= 10 && s > 0) beep(s <= 3 ? 1400 : 900, 0.08);
       }
     }
-    if (game.nukeLeft <= 0 && !tk.nukeEv && game.phase === "question" && $("#overlay").hidden && !tk.replay && !tk.pov) tkxNukeAll();
+    if (!TKX_NUKE_OFF && game.nukeLeft <= 0 && !tk.nukeEv && game.phase === "question" && $("#overlay").hidden && !tk.replay && !tk.pov) tkxNukeAll();
     tkxClockEl();
     if (tk.frame % 30 === 0) {
       try {
@@ -13595,15 +13598,19 @@ var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
       el.className = "tknuket";
       $("#vTank").appendChild(el);
     }
-    const on = game && game.mode === "tanks" && game.phase !== "over" && !tk.replay;
+    const on = !TKX_NUKE_OFF && game && game.mode === "tanks" && game.phase !== "over" && !tk.replay;
     el.hidden = !on;
-    if (!on) return;
+    if (!on) return tkxPhonePill();
     const s = Math.max(0, Math.ceil(game.nukeLeft || 0)), txt = tk.nukeEv ? "\u2622\uFE0F \xA1IMPACTO!" : s <= 0 ? "\u2622\uFE0F \xA1INMINENTE!" : `\u2622\uFE0F ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
     if (el._t !== txt) {
       el._t = txt;
       el.textContent = txt;
     }
     el.classList.toggle("warn", s <= 15 || !!tk.nukeEv);
+    tkxPhonePill();
+  }
+  function tkxPhonePill() {
+    if (!game || game.mode !== "tanks") return;
     let pc = document.getElementById("tkPhone");
     if (!pc) {
       pc = document.createElement("div");
@@ -26032,7 +26039,7 @@ onmessage = function(e){ var m = e.data, out = [];
     });
     $("#scRace").addEventListener("click", scRaceTap);
     ["#scPrint", "#scPick", "#scLink", "#scEdit"].forEach((id) => document.body.appendChild($(id)));
-    $("#scStart").onclick = scStart;
+    $("#scStart").onclick = () => scStart();
     $("#scKind").onchange = scKindNote;
     $("#scPrintB").onclick = scPrintCards;
     $("#scPrintGo").onclick = () => {
@@ -26072,6 +26079,92 @@ onmessage = function(e){ var m = e.data, out = [];
     };
   }
   let scSyncT = null, scSyncLast = "";
+  /* ═══ APP_HCM (Brian, 20 nov) ═══════════════════════════════════════
+     Si el juego se abre desde la app del Colegio (?app=1), es un cadete
+     jugando solo en su celular: nada de QR, ni código, ni tarjetas, ni
+     celular de control. En la carrera contesta tocando la respuesta y
+     corre contra tres cadetes de la computadora.
+     Si Brian lo abre desde tinyurl.com/juegoshcm en la pantalla del
+     salón, todo sigue igual: QR, tarjetas y su celular.              */
+  // solo por la dirección: así la pantalla del salón nunca se queda en modo app
+  const APP_HCM = /[?&]app=1(&|$)/.test(location.search);
+  const APP_BOTS = { 2: "Cadete Ríos", 3: "Cadete Luna", 4: "Cadete Vega" };
+  if (APP_HCM) {
+    document.documentElement.classList.add("apphcm");
+    const st = document.createElement("style");
+    st.textContent =
+      ".apphcm .scconnect,.apphcm #scPrintB,.apphcm #scKindNote,.apphcm #scCodeTag,.apphcm #tkPhone,.apphcm #scLink,.apphcm .scd[data-d=cam]{display:none!important}" +
+      ".apphcm .sclobby label:first-child{display:none!important}" +
+      "#scTap{position:absolute;left:0;right:0;bottom:92px;z-index:40;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 12px;pointer-events:auto}" +
+      "#scTap[hidden]{display:none}" +
+      "#scTap button{display:flex;align-items:center;gap:10px;min-height:58px;padding:10px 12px;border-radius:16px;border:3px solid #1E1838;background:#fff;color:#1E1838;font:800 16px/1.2 system-ui,sans-serif;text-align:left;box-shadow:0 5px 0 #1E1838;cursor:pointer}" +
+      "#scTap button:active{transform:translateY(3px);box-shadow:0 2px 0 #1E1838}" +
+      "#scTap b{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px}" +
+      "#scTap .t1{grid-column:1/-1}" +
+      "@media (max-width:520px){#scTap{grid-template-columns:1fr;bottom:86px}#scTap button{min-height:48px;font-size:15px}}";
+    document.head.appendChild(st);
+  }
+  function appTapRender() {
+    if (!APP_HCM) return;
+    const stg = $("#scStage");
+    if (!stg) return;
+    let box = document.getElementById("scTap");
+    if (!box) { box = document.createElement("div"); box.id = "scTap"; stg.appendChild(box); }
+    const on = game && game.mode === "scan" && game.phase === "q" && sc && sc.qi >= 0;
+    box.hidden = !on;
+    if (!on) { box._qi = null; return; }
+    if (box._qi === sc.qi) return;
+    box._qi = sc.qi;
+    const q = scQ(), ops = scOpts(q) || [], cols = ["#E5484D", "#2F7DE1", "#E8A317", "#2FA84F"];
+    box.innerHTML = ops.map((o, i) => `<button data-i="${i}"${ops.length % 2 && i === ops.length - 1 ? ' class="t1"' : ""}><b style="background:${cols[i % 4]}">${"ABCD"[i]}</b><span>${esc(String(o))}</span></button>`).join("");
+    box.querySelectorAll("button").forEach((b) => b.onclick = () => appTapAnswer(+b.dataset.i));
+  }
+  function appTapAnswer(i) {
+    if (!sc || game.phase !== "q") return;
+    const qi = sc.qi;
+    try { if (sc.reading) scEndRead(true); } catch (e) {}
+    try {
+      const q = scQ(), cor = scCorrect(q), n = (scOpts(q) || []).length || 2;
+      Object.keys(APP_BOTS).forEach((k) => {
+        if (!scStu(+k)) return;
+        sc.answers[k] = Math.random() < 0.6 ? cor : (cor + 1 + Math.floor(Math.random() * (n - 1))) % n;
+      });
+    } catch (e) {}
+    scMergeAnswers(qi, { 1: i });
+    scReveal();
+    appTapRender();
+  }
+  if (APP_HCM) {
+    const lab0 = scLabel;
+    scLabel = (s) => (s && s.no === 1 ? "Tú" : (s && APP_BOTS[s.no]) || lab0(s));
+    const start0 = scStart;
+    scStart = function () {
+      const r = start0.apply(this, arguments);
+      try {
+        if (game && game.mode === "scan" && game.phase === "pick") {
+          [1, 2, 3, 4].forEach((no) => scRegister(no));
+          scRenderPop();
+          scRenderDock();
+          scToast("\u{1F3C3} Tú contra tres cadetes · toca Arrancar");
+        }
+      } catch (e) {}
+      return r;
+    };
+    const render0 = renderScan;
+    renderScan = function () {
+      const r = render0.apply(this, arguments);
+      try {
+        const b = $("#scStart");
+        if (b && !b._app) { b._app = 1; b.textContent = "\u{1F3C1} ¡A correr!"; b.onclick = () => scStart(); }
+        appTapRender();
+      } catch (e) {}
+      return r;
+    };
+    const goq0 = scGoQ;
+    scGoQ = function () { const r = goq0.apply(this, arguments); try { appTapRender(); } catch (e) {} return r; };
+    const rev0 = scReveal;
+    scReveal = function () { const r = rev0.apply(this, arguments); try { appTapRender(); } catch (e) {} return r; };
+  }
   function scLinkCode() {
     if (!cfg.scanCode) {
       try {

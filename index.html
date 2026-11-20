@@ -14070,6 +14070,21 @@ function hcmTutorial(){
   var JUEGOS = {"1": {"v": "4821148", "g": "4821149"}, "2": {"v": "4821150", "g": "4821151"}, "3": {"v": "4821152", "g": "4821154"}, "4": {"v": "4821155", "g": "4821157"}, "5": {"v": "4821159", "g": "4821160"}, "6": {"v": "4821162", "g": "4821163"}, "7": {"v": "4821164", "g": "4821165"}, "8": {"v": "4821167", "g": "4821169"}, "10": {"v": "4821171", "g": "4821172"}, "11": {"v": "4821175", "g": "4821179"}, "12": {"v": "4821181", "g": "4821182"}, "13": {"v": "4821183", "g": "4821184"}, "14": {"v": "4821185", "g": "4821186"}, "15": {"v": "4821187", "g": "4821189"}, "16": {"v": "4821190", "g": "4821192"}, "17": {"v": "4821193", "g": "4821194"}};
   var TITULOS = {"1": "I'd like to open an account", "2": "The cake is delicious", "3": "He was talking when he hit the car", "4": "You must obey traffic laws", "5": "Ted can repair the car", "6": "Should I ask Lt Clark for help?", "7": "He realized the tank was empty", "8": "I apologize for breaking your window", "10": "Tell me how to", "11": "Sue exercises before she goes to work", "12": "Like shopping in the mall", "13": "Let me introduce", "14": "Can you change a flat tire?", "15": "Would you introduce your family?", "16": "What kind of work can I do?", "17": "How far is it from El Paso to Houston?"};
   var BASE = 'https://www.baamboozle.com/game/';
+  /* Los juegos del teacher (Tile Rush) por lección. Desde aquí se abren con
+     ?app=1: el cadete juega solo en su celular, sin QR ni tarjetas.        */
+  var JUEGO_URL = 'https://brianmartinezroz-alt.github.io/hcm-ingles-iv/juego.html';
+  var SETS = {1:'hcm-l1', 2:'verbs-irregular', 3:'hcm-l3-grammar', 4:'hcm-reported-commands',
+              5:'hcm-u5-week-io', 6:'hcm-u6-audio10', 7:'hcm-u7-carrera', 8:'hcm-u8-apol-express30',
+              10:'hcm-u9-tanques20', 11:'hcm-u10-tanques18'};
+  var MODOS = [['scan','🏁','Carrera'],['tanks','💥','Tanques'],['tiles','🟦','Tablero'],
+               ['c4','🔴','4 en línea'],['plinko','⚪','Pelotas'],['box','🥊','Box']];
+  function chipsDe(n){
+    if(!SETS[n]) return '';
+    return '<div class="hcm-jg-k">Juegos del salón · aquí mismo</div><div class="hcm-jg">'+
+      MODOS.map(function(m){
+        return '<button class="hcm-jg-b" data-jset="'+SETS[n]+'" data-jmodo="'+m[0]+'"><span>'+m[1]+'</span>'+m[2]+'</button>';
+      }).join('')+'</div>';
+  }
 
   function tieneJuegos(n){ return !!(JUEGOS[n] && JUEGOS[n].v); }
   function abrir(id){ try{ window.open(BASE+id,'_blank','noopener'); }catch(e){ location.href = BASE+id; } }
@@ -14086,6 +14101,13 @@ function hcmTutorial(){
     for(var i=0;i<bs.length;i++){
       (function(b){ b.onclick = function(){ abrir(b.getAttribute('data-baam')); }; })(bs[i]);
     }
+    var js = raiz.querySelectorAll('[data-jset]');
+    for(var k=0;k<js.length;k++){
+      (function(b){ b.onclick = function(){
+        var u = JUEGO_URL+'?app=1&set='+encodeURIComponent(b.getAttribute('data-jset'))+'&modo='+b.getAttribute('data-jmodo');
+        if(window.__hcmAbrirJuego) window.__hcmAbrirJuego(u); else location.href = u;
+      }; })(js[k]);
+    }
   }
 
   /* Pantalla con las 16 lecciones */
@@ -14093,14 +14115,20 @@ function hcmTutorial(){
     var h = (typeof atras==='function'?atras():'') +
       '<div class="qcard"><div class="qlbl">Extra</div>'+
       '<div class="qtxt">Juegos de repaso</div>'+
-      '<div class="qsub">Dos juegos por lección, 50 preguntas cada uno, de opción múltiple, como el examen ALC. '+
-      'Se abren fuera de la app y no cuentan para tu avance.</div></div>';
+      '<div class="qsub">Los juegos del salón se juegan aquí mismo, tú solo y sin QR. '+
+      'Los de Baamboozle (vocabulario y gramática) se abren aparte. Ninguno cuenta para tu avance.</div></div>'+
+      '<style>.hcm-jg-k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--oro,#8F7320);margin:10px 0 6px;font-weight:700}'+
+      '.hcm-jg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}'+
+      '.hcm-jg-b{display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 4px;border-radius:12px;border:1px solid var(--linea,#DDD5C4);background:var(--papel,#FDFBF6);color:inherit;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}'+
+      '.hcm-jg-b span{font-size:22px;line-height:1}.hcm-jg-b:active{transform:scale(.97)}'+
+      '.hcm-jg-bz{font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.6;margin:12px 0 0;font-weight:700}</style>';
     var ns = Object.keys(JUEGOS).map(Number).sort(function(a,b){return a-b;});
     for(var i=0;i<ns.length;i++){
       var n = ns[i];
       h += '<div class="card" style="margin-top:10px">'+
            '<h3 style="margin:0 0 2px">Lección '+n+'</h3>'+
            '<p class="sub" style="margin:0 0 8px">'+esc(TITULOS[n]||'')+'</p>'+
+           chipsDe(n)+(SETS[n]?'<div class="hcm-jg-bz">Baamboozle</div>':'')+
            botonesDe(n)+'</div>';
     }
     APP.innerHTML = h;
@@ -14288,7 +14316,8 @@ function hcmTutorial(){
       VISOR.querySelector('.hcm-vis-x').onclick=function(){ cerrarDentro(true); };
     }
     VISOR.querySelector('.hcm-vis-t').textContent=titulo||'';
-    VISOR.querySelector('.hcm-vis-ic').innerHTML = clave==='efa' ? icoEFA('hcm-vis-logo') : icoLibro('hcm-vis-logo');
+    VISOR.querySelector('.hcm-vis-ic').innerHTML = clave==='efa' ? icoEFA('hcm-vis-logo') :
+      clave==='juego' ? '<span class="hcm-vis-logo" style="display:flex;align-items:center;justify-content:center;font-size:24px">🎮</span>' : icoLibro('hcm-vis-logo');
     var caja=VISOR.querySelector('.hcm-vis-marcos'), fr=caja.querySelector('iframe[data-k="'+clave+'"]');
     if(!fr){
       fr=document.createElement('iframe'); fr.className='hcm-vis-f'; fr.setAttribute('data-k',clave);
@@ -14300,7 +14329,7 @@ function hcmTutorial(){
     caja.querySelectorAll('iframe').forEach(function(x){ x.classList.toggle('on', x===fr); });
     if(fr.getAttribute('data-u')!==url){ fr.removeAttribute('data-listo'); fr.setAttribute('data-u',url); fr.src=url; }
     VISOR.classList.toggle('listo', !!fr.getAttribute('data-listo'));
-    VISOR.querySelector('.hcm-vis-cargando').textContent = 'Cargando '+(clave==='efa'?'English For All':'las actividades')+'…';
+    VISOR.querySelector('.hcm-vis-cargando').textContent = 'Cargando '+(clave==='efa'?'English For All':clave==='juego'?'el juego':'las actividades')+'…';
     VISOR.classList.add('on'); document.documentElement.classList.add('hcm-vis-abierto');
     try{ history.pushState({hcmVisor:1},''); }catch(err){}
   }
@@ -14324,7 +14353,8 @@ function hcmTutorial(){
     if(u.indexOf(ACT_BASE)===0) return abrirDentro(u,'Actividades','act');
     abrirFuera(u);
   }
-  try{ window.__hcmAbrirEFA=function(){ abrirURL(EFA_URL); }; window.__hcmAbrirAct=function(){ abrirURL(ACT_URL); }; }catch(err){}
+  try{ window.__hcmAbrirEFA=function(){ abrirURL(EFA_URL); }; window.__hcmAbrirAct=function(){ abrirURL(ACT_URL); };
+       window.__hcmAbrirJuego=function(u){ abrirDentro(u,'Juegos','juego'); }; }catch(err){}
 
   /* ── la lección que van viendo en clase: la de la actividad más reciente del sitio ── */
   function enClase(){
