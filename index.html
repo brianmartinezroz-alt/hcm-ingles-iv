@@ -14312,7 +14312,14 @@ function hcmTutorial(){
   // el botón "atrás" del celular cierra la ventana y regresa a la app
   try{ window.addEventListener('popstate',function(){ cerrarDentro(false); }); }catch(err){}
   function abrirURL(u){
-    if(u===EFA_URL) return abrirDentro(u,'Inglés general','efa');
+    if(u===EFA_URL){
+      // el cadete ya se registró aquí: EFA recibe su nombre y su grupo y no lo vuelve a registrar
+      // (va después del #, así no viaja a ningún servidor)
+      var Pf={}; try{ Pf=hcmLoad().perfil||{}; }catch(err){}
+      var nom=String(Pf.nombre||'').trim(), gr=String(Pf.grupo||'').trim();
+      var dest = nom ? u+'#hcm=1&n='+encodeURIComponent(nom)+'&g='+encodeURIComponent(gr) : u;
+      return abrirDentro(dest,'Inglés general','efa');
+    }
     if(u===ACT_URL) return abrirDentro(ACT_BASE,'Actividades','act');
     if(u.indexOf(ACT_BASE)===0) return abrirDentro(u,'Actividades','act');
     abrirFuera(u);
